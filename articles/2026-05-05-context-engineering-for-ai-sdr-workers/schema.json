@@ -1,0 +1,135 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/#organization",
+      "name": "EverWorker",
+      "url": "https://everworker.ai",
+      "description": "EverWorker builds AI Workers — agentic systems that take ownership of business processes end-to-end across sales, marketing, and finance.",
+      "logo": { "@type": "ImageObject", "url": "https://everworker.ai/images/everworker-logo.png", "width": 512, "height": 512 },
+      "sameAs": ["https://www.linkedin.com/company/everworker", "https://twitter.com/everworker"]
+    },
+    { "@type": "WebSite", "@id": "https://everworker.ai/#website", "url": "https://everworker.ai", "name": "EverWorker", "publisher": { "@id": "https://everworker.ai/#organization" }, "inLanguage": "en-us" },
+    { "@type": "Person", "@id": "https://everworker.ai/about/ameya-deshmukh#person", "name": "Ameya Deshmukh", "url": "https://everworker.ai/about/ameya-deshmukh", "jobTitle": "Head of Content & Marketing", "worksFor": { "@id": "https://everworker.ai/#organization" }, "sameAs": ["https://www.linkedin.com/in/ameyadeshmukh/"] },
+    { "@type": "ImageObject", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#primaryimage", "url": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers/header.png", "contentUrl": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers/header.png", "width": 1200, "height": 600, "caption": "Context engineering for AI SDR workers. EverWorker." },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://everworker.ai/" },
+        { "@type": "ListItem", "position": 2, "name": "Blog",  "item": "https://everworker.ai/blog" },
+        { "@type": "ListItem", "position": 3, "name": "Context Engineering for AI SDR Workers: 4-Layer Architecture", "item": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#webpage",
+      "url": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers",
+      "name": "Context Engineering for AI SDR Workers: 4-Layer Architecture",
+      "isPartOf": { "@id": "https://everworker.ai/#website" },
+      "primaryImageOfPage": { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#primaryimage" },
+      "breadcrumb": { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#breadcrumbs" },
+      "speakable": { "@type": "SpeakableSpecification", "cssSelector": ["#key-takeaways", ".key-takeaways"] },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "BlogPosting",
+      "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#article",
+      "headline": "Context Engineering for AI SDR Workers: 4-Layer Architecture",
+      "description": "Context engineering for AI SDR workers: the 4 knowledge layers, the 6 artifacts, Markdown over PDFs, what stays out of vector memory, and chunk-size math.",
+      "author": { "@id": "https://everworker.ai/about/ameya-deshmukh#person" },
+      "publisher": { "@id": "https://everworker.ai/#organization" },
+      "datePublished": "2026-05-05",
+      "dateModified": "2026-05-05",
+      "image": { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#primaryimage" },
+      "mainEntityOfPage": { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#webpage" },
+      "keywords": "context engineering for ai sdr, ai sdr architecture, ai sdr knowledge engine, ai sdr vector memory, ai sdr rag architecture, markdown for ai sdr, chunk size ai sdr embeddings",
+      "wordCount": 4944,
+      "articleSection": "AI Workers",
+      "inLanguage": "en-us",
+      "isPartOf": { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#article" },
+      "mentions": [
+        { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-openai" },
+        { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-anthropic" },
+        { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-cohere" },
+        { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-voyageai" },
+        { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-text-embedding-3-large" },
+        { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-claude" },
+        { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-rag" }
+      ],
+      "citation": [
+        { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#citation-openai-embeddings" },
+        { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#citation-anthropic-contextual-retrieval" },
+        { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#citation-cohere-embed" },
+        { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#citation-voyageai-embeddings" },
+        { "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#citation-matryoshka" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#faq",
+      "mainEntity": [
+        { "@type": "Question", "name": "What is context engineering for an AI SDR?", "acceptedAnswer": { "@type": "Answer", "text": "Context engineering for an AI SDR is the discipline of segregating the worker's knowledge into distinct layers and giving each layer its own retrieval strategy. The four layers are foundation (instructions, master positioning, allowlists, guardrails), domain memory (deep reference content about personas, solutions, services), real-time research (per-prospect facts fetched per invocation), and provenance (source URLs and evidence trails attached to every fact). Most AI SDR failures are not model failures or prompt failures. They are architecture failures where two or more layers were collapsed into a single retrieval bucket because someone wanted a tidier diagram." } },
+        { "@type": "Question", "name": "What are the four knowledge layers an AI SDR needs?", "acceptedAnswer": { "@type": "Answer", "text": "The foundation layer holds instructions, master positioning, ICP gates, and allowlists, loaded into the system prompt on every invocation with zero failure tolerance. The domain memory layer holds persona, solution, and service reference documents, retrieved per invocation via vector search. The real-time research layer holds prospect-specific facts fetched per invocation and discarded after use. The provenance layer is not a separate content store but a property: every fact in every layer carries a source URL and evidence trail that downstream auditing can reconstruct. The four layers map cleanly to four different retrieval strategies: static context, RAG, tool calls, and metadata." } },
+        { "@type": "Question", "name": "Why does Markdown beat PDFs and Word docs for AI SDR knowledge?", "acceptedAnswer": { "@type": "Answer", "text": "Four reasons. Markdown headers are semantic boundaries that virtually every modern chunker respects, so H2 splits produce coherent chunks that map to one concept rather than fragments of two. YAML frontmatter is filterable metadata, which enables aggressive pre-filtering before semantic search and can narrow a 200-chunk candidate set to 8 before embedding similarity is computed. Markdown content embeds cleanly, with no HTML noise, JSON escapes, or proprietary format quirks polluting the token stream. Markdown is human-auditable and source-controllable, so versioning, change review, and rollback are first-class operations." } },
+        { "@type": "Question", "name": "What goes in vector memory and what does not?", "acceptedAnswer": { "@type": "Answer", "text": "Vector memory is for content that is high-volume, query-dependent, and self-contained at the chunk level. Persona, solution, and service documents fit all three criteria and belong in vector memory. The company-level positioning document does not, because it contains ICP gates the worker must check on every invocation regardless of query. The proof points matrix and offers matrix do not, because they are closed allowlists the anti-hallucination guardrails reference. The instruction set is not memory; it is the worker's behaviour and lives in the system prompt. Real-time prospect research is also not memory; it is ephemeral input fetched per invocation." } },
+        { "@type": "Question", "name": "Which embedding model should I use for an AI SDR?", "acceptedAnswer": { "@type": "Answer", "text": "For enterprise B2B SDR work where the corpus contains specialised vocabulary and queries require nuanced persona disambiguation, OpenAI's text-embedding-3-large at 1,536 dimensions (Matryoshka-truncated from the default 3,072) is the default right choice. It handles specialised vocabulary, disambiguates close persona clusters cleanly, and the half-dimension truncation gives roughly 99% of full-dimension quality at half the storage. text-embedding-3-small is a reasonable downgrade for high-volume cost-sensitive deployments. Cohere's embed-v3 excels for multilingual workloads. VoyageAI's voyage-3-large is overkill but defensible for technically dense corpora. Specialised fine-tuned embedders are usually a six-month detour for two percentage points; skip them." } }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#term-context-engineering",
+      "name": "Context engineering for AI SDR",
+      "description": "The discipline of segregating an AI SDR worker's knowledge into distinct layers (foundation, domain memory, real-time research, provenance) and giving each layer its own retrieval strategy. Most AI SDR failures are architecture failures from collapsing layers, not model or prompt failures."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#term-foundation-layer",
+      "name": "Foundation layer",
+      "description": "The AI SDR knowledge layer holding instructions, master positioning, ICP gates, allowlists, and guardrails. Loaded into the system prompt on every invocation with zero failure tolerance. Includes the company-level messaging document, the proof-points matrix, and the value-led offers matrix."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#term-domain-memory-layer",
+      "name": "Domain memory layer",
+      "description": "The AI SDR knowledge layer holding deep, structured reference content about personas, solutions, and services. Retrieved per invocation via vector search. Content is high-volume, query-dependent, and self-contained at the chunk level — the three criteria that justify RAG."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#term-real-time-research-layer",
+      "name": "Real-time research layer",
+      "description": "The AI SDR knowledge layer holding prospect-specific facts (company news, contact details, signals) fetched per invocation via tool calls. Ephemeral input, valid only for that contact, discarded after the email is composed. Distinct from persistent CRM enrichment."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#term-provenance-layer",
+      "name": "Provenance layer",
+      "description": "Not a separate content store but a property running through the other three knowledge layers: every fact in every layer carries a source URL and evidence trail. Enables a human reviewer to reconstruct the worker's reasoning chain from input to output, which is the difference between an architecture sales leadership trusts and one they tolerate."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#term-vector-memory-criterion",
+      "name": "Vector memory criterion",
+      "description": "Vector memory is for content that is (1) high-volume, (2) query-dependent, and (3) self-contained at the chunk level. Persona, solution, and service documents satisfy all three. The company doc, proof matrix, offers matrix, and instruction set do not, and belong in static runtime context instead."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#term-runtime-context",
+      "name": "Runtime context",
+      "description": "What an AI SDR worker sees on every invocation before any retrievals or tool calls. Contains exactly four artifacts: the worker instruction set, the company-level messaging document, the proof-points matrix, and the value-led offers matrix. Typically 35,000-45,000 tokens total."
+    },
+    { "@type": "Organization", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-openai", "name": "OpenAI", "sameAs": "https://en.wikipedia.org/wiki/OpenAI" },
+    { "@type": "Organization", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-anthropic", "name": "Anthropic", "sameAs": "https://en.wikipedia.org/wiki/Anthropic" },
+    { "@type": "Organization", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-cohere", "name": "Cohere", "sameAs": "https://en.wikipedia.org/wiki/Cohere" },
+    { "@type": "Organization", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-voyageai", "name": "VoyageAI", "url": "https://voyageai.com" },
+    { "@type": "SoftwareApplication", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-text-embedding-3-large", "name": "text-embedding-3-large", "url": "https://platform.openai.com/docs/guides/embeddings" },
+    { "@type": "SoftwareApplication", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-claude", "name": "Claude", "sameAs": "https://en.wikipedia.org/wiki/Claude_(language_model)" },
+    { "@type": "Thing", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#mention-rag", "name": "Retrieval-augmented generation", "sameAs": "https://en.wikipedia.org/wiki/Retrieval-augmented_generation" },
+    { "@type": "WebPage", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#citation-openai-embeddings", "name": "OpenAI Embeddings Guide (text-embedding-3-large)", "url": "https://platform.openai.com/docs/guides/embeddings", "publisher": "OpenAI" },
+    { "@type": "Article", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#citation-anthropic-contextual-retrieval", "name": "Introducing Contextual Retrieval", "url": "https://www.anthropic.com/news/contextual-retrieval", "publisher": "Anthropic", "datePublished": "2024-09" },
+    { "@type": "WebPage", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#citation-cohere-embed", "name": "Cohere Embed Documentation", "url": "https://docs.cohere.com/docs/cohere-embed", "publisher": "Cohere" },
+    { "@type": "WebPage", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#citation-voyageai-embeddings", "name": "VoyageAI Embeddings Documentation", "url": "https://docs.voyageai.com/docs/embeddings", "publisher": "VoyageAI" },
+    { "@type": "ScholarlyArticle", "@id": "https://everworker.ai/blog/context-engineering-for-ai-sdr-workers#citation-matryoshka", "name": "Matryoshka Representation Learning", "url": "https://arxiv.org/abs/2205.13147", "author": "Aditya Kusupati et al.", "datePublished": "2022" }
+  ]
+}

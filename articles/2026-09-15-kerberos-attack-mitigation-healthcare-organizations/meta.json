@@ -1,0 +1,30 @@
+{
+  "title": "Kerberos Attack Mitigation in Healthcare: One Attack Path",
+  "slug": "kerberos-attack-mitigation-healthcare-organizations",
+  "meta_description": "Kerberos attack mitigation for hospitals: Kerberoasting, golden tickets, pass-the-ticket and delegation abuse form one attack path. See what to fix first.",
+  "primary_keyword": "kerberos attack mitigation",
+  "secondary_keywords": [
+    "kerberoasting healthcare",
+    "golden ticket attack mitigation",
+    "pass-the-hash vs pass-the-ticket",
+    "kerberos delegation attacks",
+    "credential guard vs defender credential guard",
+    "RC4 kerberos deprecation healthcare"
+  ],
+  "keywords": [
+    "kerberos attack mitigation",
+    "kerberoasting healthcare",
+    "golden ticket attack mitigation",
+    "pass-the-hash vs pass-the-ticket",
+    "kerberos delegation attacks",
+    "credential guard vs defender credential guard",
+    "RC4 kerberos deprecation healthcare"
+  ],
+  "canonical_url": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations",
+  "author": "Ameya Deshmukh",
+  "category": "Identity Security",
+  "publish_date": "2026-09-15",
+  "modified_date": "2026-09-21",
+  "reading_time_minutes": 9,
+  "word_count": 2179
+}

@@ -1,0 +1,32 @@
+{
+  "title": "Identity-Based Attacks in Healthcare: The Hybrid AD Seam",
+  "slug": "what-are-identity-based-attacks-in-healthcare-it",
+  "meta_description": "Identity-based attacks in healthcare exploit the sync between on-prem Active Directory and Entra ID. See how the hybrid seam fails, and what to fix first.",
+  "primary_keyword": "identity-based attacks in healthcare",
+  "secondary_keywords": [
+    "identity attack surface healthcare",
+    "hybrid AD Azure AD security",
+    "Active Directory Azure AD attack path",
+    "non-human identity risk healthcare",
+    "medical device identity risk",
+    "Azure AD vs on-premises Active Directory security",
+    "what are identity-based attacks in healthcare IT"
+  ],
+  "keywords": [
+    "identity-based attacks in healthcare",
+    "identity attack surface healthcare",
+    "hybrid AD Azure AD security",
+    "Active Directory Azure AD attack path",
+    "non-human identity risk healthcare",
+    "medical device identity risk",
+    "Azure AD vs on-premises Active Directory security",
+    "what are identity-based attacks in healthcare IT"
+  ],
+  "canonical_url": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it",
+  "author": "Ameya Deshmukh",
+  "category": "Identity Security",
+  "publish_date": "2026-09-15",
+  "modified_date": "2026-09-21",
+  "reading_time_minutes": 8,
+  "h1": "Identity-Based Attacks in Healthcare: The Hybrid AD Seam"
+}

@@ -1,0 +1,298 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/#organization",
+      "name": "EverWorker",
+      "url": "https://everworker.ai",
+      "description": "EverWorker builds AI Workers — agentic systems that take ownership of business processes end-to-end across sales, marketing, and finance.",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://everworker.ai/images/everworker-logo.png",
+        "width": 512,
+        "height": 512
+      },
+      "sameAs": [
+        "https://www.linkedin.com/company/everworker",
+        "https://twitter.com/everworker"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://everworker.ai/#website",
+      "url": "https://everworker.ai",
+      "name": "EverWorker",
+      "publisher": { "@id": "https://everworker.ai/#organization" },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://everworker.ai/about/ameya-deshmukh#person",
+      "name": "Ameya Deshmukh",
+      "url": "https://everworker.ai/about/ameya-deshmukh",
+      "jobTitle": "Head of Content & Marketing",
+      "worksFor": { "@id": "https://everworker.ai/#organization" },
+      "sameAs": [
+        "https://www.linkedin.com/in/ameyadeshmukh/"
+      ]
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#primaryimage",
+      "url": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model/header.png",
+      "contentUrl": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model/header.png",
+      "width": 1200,
+      "height": 600,
+      "caption": "How to build an AI-first sales operating model — EverWorker"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://everworker.ai/" },
+        { "@type": "ListItem", "position": 2, "name": "Blog",  "item": "https://everworker.ai/blog" },
+        { "@type": "ListItem", "position": 3, "name": "How to Build an AI-First Sales Operating Model in 2026", "item": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#webpage",
+      "url": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model",
+      "name": "How to Build an AI-First Sales Operating Model in 2026",
+      "isPartOf": { "@id": "https://everworker.ai/#website" },
+      "primaryImageOfPage": { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#primaryimage" },
+      "breadcrumb": { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#breadcrumbs" },
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": ["#key-takeaways", ".key-takeaways"]
+      },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "BlogPosting",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#article",
+      "headline": "How to Build an AI-First Sales Operating Model in 2026",
+      "description": "The 2011 SDR playbook is broken. Here's the AI-first sales operating model that books hundreds of meetings, runs deal execution, and ships in 45 days.",
+      "author": { "@id": "https://everworker.ai/about/ameya-deshmukh#person" },
+      "publisher": { "@id": "https://everworker.ai/#organization" },
+      "datePublished": "2026-04-29",
+      "dateModified": "2026-04-29",
+      "image": { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#primaryimage" },
+      "mainEntityOfPage": { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#webpage" },
+      "keywords": "ai-first sales operating model, ai sales operating model, sdr economics 2026, predictable revenue model broken, ai sdr conversion rate, signal-based outbound, 45 day ai sdr implementation",
+      "wordCount": 4320,
+      "articleSection": "AI Workers",
+      "inLanguage": "en-us",
+      "mentions": [
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-aaron-ross" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-predictable-revenue" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-salesforce" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-hubspot" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-11x" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-wef" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-clay" }
+      ],
+      "citation": [
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-bridge-group" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-instantly-2026" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-saleshandy-2026" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-salesmotion-2026" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-varicent-2026" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-wef-2026" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-validity-2025" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-litmus-2025" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-google-postmaster-2024" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is an AI-first sales operating model?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "An AI-first sales operating model is a system where AI Workers handle the execution of your sales process (research, outreach, sequencing, follow-up, document generation, qualification) so your human team focuses on strategy, live conversation, relationship-building, and closing. It is not the same as buying an AI SDR tool. The operating model rests on four pillars (Signal Intelligence, AI-Executed Outbound, AI-Driven Deal Execution, AI-Enabled Intelligence) and replaces the human-capacity bottlenecks in the traditional Predictable Revenue model with AI Workers that run the same processes at higher volume and lower cost."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is the SDR role dead?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. The role is not dead, but the traditional SDR job description is changing. Aaron Ross, the author of Predictable Revenue, has himself acknowledged that the framework has been misinterpreted. The data backs that read: SDRs spend only 28% of their week selling and 72% on research, list-building, and administrative work. AI Workers absorb that 72%. The new SDR role focuses on live triage, conversation, and qualification. Top SDRs in an AI-first model book more meetings because they spend their time on what only humans can do."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is an AI-first sales operating model different from buying an AI SDR tool?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "An AI SDR tool is a single feature: it writes and sends outbound emails. An AI-first sales operating model is the full system around that feature, including the signal-detection layer that triggers the AI SDR, the knowledge engine that grounds its messaging, the deal-execution workers that take over after the meeting, and the intelligence layer that reports back on what is working. Off-the-shelf AI SDR tools like 11x and Artisan have published high early-customer churn (70–80% in some reports) because they ship without the operating model around them, producing the 30-to-60-day fade pattern users describe. Buy off-the-shelf if your operating model is mature. Build a system if it isn't."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How long does it take to roll out an AI-first sales operating model?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A functional AI-first sales motion can be live in 45 days from scratch when the templates and architecture are in place. Weeks 1–2 cover foundation work (sending infrastructure, CRM cleanup, ICP and messaging documentation). Weeks 2–3 build the AI SDR. Weeks 3–4 add the Sales Playbook Workers for deal execution. Weeks 4–6 scale and optimize based on what the data shows. The 45-day number is achievable because the work is configuration, not greenfield engineering."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What signals matter most for AI-triggered outbound?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The highest-yield signals for B2B outbound are hiring patterns (especially for the role you sell to), funding announcements (capital to spend, growth mandate), leadership changes (new executives who need to make their mark), technology changes (new tools that create compatibility needs), competitive displacement (a competitor had a bad quarter or bad press), and product launches or major company milestones. The exact signal mix depends on your ICP. The way to find yours is to look at your closed-won customers and ask: what was happening at those companies in the 60 to 90 days before they started talking to us? Those patterns are your signal set."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#term-ai-first-sales-operating-model",
+      "name": "AI-first sales operating model",
+      "description": "A system in which AI Workers handle the execution of the sales process (research, outreach, sequencing, follow-up, document generation, qualification) so human teams focus exclusively on strategy, live conversation, relationship-building, and closing."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#term-ai-sdr",
+      "name": "AI SDR",
+      "description": "An AI Worker that performs the inbound and outbound sales development representative function: classifying signals, researching companies and contacts, writing personalized email sequences, and enrolling prospects in cadence — all without manual list-building or template-writing by a human."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#term-knowledge-engine",
+      "name": "Knowledge Engine",
+      "description": "The component of an AI SDR that connects to a company's living knowledge base (Confluence, SharePoint, Notion, Google Drive) and retrieves the correct messaging, ICP, persona pains, and competitive positioning at runtime — fixing the AI-slop problem of generic generative output."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#term-signal-detection-layer",
+      "name": "Signal Detection Layer",
+      "description": "The component of an AI SDR that continuously monitors target accounts on primary sources (job boards, company websites, LinkedIn, news, Crunchbase) for buying signals such as hiring patterns, funding rounds, leadership changes, and technology adoption — and triggers downstream outreach when a signal fires."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#term-signal-based-outbound",
+      "name": "Signal-based outbound",
+      "description": "An outbound prospecting motion in which contacts are reached only when a relevant signal (hiring, funding, leadership change, technology adoption) indicates they are likely to need the seller's solution right now. Independent benchmarks show 5–18% reply rates for signal-based outreach versus 1–3% for generic list-based campaigns."
+    },
+    {
+      "@type": "Person",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-aaron-ross",
+      "name": "Aaron Ross",
+      "sameAs": "https://en.wikipedia.org/wiki/Predictable_Revenue"
+    },
+    {
+      "@type": "Book",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-predictable-revenue",
+      "name": "Predictable Revenue",
+      "sameAs": "https://en.wikipedia.org/wiki/Predictable_Revenue"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-salesforce",
+      "name": "Salesforce",
+      "sameAs": "https://en.wikipedia.org/wiki/Salesforce"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-hubspot",
+      "name": "HubSpot",
+      "sameAs": "https://en.wikipedia.org/wiki/HubSpot"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-11x",
+      "name": "11x",
+      "sameAs": "https://en.wikipedia.org/wiki/11x_(company)"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-wef",
+      "name": "World Economic Forum",
+      "sameAs": "https://en.wikipedia.org/wiki/World_Economic_Forum"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#mention-clay",
+      "name": "Clay",
+      "url": "https://clay.com"
+    },
+    {
+      "@type": "Report",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-bridge-group",
+      "name": "Sales Development (SDR) Metrics & Comp Report",
+      "url": "https://blog.bridgegroupinc.com/sales-development-metrics",
+      "publisher": "The Bridge Group"
+    },
+    {
+      "@type": "Report",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-instantly-2026",
+      "name": "Cold Email Benchmark Report 2026",
+      "url": "https://instantly.ai/cold-email-benchmark-report-2026",
+      "publisher": "Instantly",
+      "datePublished": "2026"
+    },
+    {
+      "@type": "Report",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-saleshandy-2026",
+      "name": "Latest Cold Email Statistics in 2026",
+      "url": "https://www.saleshandy.com/blog/cold-email-statistics/",
+      "publisher": "Saleshandy",
+      "datePublished": "2026"
+    },
+    {
+      "@type": "Article",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-salesmotion-2026",
+      "name": "AI SDR Tools Compared: What Actually Works for B2B Pipeline in 2026",
+      "url": "https://salesmotion.io/blog/ai-sdr-tools-compared",
+      "publisher": "Salesmotion",
+      "datePublished": "2026"
+    },
+    {
+      "@type": "Article",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-varicent-2026",
+      "name": "AI in Sales Statistics: 6 Enterprise Proof Points (2026)",
+      "url": "https://www.varicent.com/blog/ai-in-sales-statistics",
+      "publisher": "Varicent",
+      "datePublished": "2026"
+    },
+    {
+      "@type": "Article",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-wef-2026",
+      "name": "How AI-first operating models unlock scalable, responsible value",
+      "url": "https://www.weforum.org/stories/2026/02/how-ai-first-operating-models-unlock-scalable-responsible-value/",
+      "publisher": "World Economic Forum",
+      "datePublished": "2026-02"
+    },
+    {
+      "@type": "Report",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-validity-2025",
+      "name": "2025 Email Deliverability Benchmark Report",
+      "url": "https://www.validity.com/",
+      "publisher": "Validity",
+      "datePublished": "2025"
+    },
+    {
+      "@type": "Report",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-litmus-2025",
+      "name": "Email Client Market Share 2025",
+      "url": "https://litmus.com/",
+      "publisher": "Litmus",
+      "datePublished": "2025"
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#citation-google-postmaster-2024",
+      "name": "Email sender guidelines (February 2024 bulk sender update)",
+      "url": "https://support.google.com/mail/answer/81126",
+      "publisher": "Google",
+      "datePublished": "2024-02"
+    }
+  ]
+}

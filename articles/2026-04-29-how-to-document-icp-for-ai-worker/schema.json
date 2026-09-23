@@ -1,0 +1,239 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/#organization",
+      "name": "EverWorker",
+      "url": "https://everworker.ai",
+      "description": "EverWorker builds AI Workers — agentic systems that take ownership of business processes end-to-end across sales, marketing, and finance.",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://everworker.ai/images/everworker-logo.png",
+        "width": 512,
+        "height": 512
+      },
+      "sameAs": [
+        "https://www.linkedin.com/company/everworker",
+        "https://twitter.com/everworker"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://everworker.ai/#website",
+      "url": "https://everworker.ai",
+      "name": "EverWorker",
+      "publisher": { "@id": "https://everworker.ai/#organization" },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://everworker.ai/about/ameya-deshmukh#person",
+      "name": "Ameya Deshmukh",
+      "url": "https://everworker.ai/about/ameya-deshmukh",
+      "jobTitle": "Head of Content & Marketing",
+      "worksFor": { "@id": "https://everworker.ai/#organization" },
+      "sameAs": [
+        "https://www.linkedin.com/in/ameyadeshmukh/"
+      ]
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#primaryimage",
+      "url": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker/header.png",
+      "contentUrl": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker/header.png",
+      "width": 1200,
+      "height": 600,
+      "caption": "How to document your ICP for an AI Worker. EverWorker."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://everworker.ai/" },
+        { "@type": "ListItem", "position": 2, "name": "Blog",  "item": "https://everworker.ai/blog" },
+        { "@type": "ListItem", "position": 3, "name": "How to Document Your ICP for an AI Worker (5 Layers)", "item": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#webpage",
+      "url": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker",
+      "name": "How to Document Your ICP for an AI Worker (5 Layers)",
+      "isPartOf": { "@id": "https://everworker.ai/#website" },
+      "primaryImageOfPage": { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#primaryimage" },
+      "breadcrumb": { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#breadcrumbs" },
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": ["#key-takeaways", ".key-takeaways"]
+      },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "BlogPosting",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#article",
+      "headline": "How to Document Your ICP for an AI Worker (5 Layers)",
+      "description": "An ICP for an AI SDR is a data structure, not a marketing persona doc. The 5-layer framework: firmographic tiers, industry, buying group, signals, TAM math.",
+      "author": { "@id": "https://everworker.ai/about/ameya-deshmukh#person" },
+      "publisher": { "@id": "https://everworker.ai/#organization" },
+      "datePublished": "2026-04-29",
+      "dateModified": "2026-04-29",
+      "image": { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#primaryimage" },
+      "mainEntityOfPage": { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#webpage" },
+      "keywords": "icp for ai sdr, document icp for ai, firmographic icp, ideal customer profile ai, icp scoring crm, machine-readable icp, icp for ai worker",
+      "wordCount": 2505,
+      "articleSection": "AI Workers",
+      "inLanguage": "en-us",
+      "isPartOf": { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#article" },
+      "mentions": [
+        { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#mention-salesforce" },
+        { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#mention-hubspot" },
+        { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#mention-clay" },
+        { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#mention-notion" },
+        { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#mention-confluence" }
+      ],
+      "citation": [
+        { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#citation-salesmotion-2026" },
+        { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#citation-saleshandy-2026" },
+        { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#citation-m1project" },
+        { "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#citation-growthahoy" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What's the difference between a marketing ICP and an ICP for an AI SDR?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A marketing ICP is a persona-driven narrative used for team alignment, typically in a Notion page or slide deck, updated quarterly. An ICP for an AI SDR is a structured, machine-readable data input the AI Worker queries every minute it runs. It has explicit thresholds (firmographic tier definitions), structured fields (geography list, vertical list, buying-group roles with deal roles, signal categories), and TAM math. The marketing ICP describes who you sell to. The AI-Worker ICP tells the worker who to talk to today, in what context, with what messaging."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What goes in an ICP for an AI Worker?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Five layers: firmographic tiers (size and revenue thresholds with messaging variants per tier), geography and industry (explicit lists, not inferences), buying group with deal roles (5+ named roles each with Economic Buyer / Champion / Influencer / Blocker / Accelerator labels), signal categories (technographic, hiring, job-posting keywords, competitive detection), and TAM math (total addressable accounts × buying-group size, plus Rule of 3% applied). Each layer has explicit fields the AI Worker queries at runtime."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How specific does an ICP need to be for an AI SDR?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Specific enough that a person reading the doc could predict what the AI SDR will write. Mid-market financial services is too broad; the AI SDR has nothing to retrieve. Banks and credit unions, 100-1,000 employees, 10M-500M USD revenue, USA/Canada only, with a CMO / DPO / Head of Data / Legal Counsel buying group is specific enough. The test: every layer has explicit thresholds, explicit lists, and explicit messaging hooks per role."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Should an ICP live in a Notion doc or in the CRM?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Both, in different forms. The narrative descriptions, messaging assets, and case studies live in a knowledge base (Notion, Confluence, SharePoint, Google Drive) the AI Worker's Knowledge Engine retrieves from. The structured fields (firmographic tier per account, primary industry, geography, lead score, signal status) live as CRM custom properties on the account record so the AI Worker can query them at runtime. The signal layer lives in signal-detection workers that write to CRM properties continuously. A Notion-only ICP is a frozen ICP."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do you score accounts dynamically against an ICP?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Combine firmographic fit, vertical fit, geographic fit, signal strength, and engagement history. Each layer of the ICP contributes to the score: tier (does the account meet the size threshold), vertical (is it in the explicit list), geography (in or out), signals (how many fired, how recent), engagement (any prior touchpoints). The score updates in real time as signals fire. Pipeline reviews shift from let me look through these 200 accounts to here are the 12 the AI Worker says to focus on this week, here is why each is scored where it is."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#term-icp-for-ai-worker",
+      "name": "ICP for an AI Worker",
+      "description": "A structured, machine-readable data input that an AI SDR queries at runtime to classify accounts, route signals, write personalized outreach, and decide which leads to enroll. Distinct from a marketing ICP, which is a persona-driven narrative used for team alignment."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#term-firmographic-tiers",
+      "name": "Firmographic tiers",
+      "description": "Size buckets with explicit thresholds (employees, revenue) that an AI Worker uses to choose between messaging tracks. EverWorker default: Large Accounts (1,000+ employees, $500M+ revenue), Midmarket / Fast Growth (100-1,000 employees, $10M-$500M), SMB (under 500 employees)."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#term-buying-group",
+      "name": "Buying group",
+      "description": "The set of named roles in a target account whom an AI Worker should reach, paired with explicit deal-role labels (Economic Buyer / Champion / Influencer / Blocker / Accelerator). EverWorker worked example uses 5 roles. The deal-role mapping is what separates qualified outreach from spam."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#term-rule-of-3-percent",
+      "name": "Rule of 3%",
+      "description": "Empirical industry framing: at any moment in any market, 3% of accounts are actively buying, 7% are open but not looking, 30% could be convinced with the right approach, 30% are not interested, and 30% will never buy. Applied to TAM math, this surfaces the addressable slice the signal layer should be hunting for."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#term-machine-readable-icp",
+      "name": "Machine-readable ICP",
+      "description": "An ICP documented as structured fields (CRM custom properties + knowledge-base messaging assets + signal-detection-worker outputs) rather than as a single narrative document. The shape required for an AI SDR to act on it at runtime, distinct from a Notion-page ICP that updates quarterly."
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#mention-salesforce",
+      "name": "Salesforce",
+      "sameAs": "https://en.wikipedia.org/wiki/Salesforce"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#mention-hubspot",
+      "name": "HubSpot",
+      "sameAs": "https://en.wikipedia.org/wiki/HubSpot"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#mention-clay",
+      "name": "Clay",
+      "url": "https://clay.com"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#mention-notion",
+      "name": "Notion",
+      "sameAs": "https://en.wikipedia.org/wiki/Notion_(productivity_software)"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#mention-confluence",
+      "name": "Confluence",
+      "sameAs": "https://en.wikipedia.org/wiki/Confluence_(software)"
+    },
+    {
+      "@type": "Article",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#citation-salesmotion-2026",
+      "name": "AI SDR Tools Compared: What Actually Works for B2B Pipeline in 2026",
+      "url": "https://salesmotion.io/blog/ai-sdr-tools-compared",
+      "publisher": "Salesmotion",
+      "datePublished": "2026"
+    },
+    {
+      "@type": "Report",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#citation-saleshandy-2026",
+      "name": "Latest Cold Email Statistics in 2026",
+      "url": "https://www.saleshandy.com/blog/cold-email-statistics/",
+      "publisher": "Saleshandy",
+      "datePublished": "2026"
+    },
+    {
+      "@type": "Article",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#citation-m1project",
+      "name": "How to Build an Ideal Customer Profile with AI",
+      "url": "https://www.m1-project.com/blog/how-to-build-an-ideal-customer-profile-with-ai",
+      "publisher": "M1-Project"
+    },
+    {
+      "@type": "Article",
+      "@id": "https://everworker.ai/blog/how-to-document-icp-for-ai-worker#citation-growthahoy",
+      "name": "How to build an Ideal Customer Profile with AI (and AI agents)",
+      "url": "https://www.growthahoy.com/blog/build-icp-with-ai-and-ai-agents",
+      "publisher": "GrowthAhoy"
+    }
+  ]
+}

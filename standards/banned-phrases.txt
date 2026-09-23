@@ -1,0 +1,71 @@
+# Canonical machine-checked banned-phrase list — ONE place.
+# Consumed by scripts/seo_audit.py and enforced by the Editor (Phase 4).
+# One phrase per line, matched case-insensitively as a substring of the body.
+# Wrap a phrase in double quotes to preserve leading/trailing spaces.
+# Only phrases that are safe to flag with zero context go here; judgment
+# calls ("leverage", "transformative", em-dash cadence) live in
+# standards/quality-bar.md for the Editor to apply by hand.
+# Company-specific additions belong in config/company.yaml voice.banned_phrases.
+just
+checklist
+in today's fast-paced world
+in the ever-evolving landscape
+delve
+dive deep into
+unlock the power of
+harness the power of
+navigate the complexities
+game-changer
+game-changing
+revolutionary
+robust solution
+cutting-edge
+seamless
+seamlessly
+it's important to note that
+it goes without saying
+when it comes to
+whether you're a
+"the world of "
+tapestry
+embark on a journey
+in the pursuit of
+stand out from the crowd
+take it to the next level
+low-hanging fruit
+tip of the iceberg
+double-edged sword
+more than ever
+now more than ever
+extremely important
+absolutely critical
+highly significant
+tremendously valuable
+load-bearing
+blast radius
+load bearing
+footgun
+yak shaving
+belt-and-suspenders
+smoking gun
+quietly
+silently
+quietly fails
+silently failes
+spine
+seams
+gate
+substrate
+nobody's watching
+here's the thing 
+it's not just
+not because 
+the truth is
+it's worth noting
+let that sink in 
+delve
+leverage
+utilize
+navigate
+
+

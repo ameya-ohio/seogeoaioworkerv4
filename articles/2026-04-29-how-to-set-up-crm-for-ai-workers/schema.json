@@ -1,0 +1,137 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/#organization",
+      "name": "EverWorker",
+      "url": "https://everworker.ai",
+      "description": "EverWorker builds AI Workers — agentic systems that take ownership of business processes end-to-end across sales, marketing, and finance.",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://everworker.ai/images/everworker-logo.png",
+        "width": 512,
+        "height": 512
+      },
+      "sameAs": ["https://www.linkedin.com/company/everworker", "https://twitter.com/everworker"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://everworker.ai/#website",
+      "url": "https://everworker.ai",
+      "name": "EverWorker",
+      "publisher": { "@id": "https://everworker.ai/#organization" },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://everworker.ai/about/ameya-deshmukh#person",
+      "name": "Ameya Deshmukh",
+      "url": "https://everworker.ai/about/ameya-deshmukh",
+      "jobTitle": "Head of Content & Marketing",
+      "worksFor": { "@id": "https://everworker.ai/#organization" },
+      "sameAs": ["https://www.linkedin.com/in/ameyadeshmukh/"]
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#primaryimage",
+      "url": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers/header.png",
+      "contentUrl": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers/header.png",
+      "width": 1200,
+      "height": 600,
+      "caption": "How to set up your CRM for AI Workers. EverWorker."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://everworker.ai/" },
+        { "@type": "ListItem", "position": 2, "name": "Blog",  "item": "https://everworker.ai/blog" },
+        { "@type": "ListItem", "position": 3, "name": "How to Set Up Your CRM for AI Workers (4-Step Foundation)", "item": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#webpage",
+      "url": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers",
+      "name": "How to Set Up Your CRM for AI Workers (4-Step Foundation)",
+      "isPartOf": { "@id": "https://everworker.ai/#website" },
+      "primaryImageOfPage": { "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#primaryimage" },
+      "breadcrumb": { "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#breadcrumbs" },
+      "speakable": { "@type": "SpeakableSpecification", "cssSelector": ["#key-takeaways", ".key-takeaways"] },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "BlogPosting",
+      "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#article",
+      "headline": "How to Set Up Your CRM for AI Workers (4-Step Foundation)",
+      "description": "AI does not fix your CRM. The 4-step RevOps foundation that makes the difference between an AI Worker that produces pipeline and one that fades in 30 days.",
+      "author": { "@id": "https://everworker.ai/about/ameya-deshmukh#person" },
+      "publisher": { "@id": "https://everworker.ai/#organization" },
+      "datePublished": "2026-04-29",
+      "dateModified": "2026-04-29",
+      "image": { "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#primaryimage" },
+      "mainEntityOfPage": { "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#webpage" },
+      "keywords": "crm setup for ai sdr, hubspot ai sdr setup, revops foundation ai, crm hygiene for automation, garbage in garbage out crm, crm properties for ai workers, sales stages ai sdr",
+      "wordCount": 2259,
+      "articleSection": "AI Workers",
+      "inLanguage": "en-us",
+      "isPartOf": { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#article" },
+      "mentions": [
+        { "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#mention-hubspot" },
+        { "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#mention-salesforce" },
+        { "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#mention-breeze" },
+        { "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#mention-agentforce" }
+      ],
+      "citation": [
+        { "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#citation-salesmotion" },
+        { "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#citation-saleshandy" },
+        { "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#citation-hubspot-blog" },
+        { "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#citation-callsphere-agentforce" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#faq",
+      "mainEntity": [
+        { "@type": "Question", "name": "Why does CRM hygiene matter for an AI SDR?", "acceptedAnswer": { "@type": "Answer", "text": "An AI SDR queries the CRM every minute it runs. Reading dirty data produces dirty decisions, which the AI then writes back to the CRM, compounding errors faster than any human ever could. According to Salesmotion's 2026 data, one major off-the-shelf AI SDR vendor sees 70 to 80% of early customers churn within months. A meaningful share of that churn is CRM-foundation failure: stage definitions inconsistent, required properties optional, rep behavior drifted. Clean data is also the precondition for the 5-to-18% signal-based reply rates the AI SDR is sold on; dirty data collapses the lift." } },
+        { "@type": "Question", "name": "What CRM properties does an AI SDR need?", "acceptedAnswer": { "@type": "Answer", "text": "At minimum: firmographic tier (Large / Midmarket / SMB), primary industry from the ICP vertical list, geography, lead source, signal status (which signal fired and when), intent classification (one of 5 categories), lead score, and sequence status (Active in Sequence / Sequence Completed / Pause on Meeting Booked). The status fields specifically need to be AI-Worker-writable so the AI's activity does not trample human activity on the same record. All of these need to be required and enforced at the appropriate stage gate, not aspirational." } },
+        { "@type": "Question", "name": "Can I just turn on HubSpot Breeze or Salesforce Agentforce and skip this work?", "acceptedAnswer": { "@type": "Answer", "text": "No. Vendor AI features sit on top of your CRM's data model. They can only act on properties that exist, are populated, and are accurate. If your stage definitions are descriptive instead of prescriptive, your required properties are aspirational, and your enforcement is missing, the AI feature will produce passable output for the first batch and then fade. The 30-to-60-day fade pattern off-the-shelf AI SDRs are known for is partly an instruction-set problem and partly a foundation problem. Either you do the foundation work or you accept the fade." } },
+        { "@type": "Question", "name": "How do I enforce data hygiene without slowing reps down?", "acceptedAnswer": { "@type": "Answer", "text": "Enforce at stage transitions, not at every save. Reps update properties throughout a deal cycle and slowing every save is friction. Enforcing at stage transitions (MQL to SQL, Discovery to Proposal) gates the data only at moments where the deal is moving forward, which is when reps are most willing to add the required data. In HubSpot, this means workflow-based property requirements at deal stage moves; in Salesforce, validation rules at stage move. The result is a CRM that holds clean data without rep complaints." } },
+        { "@type": "Question", "name": "What sales stages does an AI Worker need?", "acceptedAnswer": { "@type": "Answer", "text": "A six-stage default works for most B2B teams: Lead, Marketing Qualified Lead, Sales Qualified Lead, Discovery, Proposal, Closed Won/Lost. For each stage, document what triggers entry, what work happens in-stage, and what exit criteria move the deal forward. The exit criteria are what the AI Worker reads to make decisions about whether to enroll, escalate, or pause. Stage definitions that are descriptive (the deal is in discovery) instead of prescriptive (Discovery requires call recording attached, MEDDIC notes captured, two named use cases) are what produce CRMs the AI Worker cannot trust." } }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#term-revops-foundation",
+      "name": "RevOps foundation",
+      "description": "The set of CRM-level decisions that determine whether AI Workers can produce reliable output: explicit sales stage definitions with prescriptive exit criteria, required properties at each stage, enforcement that prevents stage progression without the required data, and AI-Worker-writable status fields. Non-negotiable prerequisite for an AI-first sales operating model."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#term-required-properties",
+      "name": "Required properties",
+      "description": "CRM custom properties that must be populated before a deal can move from one stage to the next. Distinct from aspirational properties (defined but not enforced), which decay over time as reps skip them. AI Workers cannot operate reliably on aspirational properties."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#term-status-field-for-ai-writes",
+      "name": "Status field for AI writes",
+      "description": "A CRM custom property writable by the AI Worker that tracks the AI's activity on a contact (e.g., Active in Sequence, Sequence Completed, Pause on Meeting Booked). Distinct from human-owned deal stage; the two coexist on the same record and prevent the AI's activity from trampling human activity."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#term-stage-gate-enforcement",
+      "name": "Stage gate enforcement",
+      "description": "CRM mechanism that prevents reps from advancing a deal stage until the required properties are populated. Implemented via HubSpot workflow-based property requirements at deal stage moves or Salesforce validation rules at stage move. The mechanism that keeps required properties from decaying into aspirational ones."
+    },
+    { "@type": "Organization", "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#mention-hubspot", "name": "HubSpot", "sameAs": "https://en.wikipedia.org/wiki/HubSpot" },
+    { "@type": "Organization", "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#mention-salesforce", "name": "Salesforce", "sameAs": "https://en.wikipedia.org/wiki/Salesforce" },
+    { "@type": "SoftwareApplication", "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#mention-breeze", "name": "HubSpot Breeze", "url": "https://www.hubspot.com/products/crm/ai-crm" },
+    { "@type": "SoftwareApplication", "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#mention-agentforce", "name": "Salesforce Agentforce", "url": "https://www.salesforce.com/agentforce/" },
+    { "@type": "Article", "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#citation-salesmotion", "name": "AI SDR Tools Compared 2026", "url": "https://salesmotion.io/blog/ai-sdr-tools-compared", "publisher": "Salesmotion", "datePublished": "2026" },
+    { "@type": "Report", "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#citation-saleshandy", "name": "Latest Cold Email Statistics in 2026", "url": "https://www.saleshandy.com/blog/cold-email-statistics/", "publisher": "Saleshandy", "datePublished": "2026" },
+    { "@type": "Article", "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#citation-hubspot-blog", "name": "How to add AI to your existing CRM without disrupting sales workflows", "url": "https://blog.hubspot.com/sales/integrating-ai-with-existing-crm", "publisher": "HubSpot" },
+    { "@type": "Article", "@id": "https://everworker.ai/blog/how-to-set-up-crm-for-ai-workers#citation-callsphere-agentforce", "name": "Salesforce Agentforce 2026: Enterprise Agent Platform With CRM-Native AI", "url": "https://callsphere.ai/blog/salesforce-agentforce-2026-enterprise-agent-platform-crm-native-ai", "publisher": "CallSphere", "datePublished": "2026" }
+  ]
+}

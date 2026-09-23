@@ -1,0 +1,106 @@
+{
+  "_comment": "Base @graph skeleton. Every <PLACEHOLDER> is filled by the Schema Builder (Phase 5). Company/author/organization values come from config/company.yaml — the config key is noted next to each placeholder. Delete this _comment key in generated output.",
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "<ORG_SCHEMA_ID — organization.schema_id>",
+      "name": "<COMPANY_NAME — company.name>",
+      "url": "<COMPANY_URL — company.url>",
+      "description": "<COMPANY_DESCRIPTION — company.description>",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "<ORG_LOGO_URL — organization.logo_url>",
+        "width": "<ORG_LOGO_WIDTH — organization.logo_width>",
+        "height": "<ORG_LOGO_HEIGHT — organization.logo_height>"
+      },
+      "sameAs": ["<ORG_SAME_AS — organization.same_as[]>"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "<COMPANY_URL>/#website",
+      "url": "<COMPANY_URL — company.url>",
+      "name": "<COMPANY_NAME — company.name>",
+      "publisher": { "@id": "<ORG_SCHEMA_ID>" },
+      "inLanguage": "<LOCALE — blog.locale>"
+    },
+    {
+      "@type": "Person",
+      "@id": "<AUTHOR_BIO_URL — author.bio_url>#person",
+      "name": "<AUTHOR_NAME — author.name>",
+      "url": "<AUTHOR_BIO_URL — author.bio_url>",
+      "jobTitle": "<AUTHOR_JOB_TITLE — author.job_title>",
+      "worksFor": { "@id": "<ORG_SCHEMA_ID>" },
+      "sameAs": ["<AUTHOR_SAME_AS — author.same_as[]>"]
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "<CANONICAL_URL>#primaryimage",
+      "url": "<HERO_IMAGE_URL>",
+      "width": 1600,
+      "height": 900,
+      "caption": "<HERO_IMAGE_CAPTION>"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "<CANONICAL_URL>#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "<BREADCRUMB_1_NAME — blog.breadcrumbs[0].name>", "item": "<BREADCRUMB_1_URL — blog.breadcrumbs[0].url>" },
+        { "@type": "ListItem", "position": 2, "name": "<BREADCRUMB_2_NAME — blog.breadcrumbs[1].name>", "item": "<BREADCRUMB_2_URL — blog.breadcrumbs[1].url>" },
+        { "@type": "ListItem", "position": 3, "name": "<ARTICLE_TITLE>", "item": "<CANONICAL_URL>" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "<CANONICAL_URL>#webpage",
+      "url": "<CANONICAL_URL>",
+      "name": "<ARTICLE_TITLE>",
+      "isPartOf": { "@id": "<COMPANY_URL>/#website" },
+      "primaryImageOfPage": { "@id": "<CANONICAL_URL>#primaryimage" },
+      "breadcrumb": { "@id": "<CANONICAL_URL>#breadcrumbs" },
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": ["#key-takeaways", ".key-takeaways"]
+      },
+      "inLanguage": "<LOCALE — blog.locale>"
+    },
+    {
+      "@type": "BlogPosting",
+      "@id": "<CANONICAL_URL>#article",
+      "headline": "<ARTICLE_TITLE>",
+      "description": "<META_DESCRIPTION>",
+      "author": { "@id": "<AUTHOR_BIO_URL>#person" },
+      "publisher": { "@id": "<ORG_SCHEMA_ID>" },
+      "datePublished": "<YYYY-MM-DD>",
+      "dateModified": "<YYYY-MM-DD>",
+      "image": { "@id": "<CANONICAL_URL>#primaryimage" },
+      "mainEntityOfPage": { "@id": "<CANONICAL_URL>#webpage" },
+      "keywords": "<PRIMARY_KEYWORD>, <SECONDARY_KEYWORDS_COMMA_SEPARATED>",
+      "wordCount": 0,
+      "articleSection": "<CATEGORY>",
+      "inLanguage": "<LOCALE — blog.locale>",
+      "mentions": [],
+      "citation": []
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "<CANONICAL_URL>#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "<QUESTION 1 — verbatim from article H3>",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "<ANSWER 1 — verbatim from article body>"
+          }
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "<CANONICAL_URL>#term-<TERM_SLUG>",
+      "name": "<TERM>",
+      "description": "<DEFINITION>"
+    }
+  ]
+}

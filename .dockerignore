@@ -1,0 +1,21 @@
+node_modules
+**/node_modules
+**/dist
+**/.venv
+articles
+outputs
+config-everworker
+# blogscraper source ships (competitive module, 6.1); its local corpora don't.
+blogscraper/artisan.co
+blogscraper/*.log
+blogsagent
+.claude
+.git
+.DS_Store
+**/.DS_Store
+*.md
+!CLAUDE.md
+!agents/*.md
+!standards/*.md
+!templates/*.md
+!context/**/*.md

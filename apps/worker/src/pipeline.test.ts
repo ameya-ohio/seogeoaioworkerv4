@@ -1,0 +1,457 @@
+import { mkdtempSync, symlinkSync, writeFileSync, mkdirSync, existsSync, readFileSync, appendFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { MongoMemoryServer } from "mongodb-memory-server";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  LocalStorage,
+  claimRun,
+  connect,
+  createArticle,
+  enqueueRun,
+  eventsAfter,
+  type EngineDb,
+} from "@blogagent/engine";
+import type { ObjectId } from "mongodb";
+import type { CitationReport } from "@blogagent/engine";
+import type { AgentInvocation, AgentInvoker, AgentRunOutcome } from "./agentRunner.js";
+import type { WorkerConfig } from "./config.js";
+import { runPipeline, type PipelineDeps } from "./pipeline.js";
+import type { CitationVerifier, LinkChecker } from "./quality.js";
+
+const REAL_REPO = join(import.meta.dirname, "..", "..", "..");
+
+let mongod: MongoMemoryServer;
+let db: EngineDb;
+let repoRoot: string;
+let cfg: WorkerConfig;
+
+beforeAll(async () => {
+  mongod = await MongoMemoryServer.create();
+  db = await connect(mongod.getUri(), "pipeline_test");
+
+  // Temp repo: symlink the real engine dirs, real articles/ stays untouched.
+  repoRoot = mkdtempSync(join(tmpdir(), "blogagent-pipeline-"));
+  for (const dir of ["scripts", "standards", "templates", "agents", "config"]) {
+    symlinkSync(join(REAL_REPO, dir), join(repoRoot, dir));
+  }
+  writeFileSync(join(repoRoot, "CLAUDE.md"), "# test repo\n");
+  mkdirSync(join(repoRoot, "articles"));
+
+  cfg = {
+    repoRoot,
+    mongoUri: mongod.getUri(),
+    mongoDb: "pipeline_test",
+    workerId: "test-worker",
+    concurrency: 1,
+    pollIntervalMs: 50,
+    leaseMs: 60_000,
+    heartbeatMs: 60_000,
+    maxRunAttempts: 2,
+    maxGateAttempts: 2,
+    models: {
+      research: "m",
+      outline: "m",
+      write: "m",
+      edit: "m",
+      schema: "m",
+      design: "m",
+    },
+    maxTurns: { research: 1, outline: 1, write: 1, edit: 1, schema: 1, design: 1 },
+    verifierModel: "fake-verifier",
+    cluster: {
+      mainModel: "m",
+      fanoutModel: "f",
+      k: 5,
+      maxValidations: 5,
+      serpChecksPerTheme: 1,
+      maxAttempts: 2,
+    },
+    scrape: { maxAttempts: 2, timeoutMs: 60_000 },
+    pythonBin: "python3",
+    headerGenPython: "python3",
+    scraperPython: "python3",
+  };
+}, 180_000);
+
+afterAll(async () => {
+  await db?.close();
+  await mongod?.stop();
+});
+
+const urlList = (n: number, host: string) =>
+  Array.from({ length: n }, (_, i) => `- https://${host}${i}.com/source-${i}`).join("\n");
+
+const RESEARCH = `# Research Notes: test
+
+## Topic Summary
+Enough substantial words to look like a real researched summary of the topic.
+
+## Target Keyword Analysis
+Primary candidate: context engineering. Informational intent.
+
+## Top Ranking Pages
+${urlList(5, "serp")}
+
+## Authoritative Sources
+${urlList(5, "authority")}
+
+## Key Entities
+- Retrieval-augmented generation — https://en.wikipedia.org/wiki/Retrieval-augmented_generation
+
+## Statistics & Data Points
+- 42% of teams report improved reply rates (Source: https://authority0.com/source-0)
+
+## Quotes Worth Including
+- "Context beats cleverness."
+
+## Questions People Are Asking
+- What is context engineering?
+
+## Debates & Counterpoints
+- Fine-tuning vs retrieval.
+
+## Content Gaps (Opportunities)
+- Nobody explains chunk-size math for sales corpora in plain language with worked examples.
+
+## AI Engine Patterns
+- Engines cite tables and definitions.
+`;
+
+const OUTLINE = `# Strategy & Outline: Test Article
+
+## Angle
+> Unlike listicles, this piece gives the 4-layer architecture with real numbers.
+
+## Thesis
+Context failures, not model quality, explain most AI SDR underperformance, so fixing the context layer beats upgrading the model.
+
+## Keywords
+- Primary: context engineering
+- Secondary: [ai sdr architecture]
+
+## Search Intent
+informational — evaluating architectures
+
+## Target Word Count
+1800 — SERP median is 1500
+
+## GEO/AIO Angle
+- Definition block up top
+
+## Target Entities (for \`mentions\` array)
+- Retrieval-augmented generation — https://en.wikipedia.org/wiki/Retrieval-augmented_generation
+
+## FAQ Candidates
+1. What is context engineering?
+2. How many layers do I need?
+3. Should I use Markdown or PDFs?
+
+## Internal Link Opportunities
+- /blog/example — intro
+
+## External Citations to Use
+1. Citation #1 — section "Layers"
+
+## Quotable Sound Bites
+- Context beats cleverness.
+
+## Hook Strategy
+Contrarian stat.
+
+## Closing / CTA
+Book a demo.
+
+## Full Outline
+
+### Intro (≈ 150 words)
+Hook.
+
+### Key Takeaways (4–6 bullets)
+Bullets.
+
+### H2: The Four Layers (≈ 300 words)
+- Coverage
+
+### H2: The Six Artifacts (≈ 300 words)
+- Coverage
+
+### H2: Markdown Over PDFs (≈ 250 words)
+- Coverage
+
+### H2: Chunk-Size Math (≈ 250 words)
+- Coverage
+
+### H2: Frequently Asked Questions
+- Q1
+
+### Closing (≈ 100 words)
+CTA.
+`;
+
+const ARTICLE = `---
+title: "Context Engineering Basics for Modern AI Sales Teams"
+slug: "pipeline-e2e"
+author: "Ameya Deshmukh"
+publish_date: "2026-09-14"
+modified_date: "2026-09-14"
+meta_description: "${"m".repeat(150)}"
+primary_keyword: "context engineering"
+secondary_keywords: ["ai sdr architecture"]
+canonical_url: "https://www.example.com/blog/pipeline-e2e"
+---
+
+# Context Engineering Basics for AI Sales Teams
+
+Context engineering decides what an AI sales agent knows before it writes a word. This guide covers the layers, the artifacts, and the rollout order for a working setup.
+
+## Key Takeaways
+
+- Layers beat lumps.
+- Markdown beats PDFs.
+
+## The Four Layers
+
+Body text about layers.
+
+## The Six Artifacts
+
+Body text about artifacts.
+
+## Chunk-Size Math
+
+Numbers and reasoning.
+
+## Frequently Asked Questions
+
+### What is context engineering?
+
+The practice of deciding what a model sees.
+
+### How many layers do I need?
+
+Four layers cover most teams.
+`;
+
+const SCHEMA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BlogPosting",
+      "@id": "https://example.com/blog/pipeline-e2e#post",
+      headline: "Context Engineering Basics for Modern AI Sales Teams",
+      author: { "@id": "https://example.com/#person" },
+      datePublished: "2026-09-14",
+      image: { "@id": "https://example.com/blog/pipeline-e2e#image" },
+      publisher: { "@id": "https://example.com/#org" },
+      mainEntityOfPage: { "@id": "https://example.com/blog/pipeline-e2e#page" },
+      description: "desc",
+      wordCount: 300,
+      keywords: ["context engineering"],
+    },
+    { "@type": "Person", "@id": "https://example.com/#person", name: "Ameya Deshmukh", sameAs: ["https://www.linkedin.com/in/ameyadeshmukh/"] },
+    { "@type": "Organization", "@id": "https://example.com/#org", name: "Example" },
+    { "@type": "BreadcrumbList", "@id": "https://example.com/blog/pipeline-e2e#crumbs" },
+    {
+      "@type": "FAQPage",
+      "@id": "https://example.com/blog/pipeline-e2e#faq",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "What is context engineering?",
+          acceptedAnswer: { "@type": "Answer", text: "The practice of deciding what a model sees." },
+        },
+        {
+          "@type": "Question",
+          name: "How many layers do I need?",
+          acceptedAnswer: { "@type": "Answer", text: "Four layers cover most teams." },
+        },
+      ],
+    },
+    { "@type": "WebPage", "@id": "https://example.com/blog/pipeline-e2e#page", speakable: { "@type": "SpeakableSpecification", cssSelector: ["#key-takeaways"] } },
+    { "@type": "ImageObject", "@id": "https://example.com/blog/pipeline-e2e#image", url: "https://example.com/header.png" },
+  ],
+};
+
+/** Fake invoker: writes what a well-behaved phase agent would produce. */
+class FakeInvoker implements AgentInvoker {
+  calls: { phase: string; prompt: string }[] = [];
+  /** Phases that should write junk on their first attempt (gate-retry test). */
+  flakyOnce = new Set<string>();
+
+  async run(inv: AgentInvocation): Promise<AgentRunOutcome> {
+    const phase = /Phase \d+ \((\w[\w ]*)\)/.exec(inv.prompt)?.[1] ?? "?";
+    this.calls.push({ phase, prompt: inv.prompt });
+    const folderMatch = /Article folder: (articles\/\S+)\//.exec(inv.prompt);
+    const dir = join(inv.cwd, folderMatch?.[1] ?? "");
+
+    const ok = (): AgentRunOutcome => ({
+      success: true,
+      finalText: "done",
+      usage: { costUsd: 0.01, numTurns: 1, model: inv.model },
+    });
+
+    switch (phase) {
+      case "Researcher":
+        if (this.flakyOnce.delete("research")) {
+          writeFileSync(join(dir, "research-notes.md"), "# thin\n");
+          return ok();
+        }
+        writeFileSync(join(dir, "research-notes.md"), RESEARCH);
+        return ok();
+      case "Strategist":
+        writeFileSync(join(dir, "outline.md"), OUTLINE);
+        return ok();
+      case "Writer":
+        writeFileSync(join(dir, "article.md"), ARTICLE);
+        writeFileSync(
+          join(dir, "meta.json"),
+          JSON.stringify({ title: "t", slug: "pipeline-e2e" }, null, 2),
+        );
+        return ok();
+      case "Editor":
+        appendFileSync(join(dir, "article.md"), "\n<!-- EDIT SUMMARY: no changes needed -->\n");
+        return ok();
+      case "Schema Builder": {
+        writeFileSync(join(dir, "schema.json"), JSON.stringify(SCHEMA, null, 2));
+        const md = readFileSync(join(dir, "article.md"), "utf-8");
+        const withFence = md.replace(
+          "<!-- EDIT SUMMARY",
+          "```json-ld\n" + JSON.stringify(SCHEMA, null, 2) + "\n```\n\n<!-- EDIT SUMMARY",
+        );
+        writeFileSync(join(dir, "article.md"), withFence);
+        return ok();
+      }
+      case "Header Designer": {
+        writeFileSync(join(dir, "header.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+        writeFileSync(join(dir, "header.html"), "<html>header</html>");
+        const md = readFileSync(join(dir, "article.md"), "utf-8");
+        writeFileSync(
+          join(dir, "article.md"),
+          md.replace(
+            'canonical_url: "https://www.example.com/blog/pipeline-e2e"',
+            'canonical_url: "https://www.example.com/blog/pipeline-e2e"\nhero_image: "header.png"\nhero_image_alt: "Blue header reading Context Engineering Basics"',
+          ),
+        );
+        return ok();
+      }
+      default:
+        return { success: false, finalText: "", usage: {}, errorSubtype: `unknown phase ${phase}` };
+    }
+  }
+}
+
+/** Passing D34/D35 fakes — verification logic itself is unit-tested elsewhere. */
+function passingCitations(): CitationReport {
+  const urls = ["https://a.example.com/1", "https://b.example.com/2", "https://c.example.com/3"];
+  return {
+    ranAt: new Date(),
+    results: urls.map((url, i) => ({
+      sourceN: i + 1,
+      url,
+      claim: `claim ${i}`,
+      kind: "key_claim" as const,
+      verdict: "supported" as const,
+    })),
+    verifiedSourceCount: urls.length,
+    verifiedUrls: urls,
+    unsupportedCount: 0,
+    unreachableCount: 0,
+  };
+}
+
+const fakeVerifier: CitationVerifier = {
+  verifyResearch: async () => passingCitations(),
+  verifyArticleBody: () => passingCitations(),
+};
+const fakeLinkChecker: LinkChecker = {
+  check: async () => ({ ranAt: new Date(), results: [], missingCount: 0 }),
+};
+
+function makeDeps(invoker: AgentInvoker): PipelineDeps {
+  return {
+    db,
+    cfg,
+    storage: new LocalStorage(join(repoRoot, "storage")),
+    invoker,
+    citationVerifier: fakeVerifier,
+    linkChecker: fakeLinkChecker,
+    companyName: "TestCo",
+    log: () => {},
+  };
+}
+
+describe("runPipeline end-to-end (fake agents, real gates + python checks)", () => {
+  it("runs all six phases, persists artifacts, lands in review", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "pipeline-e2e",
+      folder: "2026-09-14-pipeline-e2e",
+      topic: "Context engineering basics",
+      targetKeyword: "context engineering",
+    });
+    const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const claimed = await claimRun(db, "test-worker", 60_000);
+    expect(claimed).not.toBeNull();
+
+    const invoker = new FakeInvoker();
+    await runPipeline(makeDeps(invoker), claimed!);
+
+    expect(invoker.calls.map((c) => c.phase)).toEqual([
+      "Researcher",
+      "Strategist",
+      "Writer",
+      "Editor",
+      "Schema Builder",
+      "Header Designer",
+    ]);
+
+    const doc = await db.articles.findOne({ _id: article._id });
+    expect(doc?.stage).toBe("review");
+    expect(doc?.artifacts.researchNotes).toContain("## Content Gaps");
+    expect(doc?.artifacts.outline).toContain("## Full Outline");
+    expect(doc?.artifacts.article).toContain("```json-ld");
+    expect(doc?.artifacts.schema?.["@graph"]).toBeDefined();
+    expect(doc?.frontmatter?.["hero_image"]).toBe("header.png");
+    expect(doc?.header?.storageKey).toBe("articles/2026-09-14-pipeline-e2e/header.png");
+    expect(existsSync(join(repoRoot, "storage", "articles", "2026-09-14-pipeline-e2e", "header.png"))).toBe(true);
+    // Final audit (stored at design) has zero failures.
+    expect(doc?.audit?.failures).toBe(0);
+    expect(doc?.schemaValidation?.exitCode).toBe(0);
+
+    const runDoc = await db.runs.findOne({ _id: run._id });
+    expect(runDoc?.status).toBe("succeeded");
+    expect(runDoc?.phaseResults.filter((p) => p.status === "succeeded")).toHaveLength(6);
+
+    const events = await eventsAfter(db, run._id as ObjectId, 0, 500);
+    expect(events.some((e) => e.type === "run.succeeded")).toBe(true);
+    expect(events.filter((e) => e.type === "gate.passed")).toHaveLength(6);
+  }, 120_000);
+
+  it("retries a phase with gate feedback, then succeeds", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "pipeline-retry",
+      folder: "2026-09-14-pipeline-retry",
+      topic: "Retry topic",
+    });
+    const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const claimed = await claimRun(db, "test-worker", 60_000);
+
+    const invoker = new FakeInvoker();
+    invoker.flakyOnce.add("research");
+    await runPipeline(makeDeps(invoker), claimed!);
+
+    const researchCalls = invoker.calls.filter((c) => c.phase === "Researcher");
+    expect(researchCalls).toHaveLength(2);
+    expect(researchCalls[1]?.prompt).toContain("GATE FEEDBACK");
+
+    const runDoc = await db.runs.findOne({ _id: run._id });
+    expect(runDoc?.status).toBe("succeeded");
+    const researchResults = runDoc?.phaseResults.filter((p) => p.phase === "research");
+    expect(researchResults?.map((p) => p.status)).toEqual(["failed", "succeeded"]);
+
+    const doc = await db.articles.findOne({ _id: article._id });
+    expect(doc?.stage).toBe("review");
+  }, 120_000);
+});

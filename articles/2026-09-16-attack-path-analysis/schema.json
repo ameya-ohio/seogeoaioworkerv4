@@ -1,0 +1,327 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/#organization",
+      "name": "Saporo",
+      "url": "https://www.saporo.io",
+      "description": "Saporo delivers Preemptive Identity Exposure Management (PIEM), continuously discovering, prioritizing, and reducing identity exposure across hybrid environments for human and non-human identities.",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://framerusercontent.com/images/eUkXw1GQzL6QlpIts0hsShXBGN4.png",
+        "width": 180,
+        "height": 180
+      },
+      "sameAs": [
+        "https://www.linkedin.com/company/saporo-cybersecurity"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.saporo.io/#website",
+      "url": "https://www.saporo.io",
+      "name": "Saporo",
+      "publisher": { "@id": "https://www.saporo.io/#organization" },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://www.saporo.io/about/ameya-deshmukh#person",
+      "name": "Ameya Deshmukh",
+      "url": "https://www.saporo.io/about/ameya-deshmukh",
+      "jobTitle": "Head of Content & Marketing",
+      "worksFor": { "@id": "https://www.saporo.io/#organization" },
+      "sameAs": [
+        "https://www.linkedin.com/in/ameyadeshmukh/"
+      ]
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#primaryimage",
+      "url": "https://www.saporo.io/images/blog/attack-path-analysis-hero.webp",
+      "contentUrl": "https://www.saporo.io/images/blog/attack-path-analysis-hero.webp",
+      "width": 1600,
+      "height": 900,
+      "caption": "Graph diagram of an identity attack path running from a phished laptop through a nested Active Directory group to a Tier 0 domain controller"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.saporo.io/" },
+        { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://www.saporo.io/resources/blog" },
+        { "@type": "ListItem", "position": 3, "name": "Attack Path Analysis: Why Identity Is the Throughline", "item": "https://www.saporo.io/resources/blog/attack-path-analysis" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#webpage",
+      "url": "https://www.saporo.io/resources/blog/attack-path-analysis",
+      "name": "Attack Path Analysis: Why Identity Is the Throughline",
+      "isPartOf": { "@id": "https://www.saporo.io/#website" },
+      "primaryImageOfPage": { "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#primaryimage" },
+      "breadcrumb": { "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#breadcrumbs" },
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": ["#key-takeaways", ".key-takeaways"]
+      },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "BlogPosting",
+      "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#article",
+      "headline": "Attack Path Analysis: Why Identity Is the Throughline",
+      "description": "Attack path analysis maps how identity relationships turn one foothold into a breach. Get the hop-by-hop chain, choke-point math, and what to fix first.",
+      "author": { "@id": "https://www.saporo.io/about/ameya-deshmukh#person" },
+      "publisher": { "@id": "https://www.saporo.io/#organization" },
+      "datePublished": "2026-09-16",
+      "dateModified": "2026-09-16",
+      "image": { "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#primaryimage" },
+      "mainEntityOfPage": { "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#webpage" },
+      "keywords": "attack path analysis, identity attack path, attack path management, attack path vs attack surface, attack path choke points, non-human identity attack paths",
+      "wordCount": 2791,
+      "articleSection": "Attack Path Management",
+      "inLanguage": "en-us",
+      "mentions": [
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-mitre-attck",
+          "name": "MITRE ATT&CK",
+          "sameAs": "https://en.wikipedia.org/wiki/MITRE_ATT%26CK"
+        },
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-active-directory",
+          "name": "Active Directory",
+          "sameAs": "https://en.wikipedia.org/wiki/Active_Directory"
+        },
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-privilege-escalation",
+          "name": "Privilege escalation",
+          "sameAs": "https://en.wikipedia.org/wiki/Privilege_escalation"
+        },
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-lateral-movement",
+          "name": "Lateral movement (MITRE ATT&CK TA0008)",
+          "sameAs": "https://attack.mitre.org/tactics/TA0008/"
+        },
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-attack-path-management",
+          "name": "Attack path management",
+          "sameAs": "https://en.wikipedia.org/wiki/Attack_path_management"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-palo-alto-networks",
+          "name": "Palo Alto Networks",
+          "sameAs": "https://en.wikipedia.org/wiki/Palo_Alto_Networks"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-verizon",
+          "name": "Verizon",
+          "sameAs": "https://en.wikipedia.org/wiki/Verizon"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-microsoft",
+          "name": "Microsoft",
+          "sameAs": "https://en.wikipedia.org/wiki/Microsoft"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-gartner",
+          "name": "Gartner",
+          "sameAs": "https://en.wikipedia.org/wiki/Gartner"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-specterops",
+          "name": "SpecterOps",
+          "sameAs": "https://specterops.io"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-bloodhound",
+          "name": "BloodHound",
+          "sameAs": "https://specterops.io"
+        },
+        {
+          "@type": "Person",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-jared-atkinson",
+          "name": "Jared Atkinson"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#mention-spycloud",
+          "name": "SpyCloud",
+          "sameAs": "https://spycloud.com"
+        },
+        { "@id": "https://www.saporo.io/#organization" }
+      ],
+      "citation": [
+        {
+          "@type": "Article",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#citation-identityweek-atkinson-2026",
+          "name": "Attack path management: Why identity has become the primary security battleground",
+          "url": "https://identityweek.net/attack-path-management-why-identity-has-become-the-primary-security-battleground/",
+          "author": "Jared Atkinson",
+          "datePublished": "2026-02-17",
+          "publisher": "Identity Week"
+        },
+        {
+          "@type": "Report",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#citation-verizon-2026-dbir",
+          "name": "Software Flaws Displace Stolen Credentials as Top Breach Entry Point, Verizon 2026 DBIR Finds",
+          "url": "https://www.verizon.com/about/news/breach-industry-wide-dbir-finds",
+          "author": "Verizon",
+          "datePublished": "2026",
+          "publisher": "Verizon"
+        },
+        {
+          "@type": "Report",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#citation-spycloud-2026-identity-threat-report",
+          "name": "SpyCloud 2026 Identity Threat Report Finds Non-Human Identities Are Now the Leading Path into the Enterprise",
+          "url": "https://www.globenewswire.com/news-release/2026/09/09/3358565/0/en/spycloud-2026-identity-threat-report-finds-non-human-identities-are-now-the-leading-path-into-the-enterprise.html",
+          "author": "SpyCloud",
+          "datePublished": "2026-09-09",
+          "publisher": "GlobeNewswire"
+        },
+        {
+          "@type": "Report",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#citation-unit42-2026-global-ir-report",
+          "name": "2026 Unit 42 Global Incident Response Report",
+          "url": "https://www.paloaltonetworks.com/blog/2026/02/unit-42-global-ir-report/",
+          "author": "Unit 42, Palo Alto Networks",
+          "datePublished": "2026-02",
+          "publisher": "Palo Alto Networks"
+        },
+        {
+          "@type": "TechArticle",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#citation-microsoft-learn-attack-paths",
+          "name": "Work with attack paths in Microsoft Security Exposure Management",
+          "url": "https://learn.microsoft.com/en-us/security-exposure-management/work-attack-paths-overview",
+          "author": "Microsoft",
+          "datePublished": "2026-08-07",
+          "publisher": "Microsoft"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#citation-wikipedia-attack-path-management",
+          "name": "Attack path management",
+          "url": "https://en.wikipedia.org/wiki/Attack_path_management",
+          "author": "Wikipedia contributors",
+          "publisher": "Wikimedia Foundation"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How is attack path analysis different from vulnerability scanning?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Vulnerability scanning enumerates individual weaknesses and ranks them by severity score. Attack path analysis models how those weaknesses connect to identities, permissions, and assets, then ranks them by what an attacker could actually reach through them. In practice that means a scanner can rate an unreachable critical CVE above a medium-severity issue sitting on a route to a domain controller."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What's the actual difference between an attack vector, an attack surface, and an attack path?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "An attack surface is the full set of points where an attacker could interact with your environment. An attack vector is the specific method used at one of those points, such as a phishing email or an exploited CVE. An attack path is the ordered chain that connects a vector at the edge, through intermediate identities and assets, to a target worth reaching."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is a Tier 0 asset in Active Directory, and why does it matter for attack paths?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tier 0 is the set of assets that control the identity infrastructure itself: domain controllers, domain admin accounts, the krbtgt account, and any object holding rights over them. It matters for attack paths because Tier 0 is the terminal node for most chains. Compromise anything in Tier 0 and the attacker can issue their own credentials, which makes every downstream control irrelevant."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is BloodHound safe to use if attackers use the same tool?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "BloodHound is an open-source graph tool, maintained by SpecterOps, that maps privilege-escalation routes through Active Directory and Entra ID. It is explicitly dual-use, and that is the argument for running it rather than against it, because red teams and real attackers already enumerate the same routes. The security community's resolution is that defenders should run it first and monitor for unauthorized use of it, since declining to look does not remove the paths."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need to run attack path analysis continuously, or is a one-time assessment enough?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Continuously. Attack paths are created by routine operations: a new group nesting during a migration, a service account granted temporary rights that were never revoked, a cached admin session on a workstation. A point-in-time assessment is accurate on the day it runs and stale within weeks, because the graph changes every time someone is added to a group."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does attack path analysis fit into a CTEM program?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Attack path analysis supplies the prioritization step of Continuous Threat Exposure Management, the exposure-management framework Gartner introduced in 2022. It converts an inventory of discovered exposures into a ranked set of routes, and it defines what the validation step should test. Gartner's widely quoted breach-reduction figure for CTEM adopters was a 2022 strategic planning assumption, a forecast rather than a measured outcome, and no independent study has since confirmed it."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can attack path analysis cover on-prem Active Directory, cloud IAM, and Entra ID at the same time?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, provided the model is one graph rather than several stitched views. Hybrid paths are the ones that matter most, because an on-prem account synchronized to Entra ID and federated into an AWS role crosses three trust boundaries that three separate tools each see half of. Real coverage means the identity relationships across Active Directory, Entra ID, cloud IAM, and SaaS all resolve as edges in the same model."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#term-attack-path-analysis",
+      "name": "Attack path analysis",
+      "description": "Attack path analysis models an environment as a graph of relationships and traces the routes an attacker could traverse to reach a critical asset, with the danger of any given path set by the identity relationships it can cross rather than the number of vulnerabilities it starts from."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#term-attack-surface",
+      "name": "Attack surface",
+      "description": "The full inventory of points where an attacker could interact with an environment: exposed services, endpoints, accounts, and APIs."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#term-attack-vector",
+      "name": "Attack vector",
+      "description": "The specific method used at a point on the attack surface, such as a phishing email or an unpatched CVE."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#term-tier-0",
+      "name": "Tier 0",
+      "description": "The set of assets that can control the entire identity infrastructure, meaning domain controllers, domain admin accounts, and anything holding rights over them."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#term-choke-point",
+      "name": "Choke point",
+      "description": "A node or relationship where many distinct attack paths converge, so fixing it removes all of them at once."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#term-non-human-identity",
+      "name": "Non-human identity",
+      "description": "Any principal that authenticates without a person present: a service account, an API key, a CI/CD runner token, a workload identity, or an agentic AI worker."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/attack-path-analysis#term-bloodhound",
+      "name": "BloodHound",
+      "description": "An open-source graph tool, maintained by SpecterOps, that maps privilege-escalation routes through Active Directory and Entra ID."
+    }
+  ]
+}

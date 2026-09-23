@@ -1,0 +1,94 @@
+# Company configuration — the single config surface for the blog engine.
+#
+# Every tool and agent phase reads this file. Nothing brand- or company-
+# specific may be hardcoded anywhere else in the engine.
+#
+# - Loader: scripts/company_config.py (stdlib-only YAML-subset parser).
+# - Path override: set the COMPANY_CONFIG env var to point at a different
+#   company file (brand assets are resolved from a `brand-assets/` folder
+#   next to whichever file is loaded).
+# - Secrets (HubSpot token, API keys) never go in this file — they stay in
+#   environment variables / .env; this file only names the env var.
+
+company:
+  id: everworker                # stable machine id (future multi-tenant company_id)
+  name: EverWorker
+  domain: everworker.ai
+  url: https://everworker.ai
+  description: "EverWorker builds AI workers — agentic systems that take ownership of business processes end-to-end."
+
+blog:
+  base_url: https://everworker.ai/blog
+  canonical_pattern: "https://everworker.ai/blog/{slug}"
+  locale: en-us
+  breadcrumbs:
+    - name: Home
+      url: https://everworker.ai/
+    - name: Blog
+      url: https://everworker.ai/blog
+
+author:
+  name: "Ameya Deshmukh"
+  job_title: "Head of Content & Marketing"
+  bio_url: "https://everworker.ai/about/ameya-deshmukh"
+  image_url: ""
+  same_as:
+    - "https://www.linkedin.com/in/ameyadeshmukh/"
+
+organization:                   # schema.org Organization node values
+  schema_id: "https://everworker.ai/#organization"
+  logo_url: "https://everworker.ai/images/everworker-logo.png"
+  logo_width: 512
+  logo_height: 512
+  same_as:
+    - "https://www.linkedin.com/company/everworker"
+    - "https://twitter.com/everworker"
+
+hubspot:
+  token_env: HUBSPOT_TOKEN        # name of the env var holding the private-app token
+  content_group_id: "104001906678"  # blog id; empty -> auto-resolve via API (cached)
+  blog_author_id: "245720213752"    # empty -> resolve by author.name via API (cached)
+
+brand:
+  colors:
+    primary_accent: "#FF0D40"     # main accent (title highlights, CTAs)
+    secondary_accent: "#48FFBD"   # decorative only, never on text
+    dark_bg: "#0E151D"
+    dark_gray: "#272B31"
+    light_bg: "#F8F8F8"
+    text_on_dark: "#FFFFFF"
+    muted_on_dark: "rgba(255,255,255,0.65)"
+    dimmer_on_dark: "rgba(255,255,255,0.40)"
+    body_text: "#000000"          # article body text color on the blog
+  font:
+    family: Gilroy
+    fallback_stack: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    # CSS weight -> file basename in config/brand-assets/fonts/ (.woff or .ttf).
+    # Remove the `files` block entirely to use the fallback stack only
+    # (e.g. a company without a licensed webfont).
+    files:
+      "400": Gilroy-Regular
+      "500": Gilroy-Medium
+      "600": Gilroy-SemiBold
+      "700": Gilroy-Bold
+      "800": Gilroy-ExtraBold
+      "900": Gilroy-Black
+  logos:
+    # File basenames in config/brand-assets/logos/. If a file is missing,
+    # the header generator falls back to a styled text wordmark (company.name).
+    light_bg: logo-light-bg.svg   # full-color logo for light backgrounds
+    dark_bg: logo-dark-bg.svg     # white/mono logo for dark backgrounds
+
+voice:
+  # Company-specific additions to the generic banned list in
+  # standards/banned-phrases.txt. Checked case-insensitively by seo_audit.py
+  # and enforced by the Editor phase.
+  banned_phrases:
+    - "AI-powered"
+    - "best-in-class"
+    - "supercharge"
+  # Short imperative company style rules the Editor applies on top of
+  # standards/quality-bar.md.
+  style_rules:
+    - "No em-dashes anywhere. Use commas, semicolons, or two sentences."
+    - "Numbers over adjectives: '20% lower CPL' beats 'much lower CPL'."

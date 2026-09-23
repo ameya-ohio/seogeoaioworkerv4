@@ -1,0 +1,88 @@
+# Company configuration — the single config surface for the blog engine.
+#
+# Every tool and agent phase reads this file. Nothing brand- or company-
+# specific may be hardcoded anywhere else in the engine.
+#
+# - Loader: scripts/company_config.py (stdlib-only YAML-subset parser).
+# - Path override: set the COMPANY_CONFIG env var to point at a different
+#   company file (brand assets are resolved from a `brand-assets/` folder
+#   next to whichever file is loaded). The previous EverWorker config lives
+#   at config-everworker/company.yaml.
+# - Secrets (HubSpot token, API keys) never go in this file — they stay in
+#   environment variables / .env; this file only names the env var.
+#
+# Configured by the Configurator agent on 2026-09-14 from https://www.saporo.io/
+
+company:
+  id: saporo                    # stable machine id (future multi-tenant company_id)
+  name: Saporo
+  domain: saporo.io
+  url: https://www.saporo.io
+  description: "Saporo delivers Preemptive Identity Exposure Management (PIEM), continuously discovering, prioritizing, and reducing identity exposure across hybrid environments for human and non-human identities."
+
+blog:
+  base_url: https://www.saporo.io/resources/blog
+  canonical_pattern: "https://www.saporo.io/resources/blog/{slug}"  # verified against a live post's canonical tag
+  locale: en-us
+  breadcrumbs:
+    - name: Home
+      url: https://www.saporo.io/
+    - name: Blog
+      url: https://www.saporo.io/resources/blog
+
+author:
+  name: "Ameya Deshmukh"
+  job_title: "Head of Content & Marketing"  # carried over; adjust if the Saporo title differs
+  bio_url: ""                   # no Saporo bio page yet
+  image_url: ""
+  same_as:
+    - "https://www.linkedin.com/in/ameyadeshmukh/"
+
+organization:                   # schema.org Organization node values
+  schema_id: "https://www.saporo.io/#organization"
+  logo_url: "https://framerusercontent.com/images/eUkXw1GQzL6QlpIts0hsShXBGN4.png"  # site touch icon (180x180); replace with an official square logo when available
+  logo_width: 180
+  logo_height: 180
+  same_as:
+    - "https://www.linkedin.com/company/saporo-cybersecurity"
+
+hubspot:
+  token_env: SAPORO_HUBSPOT_TOKEN  # not set yet; run scripts/validate_hubspot.py once it is
+  content_group_id: ""             # empty -> auto-resolve via API (cached)
+  blog_author_id: ""               # empty -> resolve by author.name via API (cached)
+
+brand:
+  colors:
+    primary_accent: "#0099FF"     # dominant site accent (blue)
+    secondary_accent: "#F14138"   # coral/red accent (attack/risk graphics); decorative only, never on text
+    dark_bg: "#0A0A0A"
+    dark_gray: "#262626"
+    light_bg: "#FAFAFA"
+    text_on_dark: "#FFFFFF"
+    muted_on_dark: "rgba(255,255,255,0.65)"
+    dimmer_on_dark: "rgba(255,255,255,0.40)"
+    body_text: "#0A0A0A"          # Saporo's darkest neutral token
+  font:
+    family: Inter                 # site font; Fragment Mono appears only as a code/accent face
+    fallback_stack: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    # CSS weight -> file basename in config/brand-assets/fonts/ (.woff or .ttf).
+    # Inter is freely licensed (OFL) — see the brand-asset checklist. Missing
+    # files degrade to the fallback stack.
+    files:
+      "400": Inter-Regular
+      "500": Inter-Medium
+      "600": Inter-SemiBold
+      "700": Inter-Bold
+      "800": Inter-ExtraBold
+      "900": Inter-Black
+  logos:
+    # File basenames in config/brand-assets/logos/. If a file is missing,
+    # the header generator falls back to a styled text wordmark (company.name).
+    light_bg: logo-light-bg.svg   # full-color logo for light backgrounds
+    dark_bg: logo-dark-bg.svg     # white/mono logo for dark backgrounds
+
+voice:
+  # Company-specific additions to the generic banned list in
+  # standards/banned-phrases.txt. None defined yet for Saporo.
+  banned_phrases: []
+  style_rules: []

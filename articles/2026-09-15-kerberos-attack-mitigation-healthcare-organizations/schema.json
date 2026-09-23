@@ -1,0 +1,403 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/#organization",
+      "name": "Saporo",
+      "url": "https://www.saporo.io",
+      "description": "Saporo delivers Preemptive Identity Exposure Management (PIEM), continuously discovering, prioritizing, and reducing identity exposure across hybrid environments for human and non-human identities.",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://framerusercontent.com/images/eUkXw1GQzL6QlpIts0hsShXBGN4.png",
+        "width": 180,
+        "height": 180
+      },
+      "sameAs": [
+        "https://www.linkedin.com/company/saporo-cybersecurity"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.saporo.io/#website",
+      "url": "https://www.saporo.io",
+      "name": "Saporo",
+      "publisher": { "@id": "https://www.saporo.io/#organization" },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://www.saporo.io/about/ameya-deshmukh#person",
+      "name": "Ameya Deshmukh",
+      "url": "https://www.saporo.io/about/ameya-deshmukh",
+      "jobTitle": "Head of Content & Marketing",
+      "worksFor": { "@id": "https://www.saporo.io/#organization" },
+      "sameAs": [
+        "https://www.linkedin.com/in/ameyadeshmukh/"
+      ]
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#primaryimage",
+      "url": "https://www.saporo.io/images/blog/kerberos-attack-mitigation-healthcare-organizations-hero.png",
+      "contentUrl": "https://www.saporo.io/images/blog/kerberos-attack-mitigation-healthcare-organizations-hero.png",
+      "width": 2400,
+      "height": 1200,
+      "caption": "Article header card reading 'Kerberos Attack Mitigation in Healthcare: One Attack Path' beneath an Identity Security label, on a Saporo-branded background."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.saporo.io/" },
+        { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://www.saporo.io/resources/blog" },
+        { "@type": "ListItem", "position": 3, "name": "Kerberos Attack Mitigation in Healthcare: One Attack Path", "item": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#webpage",
+      "url": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations",
+      "name": "Kerberos Attack Mitigation in Healthcare: One Attack Path",
+      "isPartOf": { "@id": "https://www.saporo.io/#website" },
+      "primaryImageOfPage": { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#primaryimage" },
+      "breadcrumb": { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#breadcrumbs" },
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": ["#key-takeaways", ".key-takeaways"]
+      },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "BlogPosting",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#article",
+      "headline": "Kerberos Attack Mitigation in Healthcare: One Attack Path",
+      "description": "Kerberos attack mitigation for hospitals: Kerberoasting, golden tickets, pass-the-ticket and delegation abuse form one attack path. See what to fix first.",
+      "author": { "@id": "https://www.saporo.io/about/ameya-deshmukh#person" },
+      "publisher": { "@id": "https://www.saporo.io/#organization" },
+      "datePublished": "2026-09-15",
+      "dateModified": "2026-09-21",
+      "image": { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#primaryimage" },
+      "mainEntityOfPage": { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#webpage" },
+      "keywords": "kerberos attack mitigation, kerberoasting healthcare, golden ticket attack mitigation, pass-the-hash vs pass-the-ticket, kerberos delegation attacks, credential guard vs defender credential guard, RC4 kerberos deprecation healthcare",
+      "wordCount": 1999,
+      "articleSection": "Identity Security",
+      "inLanguage": "en-us",
+      "mentions": [
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-kerberos-protocol" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-active-directory" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-pass-the-hash" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-rc4" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-aes" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-credential-guard" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-mimikatz" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-mitre-attck" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-cisa" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-microsoft" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-ascension" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-hhs-ocr" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-ron-wyden" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-microsoft-entra-id" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-gmsa" },
+        { "@id": "https://www.saporo.io/#organization" }
+      ],
+      "citation": [
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-wyden-ftc-letter" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-hipaa-journal-ascension" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-cisa-aa23-349a" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-nccgroup-defending-your-directory" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-mitre-attck-t1558-003" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-semperis-golden-ticket" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-microsoft-learn-credential-guard" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-trimarc-unconstrained-delegation" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-microsoft-learn-rc4-detect-remediate" },
+        { "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-microsoft-techcommunity-rc4-retirement" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why do you have to reset the KRBTGT password twice after a golden ticket attack, not only once?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Active Directory keeps a KRBTGT password history of two, so tickets signed with the previous key still validate. A single reset pushes the stolen key into that previous slot, where it keeps validating forged tickets. Semperis's golden ticket guidance prescribes changing the password twice in a row for exactly that reason."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is it safe to re-enable RC4 for a legacy clinical device that can't support AES, and what does that do to HIPAA compliance?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Microsoft calls explicit RC4 configuration \"a practice that is strongly discouraged,\" and since July 2026 that is the only way RC4 functions. Treat it as a documented, time-boxed exception under the HIPAA Security Rule's technical safeguards at §164.312, with a named owner, network isolation, and an expiration date."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Are Group Managed Service Accounts (gMSA) practical for vendor-managed EHR, PACS, or lab-middleware systems?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Not universally, and the constraint is the vendor rather than the technology. gMSA requires the application to retrieve its password from Active Directory at runtime, which clinical applications with hardcoded credentials cannot do. Adopt gMSA where it works, put the rest on long random passwords with AES, and renegotiate at contract renewal."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which delegation type, unconstrained, constrained, or resource-based constrained, should a hospital worry about most?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Unconstrained delegation, by a wide margin. A server configured for it receives a full copy of the TGT of every user who authenticates to it, domain administrators included, so compromising it yields reusable tickets for all of them. The other two forms limit impersonation scope; unconstrained delegation reachable from clinical workstations is what to find first."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do you find kerberoastable accounts in your own Active Directory before an attacker does?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Enumerate every account with a servicePrincipalName set, which is the query an attacker runs, then rank them by what each one reaches through group memberships, delegation rights, and the systems it authenticates to. Check msDS-SupportedEncryptionTypes on each to confirm AES support, and run Microsoft's Get-KerbEncryptionUsage.ps1 script to catch accounts still on RC4."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do hospitals need to deploy both Credential Guard and Windows Defender Credential Guard?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. They are one feature under two generations of Microsoft naming, and Microsoft Learn now uses only \"Credential Guard.\" Enable it once on systems meeting the virtualization-based security and Secure Boot prerequisites. The real work is finding the clinical devices that cannot."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#term-kerberoasting",
+      "name": "Kerberoasting",
+      "description": "Requesting a Kerberos service ticket for any account with a Service Principal Name, then cracking that ticket's encrypted password hash offline."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#term-gmsa",
+      "name": "Group Managed Service Accounts (gMSA)",
+      "description": "The structural fix for weak service-account passwords: Active Directory generates and rotates the password itself, at a length no cracking run recovers."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#term-golden-ticket-attack",
+      "name": "Golden ticket attack",
+      "description": "Forging a Kerberos Ticket-Granting Ticket using the stolen password hash of the KRBTGT account, letting the attacker issue valid tickets for any user in the domain."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#term-pass-the-hash",
+      "name": "Pass-the-hash",
+      "description": "Replaying a stolen password hash to authenticate as its owner without knowing the password."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#term-pass-the-ticket",
+      "name": "Pass-the-ticket",
+      "description": "Replaying an already-issued Kerberos ticket directly, skipping the hash-to-ticket step."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#term-unconstrained-delegation",
+      "name": "Unconstrained delegation",
+      "description": "A form of Kerberos delegation that lets the receiving server impersonate the user to any service in the domain."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#term-constrained-delegation",
+      "name": "Constrained delegation",
+      "description": "A form of Kerberos delegation that limits impersonation to a defined service list."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#term-resource-based-constrained-delegation",
+      "name": "Resource-based constrained delegation",
+      "description": "A form of Kerberos delegation that lets the target resource decide who may impersonate users to it."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#term-credential-guard",
+      "name": "Credential Guard",
+      "description": "A Microsoft feature that protects NTLM password hashes and Kerberos Ticket-Granting Tickets with virtualization-based security, so malware running with administrative privileges can't extract secrets protected by VBS."
+    },
+    {
+      "@type": "Thing",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-kerberos-protocol",
+      "name": "Kerberos (protocol)",
+      "sameAs": "https://en.wikipedia.org/wiki/Kerberos_(protocol)"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-active-directory",
+      "name": "Active Directory",
+      "sameAs": "https://en.wikipedia.org/wiki/Active_Directory"
+    },
+    {
+      "@type": "Thing",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-pass-the-hash",
+      "name": "Pass the hash",
+      "sameAs": "https://en.wikipedia.org/wiki/Pass_the_hash"
+    },
+    {
+      "@type": "Thing",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-rc4",
+      "name": "RC4",
+      "sameAs": "https://en.wikipedia.org/wiki/RC4"
+    },
+    {
+      "@type": "Thing",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-aes",
+      "name": "Advanced Encryption Standard (AES)",
+      "sameAs": "https://en.wikipedia.org/wiki/Advanced_Encryption_Standard"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-credential-guard",
+      "name": "Credential Guard",
+      "sameAs": "https://en.wikipedia.org/wiki/Credential_Guard"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-mimikatz",
+      "name": "Mimikatz",
+      "sameAs": "https://en.wikipedia.org/wiki/Mimikatz"
+    },
+    {
+      "@type": "Thing",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-mitre-attck",
+      "name": "MITRE ATT&CK",
+      "sameAs": "https://en.wikipedia.org/wiki/MITRE_ATT%26CK"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-cisa",
+      "name": "Cybersecurity and Infrastructure Security Agency (CISA)",
+      "sameAs": "https://en.wikipedia.org/wiki/Cybersecurity_and_Infrastructure_Security_Agency"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-microsoft",
+      "name": "Microsoft",
+      "sameAs": "https://en.wikipedia.org/wiki/Microsoft"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-ascension",
+      "name": "Ascension (healthcare system)",
+      "sameAs": "https://en.wikipedia.org/wiki/Ascension_(healthcare_system)"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-hhs-ocr",
+      "name": "U.S. Department of Health and Human Services Office for Civil Rights",
+      "sameAs": "https://en.wikipedia.org/wiki/Office_for_Civil_Rights"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-ron-wyden",
+      "name": "Ron Wyden",
+      "sameAs": "https://en.wikipedia.org/wiki/Ron_Wyden"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-microsoft-entra-id",
+      "name": "Microsoft Entra ID",
+      "sameAs": "https://www.microsoft.com/en-us/security/business/identity-access/microsoft-entra-id"
+    },
+    {
+      "@type": "Thing",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#mention-gmsa",
+      "name": "Group Managed Service Accounts (gMSA)",
+      "sameAs": "https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/group-managed-service-accounts/group-managed-service-accounts-overview"
+    },
+    {
+      "@type": "NewsArticle",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-wyden-ftc-letter",
+      "name": "Wyden Calls for FTC Investigation of Microsoft for Enabling Ascension Hospital Ransomware Hack with Insecure Software",
+      "url": "https://www.wyden.senate.gov/news/press-releases/wyden-calls-for-ftc-investigation-of-microsoft-for-enabling-ascension-hospital-ransomware-hack-with-insecure-software",
+      "author": "Office of Senator Ron Wyden",
+      "datePublished": "2025-09-10",
+      "publisher": "Office of Senator Ron Wyden"
+    },
+    {
+      "@type": "NewsArticle",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-hipaa-journal-ascension",
+      "name": "Ascension Ransomware Attack Affects 5.6 Million Patients",
+      "url": "https://www.hipaajournal.com/ascension-cyberattack-2024/",
+      "author": "Steve Alder",
+      "datePublished": "2024-12-20",
+      "publisher": "HIPAA Journal"
+    },
+    {
+      "@type": "Report",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-cisa-aa23-349a",
+      "name": "Cybersecurity Advisory AA23-349A: #StopRansomware — CISA and Partners Release Advisory on RVA Conducted at a Healthcare and Public Health Sector Organization",
+      "url": "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-349a",
+      "author": "Cybersecurity and Infrastructure Security Agency (CISA)",
+      "datePublished": "2023-12-15",
+      "publisher": "Cybersecurity and Infrastructure Security Agency (CISA)"
+    },
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-nccgroup-defending-your-directory",
+      "name": "Defending Your Directory: An Expert Guide to Combating Kerberoasting in Active Directory",
+      "url": "https://www.nccgroup.com/research/defending-your-directory-an-expert-guide-to-combating-kerberoasting-in-active-directory/",
+      "author": "Rafael Alfaro March and Rodrigo Munoz",
+      "publisher": "NCC Group"
+    },
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-mitre-attck-t1558-003",
+      "name": "Steal or Forge Kerberos Tickets: Kerberoasting (T1558.003)",
+      "url": "https://attack.mitre.org/techniques/T1558/003/",
+      "author": "MITRE Corporation",
+      "publisher": "MITRE Corporation"
+    },
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-semperis-golden-ticket",
+      "name": "How to Defend Against Golden Ticket Attacks: AD Security 101",
+      "url": "https://www.semperis.com/blog/how-to-defend-against-golden-ticket-attacks/",
+      "author": "Semperis",
+      "publisher": "Semperis"
+    },
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-microsoft-learn-credential-guard",
+      "name": "Credential Guard overview",
+      "url": "https://learn.microsoft.com/en-us/windows/security/identity-protection/credential-guard/",
+      "author": "Microsoft",
+      "datePublished": "2026-04-27",
+      "publisher": "Microsoft"
+    },
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-trimarc-unconstrained-delegation",
+      "name": "Active Directory Security Risk #101: Kerberos Unconstrained Delegation (or, How Compromise of a Single Server Can Lead to Complete AD Domain Compromise)",
+      "url": "https://www.trimarcsecurity.com/hub-post/active-directory-security-risk-101-kerberos-unconstrained-delegation-or-how-compromise-of-a-singl-1",
+      "author": "Sean Metcalf",
+      "datePublished": "2024-07-01",
+      "publisher": "Trimarc Security"
+    },
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-microsoft-learn-rc4-detect-remediate",
+      "name": "Detect and Remediate RC4 Usage in Kerberos",
+      "url": "https://learn.microsoft.com/en-us/windows-server/security/kerberos/detect-remediate-rc4-kerberos",
+      "author": "Microsoft",
+      "datePublished": "2026-04-13",
+      "publisher": "Microsoft"
+    },
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.saporo.io/resources/blog/kerberos-attack-mitigation-healthcare-organizations#citation-microsoft-techcommunity-rc4-retirement",
+      "name": "Kerberos and the End of RC4: Protocol Hardening and Preparing for CVE-2026-20833",
+      "url": "https://techcommunity.microsoft.com/discussions/microsoft-security/kerberos-and-the-end-of-rc4-protocol-hardening-and-preparing-for-cve%E2%80%912026%E2%80%9120833/4502262",
+      "author": "Microsoft",
+      "datePublished": "2026-01",
+      "publisher": "Microsoft"
+    }
+  ]
+}

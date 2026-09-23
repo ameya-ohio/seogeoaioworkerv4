@@ -1,0 +1,355 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/#organization",
+      "name": "Saporo",
+      "url": "https://www.saporo.io",
+      "description": "Saporo delivers Preemptive Identity Exposure Management (PIEM), continuously discovering, prioritizing, and reducing identity exposure across hybrid environments for human and non-human identities.",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://framerusercontent.com/images/eUkXw1GQzL6QlpIts0hsShXBGN4.png",
+        "width": 180,
+        "height": 180
+      },
+      "sameAs": [
+        "https://www.linkedin.com/company/saporo-cybersecurity"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.saporo.io/#website",
+      "url": "https://www.saporo.io",
+      "name": "Saporo",
+      "publisher": { "@id": "https://www.saporo.io/#organization" },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://www.saporo.io/about/ameya-deshmukh#person",
+      "name": "Ameya Deshmukh",
+      "url": "https://www.saporo.io/about/ameya-deshmukh",
+      "jobTitle": "Head of Content & Marketing",
+      "worksFor": { "@id": "https://www.saporo.io/#organization" },
+      "sameAs": [
+        "https://www.linkedin.com/in/ameyadeshmukh/"
+      ]
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#primaryimage",
+      "url": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare/header.png",
+      "contentUrl": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare/header.png",
+      "width": 2400,
+      "height": 1200,
+      "caption": "Article header card reading 'PAM for Healthcare Active Directory: The Tier 0 Gap' beneath an Identity Security label, on a Saporo-branded background."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.saporo.io/" },
+        { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://www.saporo.io/resources/blog" },
+        { "@type": "ListItem", "position": 3, "name": "Privileged Access Management in Healthcare: The Tier 0 Gap", "item": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#webpage",
+      "url": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare",
+      "name": "Privileged Access Management in Healthcare: The Tier 0 Gap",
+      "isPartOf": { "@id": "https://www.saporo.io/#website" },
+      "primaryImageOfPage": { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#primaryimage" },
+      "breadcrumb": { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#breadcrumbs" },
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": ["#key-takeaways", ".key-takeaways"]
+      },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "BlogPosting",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#article",
+      "headline": "Privileged Access Management in Healthcare: The Tier 0 Gap",
+      "description": "Privileged access management in healthcare protects the credentials you know about. Here is why Tier 0 in hybrid AD/Azure stays reachable, and how to close it.",
+      "author": { "@id": "https://www.saporo.io/about/ameya-deshmukh#person" },
+      "publisher": { "@id": "https://www.saporo.io/#organization" },
+      "datePublished": "2026-09-15",
+      "dateModified": "2026-09-16",
+      "image": { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#primaryimage" },
+      "mainEntityOfPage": { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#webpage" },
+      "keywords": "privileged access management healthcare, PAM for hospitals, tier 0 active directory healthcare, privileged access management Active Directory hybrid, admin account isolation Active Directory, zero trust identity architecture hybrid AD Azure, cost of identity breach healthcare",
+      "wordCount": 1999,
+      "articleSection": "Identity Security",
+      "inLanguage": "en-us",
+      "mentions": [
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-active-directory" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-domain-controller" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-microsoft" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-microsoft-entra-id" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-microsoft-defender-for-identity" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-privileged-access-management" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-zero-trust-security-model" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-hipaa" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-ransomware" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-change-healthcare" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-unitedhealth-group" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-andrew-witty" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-cisa" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-nsa" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-netwrix" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-ibm" }
+      ],
+      "citation": [
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-hipaa-journal-2025" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-ms-learn-tier-model" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-ms-learn-enterprise-access-model" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-cisa-ad-compromises" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-ms-defender-experts-pam-bridge" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-netwrix-2026-report" },
+        { "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-healthcaredive-100m" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What counts as a Tier 0 asset in a hospital's Active Directory environment beyond the domain controllers?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Any system that can grant or forge administrative control over the directory. That includes ADFS servers, Entra Connect sync servers, internal certificate authorities, backup systems holding domain controller images or the NTDS.dit database, and virtualization hosts. PAM infrastructure that retrieves Tier 0 credentials belongs on the list too."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does HIPAA's Security Rule actually map to specific PAM controls?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The access control standard maps to unique user identification and role-based least privilege, person or entity authentication to MFA on privileged accounts, audit controls to session recording, and information access management to periodic access reviews. Emergency access procedure calls for vaulted break-glass credentials. HIPAA specifies outcomes rather than architecture, so a compliant program can still leave a Tier 0 path open."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can PAM protect medical devices and service accounts that cannot use MFA or be rotated on a schedule?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Partly. Vaulting and session brokering work for interactive vendor access to a device management console, but not for a machine account authenticating continuously to an EHR interface. Those identities need scoping instead: remove unneeded rights, constrain delegation, restrict which hosts the account can authenticate to, and monitor what it can reach. Most health systems have no inventory of these accounts, so that is where the work starts."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is a PAM tool ever a security risk to the environment it is supposed to protect?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, when it is placed below the tier it administers. Microsoft Defender Experts documented an April 2026 case where a PAM session host managing Tier 0 credentials sat in Tier 1, and an attacker who reached a Tier 1 admin account took the host and its credentials with it. A system that can retrieve Tier 0 secrets is a Tier 0 asset, and deploying it anywhere else creates the bridge it was bought to prevent."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the real ROI case for a PAM investment in a hospital's budget cycle?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The defensible version rests on breach lifecycle rather than breach probability. Healthcare breaches take an average of 279 days to identify and contain, and cost scales with dwell time, so controls that shorten an attacker's operating window produce measurable return. As of 2026, cyber-insurance underwriting and board reporting ask for privileged access coverage explicitly, which makes a PAM program a premium input rather than a pure cost line."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#term-privileged-access-management",
+      "name": "Privileged access management",
+      "description": "The discipline of controlling, vaulting, monitoring, and time-bounding the accounts that carry elevated rights."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#term-tier-0",
+      "name": "Tier 0",
+      "description": "The set of assets carrying direct or indirect administrative control over identity infrastructure. Compromise one and an attacker effectively owns the directory."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#term-standing-privileged-access",
+      "name": "Standing privileged access",
+      "description": "Any permission an identity holds continuously, whether or not it is in use or the account is labeled privileged."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#term-non-human-identity",
+      "name": "Non-human identity",
+      "description": "Any account that authenticates without a person behind it: service accounts, medical-device machine accounts, API keys, EHR integration credentials."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#term-zero-trust-identity-architecture",
+      "name": "Zero trust identity architecture",
+      "description": "For hybrid AD and Azure, no implicit trust between on-premises tiers and cloud administrative roles, with every privileged request evaluated against current reachability rather than a role assignment made months ago."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#term-privileged-access-workstations",
+      "name": "Privileged access workstations",
+      "description": "Hardened devices used for administrative work and nothing else, used by Tier 0 accounts to sign in."
+    },
+    {
+      "@type": "Thing",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-active-directory",
+      "name": "Active Directory",
+      "sameAs": "https://en.wikipedia.org/wiki/Active_Directory"
+    },
+    {
+      "@type": "Thing",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-domain-controller",
+      "name": "Domain controller",
+      "sameAs": "https://en.wikipedia.org/wiki/Domain_controller"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-microsoft",
+      "name": "Microsoft",
+      "sameAs": "https://en.wikipedia.org/wiki/Microsoft"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-microsoft-entra-id",
+      "name": "Microsoft Entra ID",
+      "sameAs": "https://learn.microsoft.com/en-us/entra/fundamentals/whatis"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-microsoft-defender-for-identity",
+      "name": "Microsoft Defender for Identity",
+      "sameAs": "https://learn.microsoft.com/en-us/defender-for-identity/what-is"
+    },
+    {
+      "@type": "Thing",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-privileged-access-management",
+      "name": "Privileged access management",
+      "sameAs": "https://en.wikipedia.org/wiki/Privileged_access_management"
+    },
+    {
+      "@type": "Thing",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-zero-trust-security-model",
+      "name": "Zero trust security model",
+      "sameAs": "https://en.wikipedia.org/wiki/Zero_trust_security_model"
+    },
+    {
+      "@type": "Thing",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-hipaa",
+      "name": "HIPAA",
+      "sameAs": "https://en.wikipedia.org/wiki/Health_Insurance_Portability_and_Accountability_Act"
+    },
+    {
+      "@type": "Thing",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-ransomware",
+      "name": "Ransomware",
+      "sameAs": "https://en.wikipedia.org/wiki/Ransomware"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-change-healthcare",
+      "name": "Change Healthcare",
+      "sameAs": "https://en.wikipedia.org/wiki/Change_Healthcare"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-unitedhealth-group",
+      "name": "UnitedHealth Group",
+      "sameAs": "https://en.wikipedia.org/wiki/UnitedHealth_Group"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-andrew-witty",
+      "name": "Andrew Witty",
+      "sameAs": "https://en.wikipedia.org/wiki/Andrew_Witty"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-cisa",
+      "name": "CISA",
+      "sameAs": "https://en.wikipedia.org/wiki/Cybersecurity_and_Infrastructure_Security_Agency"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-nsa",
+      "name": "NSA",
+      "sameAs": "https://en.wikipedia.org/wiki/National_Security_Agency"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-netwrix",
+      "name": "Netwrix",
+      "sameAs": "https://netwrix.com/"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#mention-ibm",
+      "name": "IBM",
+      "sameAs": "https://en.wikipedia.org/wiki/IBM"
+    },
+    {
+      "@type": "NewsArticle",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-hipaa-journal-2025",
+      "name": "Average Cost of a Healthcare Data Breach Falls to $7.42 Million",
+      "url": "https://www.hipaajournal.com/average-cost-of-a-healthcare-data-breach-2025/",
+      "author": "Steve Alder",
+      "datePublished": "2025",
+      "publisher": "HIPAA Journal"
+    },
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-ms-learn-tier-model",
+      "name": "PAM environment tier model",
+      "url": "https://learn.microsoft.com/en-us/microsoft-identity-manager/pam/tier-model-for-partitioning-administrative-privileges",
+      "author": "Microsoft",
+      "datePublished": "2025-04-08",
+      "publisher": "Microsoft"
+    },
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-ms-learn-enterprise-access-model",
+      "name": "Securing privileged access: Enterprise access model",
+      "url": "https://learn.microsoft.com/en-us/security/privileged-access-workstations/privileged-access-access-model",
+      "author": "Microsoft",
+      "datePublished": "2026-05-06",
+      "publisher": "Microsoft"
+    },
+    {
+      "@type": "Report",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-cisa-ad-compromises",
+      "name": "Detecting and Mitigating Active Directory Compromises",
+      "url": "https://www.cisa.gov/resources-tools/resources/detecting-and-mitigating-active-directory-compromises",
+      "author": "Australian Signals Directorate's ACSC, in cooperation with CISA and NSA",
+      "datePublished": "2026-09-15",
+      "publisher": "Cybersecurity and Infrastructure Security Agency (CISA)"
+    },
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-ms-defender-experts-pam-bridge",
+      "name": "When the shield becomes the sword: How misconfigured PAM bridges the tiering model",
+      "url": "https://techcommunity.microsoft.com/blog/microsoft-defender-experts/when-the-shield-becomes-the-sword-how-misconfigured-pam-bridges-the-tiering-mode/4509392",
+      "author": "Microsoft Defender Experts",
+      "datePublished": "2026-04-09",
+      "publisher": "Microsoft Tech Community"
+    },
+    {
+      "@type": "Report",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-netwrix-2026-report",
+      "name": "Netwrix 2026 Data and Identity Security Report",
+      "url": "https://netwrix.com/en/resources/news/netwrix-2026-data-and-identity-security-report-ai-adoption-outpacing-ai-readiness-driving-a-4x-breach-gap/",
+      "author": "Netwrix",
+      "datePublished": "2026-06-10",
+      "publisher": "Netwrix"
+    },
+    {
+      "@type": "NewsArticle",
+      "@id": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare#citation-healthcaredive-100m",
+      "name": "Change Healthcare data breach officially affects 100M",
+      "url": "https://www.healthcaredive.com/news/change-healthcare-data-breach-affects-100-million/723493/",
+      "datePublished": "2024-10-24",
+      "publisher": "Healthcare Dive"
+    }
+  ]
+}

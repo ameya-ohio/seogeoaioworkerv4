@@ -1,0 +1,253 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/#organization",
+      "name": "EverWorker",
+      "url": "https://everworker.ai",
+      "description": "EverWorker builds AI Workers — agentic systems that take ownership of business processes end-to-end across sales, marketing, and finance.",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://everworker.ai/images/everworker-logo.png",
+        "width": 512,
+        "height": 512
+      },
+      "sameAs": [
+        "https://www.linkedin.com/company/everworker",
+        "https://twitter.com/everworker"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://everworker.ai/#website",
+      "url": "https://everworker.ai",
+      "name": "EverWorker",
+      "publisher": { "@id": "https://everworker.ai/#organization" },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://everworker.ai/about/ameya-deshmukh#person",
+      "name": "Ameya Deshmukh",
+      "url": "https://everworker.ai/about/ameya-deshmukh",
+      "jobTitle": "Head of Content & Marketing",
+      "worksFor": { "@id": "https://everworker.ai/#organization" },
+      "sameAs": [
+        "https://www.linkedin.com/in/ameyadeshmukh/"
+      ]
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#primaryimage",
+      "url": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions/header.png",
+      "contentUrl": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions/header.png",
+      "width": 1200,
+      "height": 600,
+      "caption": "How to write AI SDR instructions that don't sound like AI. EverWorker."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://everworker.ai/" },
+        { "@type": "ListItem", "position": 2, "name": "Blog",  "item": "https://everworker.ai/blog" },
+        { "@type": "ListItem", "position": 3, "name": "How to Write AI SDR Instructions That Don't Sound Like AI", "item": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#webpage",
+      "url": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions",
+      "name": "How to Write AI SDR Instructions That Don't Sound Like AI",
+      "isPartOf": { "@id": "https://everworker.ai/#website" },
+      "primaryImageOfPage": { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#primaryimage" },
+      "breadcrumb": { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#breadcrumbs" },
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": ["#key-takeaways", ".key-takeaways"]
+      },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "BlogPosting",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#article",
+      "headline": "How to Write AI SDR Instructions That Don't Sound Like AI",
+      "description": "AI slop is a prompt problem, not a model problem. The four-step instruction framework that produces emails sounding like your best human SDR, not ChatGPT.",
+      "author": { "@id": "https://everworker.ai/about/ameya-deshmukh#person" },
+      "publisher": { "@id": "https://everworker.ai/#organization" },
+      "datePublished": "2026-04-29",
+      "dateModified": "2026-04-29",
+      "image": { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#primaryimage" },
+      "mainEntityOfPage": { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#webpage" },
+      "keywords": "ai sdr instructions, ai sdr prompt, ai sdr prompt engineering, prevent ai slop sales emails, ai cold email prompt, personalization at scale ai sdr",
+      "wordCount": 2459,
+      "articleSection": "AI Workers",
+      "inLanguage": "en-us",
+      "isPartOf": { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#article" },
+      "mentions": [
+        { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#mention-openai" },
+        { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#mention-anthropic" },
+        { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#mention-claude" },
+        { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#mention-chatgpt" },
+        { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#mention-clay" },
+        { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#mention-linkedin" }
+      ],
+      "citation": [
+        { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#citation-saleshandy-2026" },
+        { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#citation-salesmotion-2026" },
+        { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#citation-tofuhq" },
+        { "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#citation-marketbetter" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is an AI SDR prompt?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "An AI SDR prompt is not a single prompt. It is a structured instruction set that tells the AI SDR what to research before writing, how to classify the inbound signal and the contact's intent, what to write in each email of the sequence, in what tone, at what length, and with what subject-line rules. The framework runs in four steps: Signal Knowledge, Intent Classification, Research, and Sequence Writing. Each step has concrete rules. Together they replace the single prompt that does everything pattern that produces AI slop."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does AI-written cold email sound like AI?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "AI-written cold email sounds like AI when the instruction set is thin. The model has nothing specific to retrieve, so it generates plausible-sounding but generic prose from training data. The two consistent failure modes are variable-substitution personalization (Hi {first_name}, I noticed {company}) and hallucinated specifics (an invented stat, a non-existent competitor, a stale company news reference). The fix is a four-step instruction framework with explicit rules for what to research, what to classify, what to write, and how long. AI slop is a prompt problem, not a model problem."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How long should an AI SDR's first-touch email be?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "75 to 125 words for Email 1 in the standard four-email sequence. Emails 2 and 3 should run 50 to 100 words. Email 4, the breakup email, runs 25 to 75 words. Maximum two to three sentences per paragraph throughout the sequence. Mobile-first formatting. These length rules exist because they are the empirical sweet spot for read-through on cold outbound. Longer emails get scanned and abandoned; shorter emails read as low-effort."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What's the difference between personalization and variable substitution?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Variable substitution is filling template fields with prospect data: name, company, title. Personalization is referencing something specific about the prospect's world that the AI SDR had to actually look up: a recent product launch, a hiring pattern, a leadership change, a piece of content the contact engaged with on LinkedIn. Variable substitution feels like personalization to the writer and like spam to the reader. According to Saleshandy's 2026 data, signal-based personalization (research-grounded) produces 5 to 18% reply rates compared to 1 to 3% for generic outreach."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I test if my AI SDR instructions are working?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Run a 50-contact batch through the AI SDR and check three things. Personalization audit: could you send the same email to a different prospect by swapping names? If yes, the instructions are too thin. Recency audit: every dated reference inside the 12-month window? Length-and-tone audit: Email 1 in the 75-to-125 word range, subject under 50 characters, two-to-three sentences per paragraph, no spam-trigger words. Run this audit weekly during the first month after launch and monthly after that. Most production slop comes from instructions that worked at launch and decayed because no one re-checked."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#term-ai-sdr-prompt",
+      "name": "AI SDR prompt",
+      "description": "Not a single prompt. A structured instruction set that tells the AI SDR what to research before writing, how to classify the inbound signal and the contact's intent, what to write in each email, at what length, in what tone, with what subject-line rules. Runs in four steps: Signal Knowledge, Intent Classification, Research, Sequence Writing."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#term-ai-slop",
+      "name": "AI slop",
+      "description": "The generic, hallucinated, on-brand-but-wrong output that most AI-generated sales emails produce. Caused by a thin instruction set: the model has nothing specific to retrieve, so it generates from training data. The two failure modes are variable-substitution personalization and hallucinated specifics."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#term-signal-knowledge",
+      "name": "Signal Knowledge",
+      "description": "The structured catalog of inbound signal types an AI SDR is configured to recognize, what each signal means in terms of buyer intent, and how each signal maps to messaging. Default starting set in the EverWorker Worker 1 framework: 6 types (Content Download, Demo Request, Webinar Registered/Attended, High-Intent Page Visit, Direct Contact Form, Trial Signup, Referral/Partner)."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#term-intent-classification",
+      "name": "Intent classification",
+      "description": "The step in the AI SDR instruction framework that combines signal knowledge with contact data to assign each contact one of 5 intent categories. The classification drives the research-protocol depth and the messaging angle. Categories: High Intent Active Evaluation, Functional Intent Solution Evaluation, Medium-High Category Awareness, High Intent Pricing Interest, Low Fit Nurture Only."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#term-recency-rule",
+      "name": "Recency rule",
+      "description": "Mandatory rule in the AI SDR research protocol: only data published within the last 12 months may be used in the email sequence. Older results are discarded. Source URLs, citations, and links are never referenced in the email body. The rule prevents the AI SDR from citing stale company news that erodes credibility."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#term-personalization-via-research",
+      "name": "Personalization-via-research",
+      "description": "Personalization grounded in research the AI SDR actually had to perform: visit the company website, read recent news, read the contact's LinkedIn, identify the personalization angle. Distinct from variable-substitution personalization (filling template fields like first name and company name). Produces 5 to 18 percent reply rates per Saleshandy 2026, compared to 1 to 3 percent for variable-substitution alone."
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#mention-openai",
+      "name": "OpenAI",
+      "sameAs": "https://en.wikipedia.org/wiki/OpenAI"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#mention-anthropic",
+      "name": "Anthropic",
+      "sameAs": "https://en.wikipedia.org/wiki/Anthropic"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#mention-claude",
+      "name": "Claude",
+      "sameAs": "https://en.wikipedia.org/wiki/Claude_(language_model)"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#mention-chatgpt",
+      "name": "ChatGPT",
+      "sameAs": "https://en.wikipedia.org/wiki/ChatGPT"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#mention-clay",
+      "name": "Clay",
+      "url": "https://clay.com"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#mention-linkedin",
+      "name": "LinkedIn",
+      "sameAs": "https://en.wikipedia.org/wiki/LinkedIn"
+    },
+    {
+      "@type": "Report",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#citation-saleshandy-2026",
+      "name": "Latest Cold Email Statistics in 2026",
+      "url": "https://www.saleshandy.com/blog/cold-email-statistics/",
+      "publisher": "Saleshandy",
+      "datePublished": "2026"
+    },
+    {
+      "@type": "Article",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#citation-salesmotion-2026",
+      "name": "AI SDR Tools Compared: What Actually Works for B2B Pipeline in 2026",
+      "url": "https://salesmotion.io/blog/ai-sdr-tools-compared",
+      "publisher": "Salesmotion",
+      "datePublished": "2026"
+    },
+    {
+      "@type": "Article",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#citation-tofuhq",
+      "name": "Tactical Guide to Prompt Engineering for SDR Sequences",
+      "url": "https://www.tofuhq.com/post/tactical-guide-to-prompt-engineering-for-sdr-sequences",
+      "publisher": "Tofu HQ"
+    },
+    {
+      "@type": "Article",
+      "@id": "https://everworker.ai/blog/how-to-write-ai-sdr-instructions#citation-marketbetter",
+      "name": "10 AI Prompts That 10x Your SDR Productivity (Copy-Paste Ready)",
+      "url": "https://marketbetter.ai/blog/2026/02/08/10-prompts-sdr-productivity/",
+      "publisher": "MarketBetter",
+      "datePublished": "2026-02"
+    }
+  ]
+}

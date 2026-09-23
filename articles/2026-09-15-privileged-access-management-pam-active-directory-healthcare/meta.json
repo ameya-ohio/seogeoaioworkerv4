@@ -1,0 +1,30 @@
+{
+  "title": "Privileged Access Management in Healthcare: The Tier 0 Gap",
+  "slug": "privileged-access-management-pam-active-directory-healthcare",
+  "meta_description": "Privileged access management in healthcare protects the credentials you know about. Here is why Tier 0 in hybrid AD/Azure stays reachable, and how to close it.",
+  "primary_keyword": "privileged access management healthcare",
+  "secondary_keywords": [
+    "PAM for hospitals",
+    "tier 0 active directory healthcare",
+    "privileged access management Active Directory hybrid",
+    "admin account isolation Active Directory",
+    "zero trust identity architecture hybrid AD Azure",
+    "cost of identity breach healthcare"
+  ],
+  "keywords": [
+    "privileged access management healthcare",
+    "PAM for hospitals",
+    "tier 0 active directory healthcare",
+    "privileged access management Active Directory hybrid",
+    "admin account isolation Active Directory",
+    "zero trust identity architecture hybrid AD Azure",
+    "cost of identity breach healthcare"
+  ],
+  "canonical_url": "https://www.saporo.io/resources/blog/privileged-access-management-pam-active-directory-healthcare",
+  "author": "Ameya Deshmukh",
+  "category": "Identity Security",
+  "publish_date": "2026-09-15",
+  "modified_date": "2026-09-16",
+  "reading_time_minutes": 9,
+  "word_count": 1999
+}

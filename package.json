@@ -1,0 +1,20 @@
+{
+  "name": "blog-agent-system",
+  "private": true,
+  "description": "Company-configurable blog agent system: markdown engine (agents/, standards/, templates/) + headless pipeline service (apps/worker) + web app (apps/web, Phase 3).",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "worker": "npm run dev -w @blogagent/worker --",
+    "dev:mongo": "node scripts/dev_mongo.mjs",
+    "dev:web": "npm run dev -w @blogagent/web"
+  }
+}

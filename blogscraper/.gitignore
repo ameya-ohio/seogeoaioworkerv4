@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+scrape.log
+
+# Scraped output (per-domain). Add specific allow rules if you want to commit a snapshot.
+*.co/
+*.com/
+*.io/
+*.ai/
+*.dev/
+*.org/
+*.net/

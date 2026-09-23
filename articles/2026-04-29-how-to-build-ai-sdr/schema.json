@@ -1,0 +1,261 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/#organization",
+      "name": "EverWorker",
+      "url": "https://everworker.ai",
+      "description": "EverWorker builds AI Workers — agentic systems that take ownership of business processes end-to-end across sales, marketing, and finance.",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://everworker.ai/images/everworker-logo.png",
+        "width": 512,
+        "height": 512
+      },
+      "sameAs": [
+        "https://www.linkedin.com/company/everworker",
+        "https://twitter.com/everworker"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://everworker.ai/#website",
+      "url": "https://everworker.ai",
+      "name": "EverWorker",
+      "publisher": { "@id": "https://everworker.ai/#organization" },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://everworker.ai/about/ameya-deshmukh#person",
+      "name": "Ameya Deshmukh",
+      "url": "https://everworker.ai/about/ameya-deshmukh",
+      "jobTitle": "Head of Content & Marketing",
+      "worksFor": { "@id": "https://everworker.ai/#organization" },
+      "sameAs": [
+        "https://www.linkedin.com/in/ameyadeshmukh/"
+      ]
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#primaryimage",
+      "url": "https://everworker.ai/blog/how-to-build-ai-sdr/header.png",
+      "contentUrl": "https://everworker.ai/blog/how-to-build-ai-sdr/header.png",
+      "width": 1200,
+      "height": 600,
+      "caption": "How to build an AI SDR that actually converts. EverWorker."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://everworker.ai/" },
+        { "@type": "ListItem", "position": 2, "name": "Blog",  "item": "https://everworker.ai/blog" },
+        { "@type": "ListItem", "position": 3, "name": "How to Build an AI SDR That Actually Converts in 2026", "item": "https://everworker.ai/blog/how-to-build-ai-sdr" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#webpage",
+      "url": "https://everworker.ai/blog/how-to-build-ai-sdr",
+      "name": "How to Build an AI SDR That Actually Converts in 2026",
+      "isPartOf": { "@id": "https://everworker.ai/#website" },
+      "primaryImageOfPage": { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#primaryimage" },
+      "breadcrumb": { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#breadcrumbs" },
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": ["#key-takeaways", ".key-takeaways"]
+      },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "BlogPosting",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#article",
+      "headline": "How to Build an AI SDR That Actually Converts in 2026",
+      "description": "Every AI SDR has four components. Off-the-shelf ships with two. Here's the architectural lens that explains why most fade in 30 days and how to build one that doesn't.",
+      "author": { "@id": "https://everworker.ai/about/ameya-deshmukh#person" },
+      "publisher": { "@id": "https://everworker.ai/#organization" },
+      "datePublished": "2026-04-29",
+      "dateModified": "2026-04-29",
+      "image": { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#primaryimage" },
+      "mainEntityOfPage": { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#webpage" },
+      "keywords": "how to build an ai sdr, ai sdr architecture, ai sdr components, build vs buy ai sdr, custom ai sdr, ai sdr knowledge engine, signal detection ai sdr",
+      "wordCount": 3070,
+      "articleSection": "AI Workers",
+      "inLanguage": "en-us",
+      "isPartOf": { "@id": "https://everworker.ai/blog/how-to-build-ai-first-sales-operating-model#article" },
+      "mentions": [
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#mention-11x" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#mention-artisan" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#mention-apollo" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#mention-clay" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#mention-confluence" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#mention-notion" }
+      ],
+      "citation": [
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#citation-salesmotion-2026" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#citation-saleshandy-2026" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#citation-instantly-2026" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#citation-apollo-academy" },
+        { "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#citation-leadpipe" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is an AI SDR?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "An AI SDR is an AI Worker that performs the sales development representative function end-to-end: classifying inbound signals, researching companies and contacts, writing personalized email sequences, and enrolling prospects in cadence. A functioning AI SDR has four architectural components: a Knowledge Engine that grounds messaging in your living company knowledge, a Signal Detection Layer that triggers outreach on real buying intent, a Research and Personalization Engine that produces equivalent of 20 minutes of research per email, and a Sending Infrastructure that places mail in the primary inbox and handles replies."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Should I build or buy an AI SDR?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Buy if your operating model is mature, your ICP and messaging are documented, your CRM is clean, and you accept that you will need to bring the Knowledge Engine and Signal Detection Layer yourself. Build if your operating model is still being defined, the four components are a real differentiator for your business, or you have already tried off-the-shelf and hit the 30-to-60-day fade. The most underweighted option is hybrid: buy off-the-shelf for Components 3 and 4 (the harder-to-build commodity), and build Components 1 and 2 (the differentiating ones) on top."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why do off-the-shelf AI SDR tools have such high churn?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Salesmotion's 2026 comparison documents 70 to 80% early-customer churn within months for one major AI SDR vendor, with users describing a 30-to-60-day fade pattern across the category. The architectural cause is consistent: off-the-shelf tools ship with Components 3 (Research and Personalization) and 4 (Sending Infrastructure) built, but Components 1 (Knowledge Engine) and 2 (Signal Detection Layer) are typically missing or stubbed. The first batch of emails works because the data is fresh. By month two, reply rates collapse because the model has no grounding in your live messaging and the signals it triggers on are generic to the vendor's customer base, not specific to your ICP."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How long does it take to build a custom AI SDR?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A four-component custom AI SDR takes 2 to 3 weeks to build when the foundation is in place: documented ICP, clean CRM, sending infrastructure provisioned. Add 1 to 2 weeks of foundation work if those prerequisites are missing. This maps to weeks 2 and 3 of the broader 45-day AI-first sales operating model rollout, with weeks 1 to 2 covering foundation and weeks 4 to 6 covering scale and optimize."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What's the difference between an AI SDR and a sales sequencer with AI features?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A sales sequencer with AI features (such as a sequence-writer in Outreach, Salesloft, or Apollo) writes individual emails or short sequences when prompted by a human SDR. The human still picks the prospect, decides when to reach out, and triggers the workflow. An AI SDR is a system that picks the prospect (Signal Detection), researches them (Personalization Engine), writes the sequence (Research and Personalization Engine), enrolls them in cadence (Sending Infrastructure), and runs the whole loop continuously without human triggering. The category difference is who decides when to act. A sequencer with AI features amplifies the SDR's capacity. An AI SDR replaces the SDR's execution."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#term-ai-sdr",
+      "name": "AI SDR",
+      "description": "An AI Worker that performs the sales development representative function end-to-end: classifying inbound signals, researching companies and contacts, writing personalized email sequences, and enrolling prospects in cadence — without manual list-building or template-writing by a human."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#term-knowledge-engine",
+      "name": "Knowledge Engine",
+      "description": "The component of an AI SDR that connects to a living company knowledge base (Confluence, Notion, SharePoint, Google Drive) and retrieves the correct messaging, ICP definition, persona pains, product positioning, and competitive differentiation at the moment the AI SDR writes an email. The fix for AI slop."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#term-signal-detection-layer",
+      "name": "Signal Detection Layer",
+      "description": "The component of an AI SDR that continuously monitors target accounts on primary sources (job boards, company websites, LinkedIn, news, Crunchbase) for buying signals such as hiring, funding, leadership changes, technology adoption, and triggers downstream outreach when a signal fires."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#term-research-and-personalization-engine",
+      "name": "Research and Personalization Engine",
+      "description": "The component of an AI SDR that produces 20 minutes of equivalent research per email and writes a first-touch that references the specific company context, the specific person's role, and the specific signal that fired. Implemented via a structured research protocol, copywriting guidelines, hallucination guardrails, and output format requirements."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#term-sending-infrastructure",
+      "name": "Sending Infrastructure",
+      "description": "The deliverability layer of an AI SDR: sending domains, mailbox provisioning, provider matching (Google to Gmail, Microsoft to Outlook), warmup pools, and reply handling. Determines whether the AI SDR's emails land in the primary inbox or the spam folder."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#term-ai-slop",
+      "name": "AI slop",
+      "description": "The generic, hallucinated, on-brand-but-wrong output that most AI-generated sales emails produce. Caused by the model having no grounding in the seller's messaging, ICP, competitive positioning, or product documentation. Fixed by a Knowledge Engine that retrieves rather than generates."
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#mention-11x",
+      "name": "11x",
+      "sameAs": "https://en.wikipedia.org/wiki/11x_(company)"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#mention-artisan",
+      "name": "Artisan AI",
+      "url": "https://www.artisan.co"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#mention-apollo",
+      "name": "Apollo",
+      "url": "https://www.apollo.io"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#mention-clay",
+      "name": "Clay",
+      "url": "https://clay.com"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#mention-confluence",
+      "name": "Confluence",
+      "sameAs": "https://en.wikipedia.org/wiki/Confluence_(software)"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#mention-notion",
+      "name": "Notion",
+      "sameAs": "https://en.wikipedia.org/wiki/Notion_(productivity_software)"
+    },
+    {
+      "@type": "Article",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#citation-salesmotion-2026",
+      "name": "AI SDR Tools Compared: What Actually Works for B2B Pipeline in 2026",
+      "url": "https://salesmotion.io/blog/ai-sdr-tools-compared",
+      "publisher": "Salesmotion",
+      "datePublished": "2026"
+    },
+    {
+      "@type": "Report",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#citation-saleshandy-2026",
+      "name": "Latest Cold Email Statistics in 2026",
+      "url": "https://www.saleshandy.com/blog/cold-email-statistics/",
+      "publisher": "Saleshandy",
+      "datePublished": "2026"
+    },
+    {
+      "@type": "Report",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#citation-instantly-2026",
+      "name": "Cold Email Benchmark Report 2026",
+      "url": "https://instantly.ai/cold-email-benchmark-report-2026",
+      "publisher": "Instantly",
+      "datePublished": "2026"
+    },
+    {
+      "@type": "Article",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#citation-apollo-academy",
+      "name": "How to Build Your Own AI-Assisted SDR",
+      "url": "https://www.apollo.io/academy/learn/how-to-build-an-ai-assisted-sdr",
+      "publisher": "Apollo"
+    },
+    {
+      "@type": "Article",
+      "@id": "https://everworker.ai/blog/how-to-build-ai-sdr#citation-leadpipe",
+      "name": "Build a Custom AI SDR with Leadpipe + OpenAI",
+      "url": "https://leadpipe.com/blog/build-custom-ai-sdr-with-leadpipe-and-openai/",
+      "publisher": "Leadpipe"
+    }
+  ]
+}

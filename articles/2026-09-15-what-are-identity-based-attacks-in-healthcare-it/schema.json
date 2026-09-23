@@ -1,0 +1,348 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.saporo.io/#organization",
+      "name": "Saporo",
+      "url": "https://www.saporo.io",
+      "description": "Saporo delivers Preemptive Identity Exposure Management (PIEM), continuously discovering, prioritizing, and reducing identity exposure across hybrid environments for human and non-human identities.",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://framerusercontent.com/images/eUkXw1GQzL6QlpIts0hsShXBGN4.png",
+        "width": 180,
+        "height": 180
+      },
+      "sameAs": [
+        "https://www.linkedin.com/company/saporo-cybersecurity"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.saporo.io/#website",
+      "url": "https://www.saporo.io",
+      "name": "Saporo",
+      "publisher": { "@id": "https://www.saporo.io/#organization" },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://www.saporo.io/#person-ameya-deshmukh",
+      "name": "Ameya Deshmukh",
+      "jobTitle": "Head of Content & Marketing",
+      "worksFor": { "@id": "https://www.saporo.io/#organization" },
+      "sameAs": [
+        "https://www.linkedin.com/in/ameyadeshmukh/"
+      ]
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#primaryimage",
+      "url": "https://www.saporo.io/images/blog/identity-based-attacks-healthcare-hybrid-ad-hero.webp",
+      "contentUrl": "https://www.saporo.io/images/blog/identity-based-attacks-healthcare-hybrid-ad-hero.webp",
+      "width": 2400,
+      "height": 1200,
+      "caption": "Diagram of a hospital identity estate showing an attack path crossing from on-premises Active Directory into Microsoft Entra ID"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.saporo.io/" },
+        { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://www.saporo.io/resources/blog" },
+        { "@type": "ListItem", "position": 3, "name": "Identity-Based Attacks in Healthcare: The Hybrid AD Seam", "item": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#webpage",
+      "url": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it",
+      "name": "Identity-Based Attacks in Healthcare: The Hybrid AD Seam",
+      "isPartOf": { "@id": "https://www.saporo.io/#website" },
+      "primaryImageOfPage": { "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#primaryimage" },
+      "breadcrumb": { "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#breadcrumbs" },
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": ["#key-takeaways", ".key-takeaways"]
+      },
+      "inLanguage": "en-us"
+    },
+    {
+      "@type": "BlogPosting",
+      "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#article",
+      "headline": "Identity-Based Attacks in Healthcare: The Hybrid AD Seam",
+      "description": "Identity-based attacks in healthcare exploit the sync between on-prem Active Directory and Entra ID. See how the hybrid seam fails, and what to fix first.",
+      "author": { "@id": "https://www.saporo.io/#person-ameya-deshmukh" },
+      "publisher": { "@id": "https://www.saporo.io/#organization" },
+      "datePublished": "2026-09-15",
+      "dateModified": "2026-09-21",
+      "image": { "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#primaryimage" },
+      "mainEntityOfPage": { "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#webpage" },
+      "keywords": "identity-based attacks in healthcare, identity attack surface healthcare, hybrid AD Azure AD security, Active Directory Azure AD attack path, non-human identity risk healthcare, medical device identity risk, Azure AD vs on-premises Active Directory security, what are identity-based attacks in healthcare IT",
+      "wordCount": 1895,
+      "articleSection": "Identity Security",
+      "inLanguage": "en-us",
+      "mentions": [
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-active-directory",
+          "name": "Active Directory",
+          "sameAs": "https://en.wikipedia.org/wiki/Active_Directory"
+        },
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-microsoft-entra-id",
+          "name": "Microsoft Entra ID",
+          "sameAs": "https://en.wikipedia.org/wiki/Microsoft_Entra_ID"
+        },
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-kerberos",
+          "name": "Kerberos (protocol)",
+          "sameAs": "https://en.wikipedia.org/wiki/Kerberos_(protocol)"
+        },
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-mfa",
+          "name": "Multi-factor authentication",
+          "sameAs": "https://en.wikipedia.org/wiki/Multi-factor_authentication"
+        },
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-mitre-attck",
+          "name": "MITRE ATT&CK",
+          "sameAs": "https://en.wikipedia.org/wiki/MITRE_ATT%26CK"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-mitre-corporation",
+          "name": "MITRE Corporation",
+          "sameAs": "https://en.wikipedia.org/wiki/MITRE_Corporation"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-crowdstrike",
+          "name": "CrowdStrike",
+          "sameAs": "https://en.wikipedia.org/wiki/CrowdStrike"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-microsoft",
+          "name": "Microsoft",
+          "sameAs": "https://en.wikipedia.org/wiki/Microsoft"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-change-healthcare",
+          "name": "Change Healthcare",
+          "sameAs": "https://en.wikipedia.org/wiki/Change_Healthcare"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-unitedhealth-group",
+          "name": "UnitedHealth Group",
+          "sameAs": "https://en.wikipedia.org/wiki/UnitedHealth_Group"
+        },
+        {
+          "@type": "Person",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-andrew-witty",
+          "name": "Andrew Witty",
+          "sameAs": "https://en.wikipedia.org/wiki/Andrew_Witty"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-citrix-systems",
+          "name": "Citrix Systems",
+          "sameAs": "https://en.wikipedia.org/wiki/Citrix_Systems"
+        },
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-hipaa",
+          "name": "HIPAA",
+          "sameAs": "https://en.wikipedia.org/wiki/Health_Insurance_Portability_and_Accountability_Act"
+        },
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-ransomware",
+          "name": "Ransomware",
+          "sameAs": "https://en.wikipedia.org/wiki/Ransomware"
+        },
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-internet-of-things",
+          "name": "Internet of Things",
+          "sameAs": "https://en.wikipedia.org/wiki/Internet_of_things"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-identity-theft-resource-center",
+          "name": "Identity Theft Resource Center"
+        },
+        {
+          "@type": "Thing",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-storm-0501",
+          "name": "Storm-0501"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#mention-saporo",
+          "name": "Saporo"
+        }
+      ],
+      "citation": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#citation-crowdstrike-identity-attack",
+          "name": "8 Types of Identity-Based Attacks",
+          "url": "https://www.crowdstrike.com/en-us/cybersecurity-101/cyberattacks/identity-attack/",
+          "author": "CrowdStrike",
+          "publisher": "CrowdStrike"
+        },
+        {
+          "@type": "NewsArticle",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#citation-bleepingcomputer-change-healthcare",
+          "name": "Change Healthcare hacked using stolen Citrix account with no MFA",
+          "url": "https://www.bleepingcomputer.com/news/security/change-healthcare-hacked-using-stolen-citrix-account-with-no-mfa/",
+          "author": "Bill Toulas",
+          "datePublished": "2024-04",
+          "publisher": "BleepingComputer"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#citation-microsoft-storm-0501",
+          "name": "Storm-0501's evolving techniques lead to cloud-based ransomware",
+          "url": "https://www.microsoft.com/en-us/security/blog/2025/08/27/storm-0501s-evolving-techniques-lead-to-cloud-based-ransomware/",
+          "author": "Microsoft Threat Intelligence",
+          "datePublished": "2025-08-27",
+          "publisher": "Microsoft"
+        },
+        {
+          "@type": "NewsArticle",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#citation-hipaa-journal-itrc-h1-2026",
+          "name": "Report Shows Surge in Malicious Insider Incidents; Mega Data Breaches",
+          "url": "https://www.hipaajournal.com/itrc-h1-2026-data-breach-report/",
+          "author": "Steve Alder",
+          "datePublished": "2026-07-23",
+          "publisher": "HIPAA Journal"
+        },
+        {
+          "@type": "Report",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#citation-ordr-medical-device-breach-2026",
+          "name": "Medical Device Breach Statistics 2026 Report",
+          "url": "https://ordr.net/blog/medical-device-breach-statistics-2026-report",
+          "author": "Pandian Gnanaprakasam",
+          "datePublished": "2026-04-03",
+          "publisher": "Ordr"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#citation-security-factory-hybrid-ad-risks",
+          "name": "What are the potential security risks of a hybrid Azure Active Directory setup in the event of an on-premise Active Directory compromise?",
+          "url": "https://thesecurityfactory.be/what-are-the-potential-security-risks-of-a-hybrid-azure-active-directory-setup-in-the-event-of-an-on-premise-active-directory-compromise/",
+          "author": "Liselotte Diericx",
+          "datePublished": "2024-04-30",
+          "publisher": "The Security Factory"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#citation-mitre-attck-t1558-001",
+          "name": "Steal or Forge Kerberos Tickets: Golden Ticket (T1558.001)",
+          "url": "https://attack.mitre.org/techniques/T1558/001/",
+          "author": "MITRE ATT&CK",
+          "publisher": "MITRE Corporation"
+        },
+        {
+          "@type": "Report",
+          "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#citation-csa-astrix-nhi-survey",
+          "name": "The State of Non-Human Identity Security",
+          "url": "https://cloudsecurityalliance.org/artifacts/state-of-non-human-identity-security-survey-report",
+          "author": "Cloud Security Alliance",
+          "datePublished": "2024-06",
+          "publisher": "Cloud Security Alliance"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is Azure AD (Entra ID) actually more secure than on-premises Active Directory?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Entra ID removes classic Active Directory weaknesses: no domain controllers of your own to patch, no Kerberos tickets to forge. In a synced estate that comparison stops being useful, because an on-premises compromise can be extended into the cloud directory. The Security Factory's April 2024 analysis of the hybrid sync models concluded it is possible in all cases, and Microsoft's August 2025 Storm-0501 report documents an attacker doing it."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is Azure AD Connect (Entra Connect Sync), and why is it a security risk?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Entra Connect Sync is the Microsoft agent that replicates users, groups, and credential material from on-premises Active Directory into Microsoft Entra ID. Its standing privileged access to both directories makes it functionally equivalent to a domain controller, which is how Microsoft says to secure it. Storm-0501 used a compromised Entra Connect Sync server as its pivot into the cloud, so the server belongs inside your Tier 0 boundary."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is Kerberoasting, and how is it different from a Golden Ticket attack?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Kerberoasting is a technique in which an authenticated attacker requests a Kerberos service ticket for an account with a registered service principal name, then cracks it offline to recover that account's password. A Golden Ticket attack, catalogued by MITRE ATT&CK as T1558.001, needs the KRBTGT hash instead, which lets the attacker forge ticket-granting tickets for any account in the domain."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why are insider incidents rising in healthcare, and are they identity-based attacks?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The Identity Theft Resource Center's H1 2026 report, covered by HIPAA Journal in July 2026, counted 281 healthcare data compromises in the first half of 2026, against 270 a year earlier. Across all sectors it tracks, malicious insider incidents rose from 3 in all of 2025 to 21 in H1 2026, and only 24% of breach notices named an attack vector, its lowest recorded rate. An insider abusing valid access and an attacker abusing stolen access exploit the same gap: standing permission nobody reviews."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What should a hospital CISO fix first in a hybrid AD/Azure environment?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Classify the Entra Connect Sync server as Tier 0 and restrict administrative access to it. Then inventory every privileged identity that crosses the sync boundary, especially non-human accounts with cloud admin roles and no credential rotation. Order the rest by whether a path exists from an ordinary user account to a clinical system."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#term-identity-based-attack",
+      "name": "Identity-based attack",
+      "description": "An intrusion in which the adversary uses a legitimate-looking digital identity, such as a stolen password, a synced service account, or a forged Kerberos ticket, rather than malware, to gain and escalate access."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#term-active-directory",
+      "name": "Active Directory",
+      "description": "Microsoft's on-premises directory service, authenticating users and machines through Kerberos and NTLM."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#term-microsoft-entra-id",
+      "name": "Microsoft Entra ID",
+      "description": "Formerly Azure Active Directory, Microsoft's cloud identity service for Microsoft 365, Teams, and SaaS sign-in."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#term-microsoft-entra-connect-sync",
+      "name": "Microsoft Entra Connect Sync",
+      "description": "Still widely called Azure AD Connect, it replicates identities and credential material from on-premises Active Directory into the cloud tenant, and holds privileged access to both at once."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#term-tier-0",
+      "name": "Tier 0",
+      "description": "The class of assets whose compromise is equivalent to compromising the directory itself."
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.saporo.io/resources/blog/what-are-identity-based-attacks-in-healthcare-it#term-non-human-identity",
+      "name": "Non-human identity",
+      "description": "Any credential-holding identity that is not a person: a service account, an API key, a certificate, or a device account."
+    }
+  ]
+}
