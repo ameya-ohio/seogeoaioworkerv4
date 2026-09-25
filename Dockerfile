@@ -45,7 +45,9 @@ COPY blogheaderimagegen ./blogheaderimagegen
 COPY blogscraper ./blogscraper
 COPY CLAUDE.md ./
 
-RUN npm run build
+# Only the engine + worker: apps/web is copied in (via `COPY apps`) but its
+# deps were never installed here — it has its own image (Dockerfile.web).
+RUN npm run build -w @blogagent/engine -w @blogagent/worker
 
 ENV NODE_ENV=production \
     REPO_ROOT=/app \

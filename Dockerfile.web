@@ -1,0 +1,33 @@
+# Operator web app image (roadmap 2.8, combined deploy with the worker).
+# Node 22 only — the web app reads Mongo + storage and the engine's markdown
+# surfaces (config/, agents/, standards/, templates/, context/) from REPO_ROOT;
+# it never shells out to Python.
+FROM node:22-slim
+
+WORKDIR /app
+
+# Install JS deps first for layer caching (every workspace manifest, so the
+# lockfile resolves cleanly).
+COPY package.json package-lock.json ./
+COPY packages/engine/package.json packages/engine/
+COPY apps/worker/package.json apps/worker/
+COPY apps/web/package.json apps/web/
+RUN npm ci
+
+COPY tsconfig.base.json ./
+COPY packages ./packages
+COPY apps/web ./apps/web
+COPY agents ./agents
+COPY standards ./standards
+COPY templates ./templates
+COPY config ./config
+COPY context ./context
+COPY CLAUDE.md ./
+
+RUN npm run build -w @blogagent/engine -w @blogagent/web
+
+ENV NODE_ENV=production \
+    REPO_ROOT=/app
+
+WORKDIR /app/apps/web
+CMD ["sh", "-c", "npx next start -p ${PORT:-3000}"]

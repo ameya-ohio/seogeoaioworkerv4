@@ -120,10 +120,22 @@ the SDK reuses its auth). `MONGODB_URI` defaults to localhost.
 ## Deploy (Railway)
 
 Root `Dockerfile` builds Node 22 + Python 3 + Playwright Chromium (header
-generation) and starts the worker; `railway.json` is the service config.
-Services per roadmap §4: this worker + MongoDB + a bucket. Set
-`STORAGE_DRIVER=s3` + the `S3_*` vars from the bucket, `MONGODB_URI` from the
-Mongo service, `ANTHROPIC_API_KEY`, and optionally `WORKER_CONCURRENCY`.
+generation) and starts the worker; the web app has its own `Dockerfile.web`
+(Node only). Railway's config-as-code (`railway.json`) is deprecated, so each
+service's Dockerfile path, start command, and restart policy are set on the
+service itself:
+
+| Service | Dockerfile | Start command |
+|---|---|---|
+| worker | `Dockerfile` | `node apps/worker/dist/cli.js start` |
+| web | `Dockerfile.web` | `sh -c 'cd /app/apps/web && npx next start -p ${PORT:-3000}'` |
+
+Services per roadmap §4: worker + web + MongoDB + a bucket. Both apps need
+`MONGODB_URI` (from the Mongo service's `MONGO_URL`), `MONGODB_DB`,
+`STORAGE_DRIVER=s3` and the `S3_*` vars from the bucket (set once as shared
+variables, referenced per service as `${{shared.X}}`). The worker also needs
+`ANTHROPIC_API_KEY` (optionally `WORKER_CONCURRENCY`); the web app needs
+`APP_PASSWORD` before it gets a public domain.
 
 ## Tests
 
