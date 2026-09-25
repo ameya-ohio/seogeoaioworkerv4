@@ -132,8 +132,11 @@ service itself:
 
 Services per roadmap §4: worker + web + MongoDB + a bucket. Both apps need
 `MONGODB_URI` (from the Mongo service's `MONGO_URL`), `MONGODB_DB`,
-`STORAGE_DRIVER=s3` and the `S3_*` vars from the bucket (set once as shared
-variables, referenced per service as `${{shared.X}}`). The worker also needs
+`STORAGE_DRIVER=s3` and the `S3_*` vars from the bucket. Reference the source
+service directly on each app (`${{MongoDB.MONGO_URL}}`,
+`${{<bucket>.ENDPOINT}}` …) — a shared variable that itself references
+another service does not resolve, and the worker crashes on an invalid
+Mongo scheme. The worker also needs
 `ANTHROPIC_API_KEY` (optionally `WORKER_CONCURRENCY`); the web app needs
 `APP_PASSWORD` before it gets a public domain.
 
