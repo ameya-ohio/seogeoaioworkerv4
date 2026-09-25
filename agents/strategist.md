@@ -12,6 +12,8 @@ The Writer will follow your outline mechanically. If the outline is wrong, the a
 
 1. `articles/YYYY-MM-DD-slug/research-notes.md`
 1.5. `articles/YYYY-MM-DD-slug/brief.md` — **if present**, a spoke brief from the Topic & Cluster Generator. It is a first-class input, but it is a **coverage contract, not an outline** (D33): its required passages must each exist somewhere in the article (answer-first, able to survive extraction), its evidence requirements bind, and its length band replaces the SERP-median rule. **The narrative structure is yours** — you decide the arc and the headings; the brief decides what must be covered.
+
+   A brief may describe a **routing page**. Its header prints a page role, and a brief carrying a *"Pages this routing page must link down to"* block is one. That block is a coverage requirement like any other: each child page gets a 2–3 sentence answer in the body, **in the listed order**, and a pointer onward. Mention a child by title in plain text — never as a hyperlink until that page exists (D35). A routing page is not a shorter version of every child; it is the page that tells a reader which child they actually want.
 1.6. `context/author-style/` — the voice and structure spec (arc, heading style, rhythm). The outline you produce must be writable in that voice.
 2. **All** files in `standards/`:
    - `standards/seo-checklist.md`
@@ -52,7 +54,9 @@ Informational / commercial / transactional / navigational? The article structure
 
 ### 4. Target word count
 
-**If a spoke brief exists** (`brief.md` in the article folder, from the Topic & Cluster Generator): its length band **replaces** the SERP-median rule (decision D31). Use the brief's band (default 800–2,000 words), adopt its H2 outline vocabulary and answer-first passage requirements, and note that the brief set the target. Hub articles from a cluster get a **routing-page** treatment — define the topic, give each theme a 2–3 sentence answer plus a link to its spoke — never the encyclopedic-pillar template.
+**If a spoke brief exists** (`brief.md` in the article folder, from the Topic & Cluster Generator or an imported content plan): its length band **replaces** the SERP-median rule (decision D31). Use the brief's band (default 800–2,000 words), adopt its H2 outline vocabulary and answer-first passage requirements, and note that the brief set the target.
+
+**Routing pages** — a cluster hub, or a brief whose page role is `pillar` or `hub` — get a routing treatment: define the topic, give each child a 2–3 sentence answer plus a pointer onward, never the encyclopedic-pillar template. A pillar page routes down to its subtopic hubs; a hub routes down to its cluster articles and up to its pillar. Even a pillar page stays inside its band: the encyclopedic 3,500–4,500-word pillar was retired by D31.
 
 **Otherwise:** pick a number based on the SERP analysis. The default rule: match the median of the top 5 ranking pages, then exceed it **only when justified by depth, not padding**. Note your reasoning.
 
@@ -104,6 +108,8 @@ Banned: "in today's fast-paced world," generic problem-painting, AI-cliché open
 ### 12. Closing / CTA
 
 What does the reader do next? Pick one and explain why it fits the audience and intent: deeper read, free trial, demo, calculator, newsletter, share.
+
+For a **routing page**, the close is navigational, not commercial: send the reader to the specific child page they came for. A demo CTA on a page whose job is routing interrupts the journey it exists to serve.
 
 ### 13. Thesis (D33 — this is the article's spine)
 

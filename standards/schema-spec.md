@@ -263,6 +263,83 @@ Each inline-defined term in the body.
 
 ---
 
+## CollectionPage (routing pages only)
+
+A **routing page** — a pillar page or a subtopic hub whose job is to define a
+topic and send the reader to the specific page they want — is a
+`CollectionPage`, not just a `BlogPosting`. Use it only when the page really
+does route onward; a normal article is never a CollectionPage.
+
+**Required**
+- `@type`
+- `@id` — `<canonical_url>#collection`
+- `name` — the page title
+- `description` — one sentence on what the collection covers
+- `mainEntity` — the `@id` of the `ItemList` below
+
+**Recommended**
+- `isPartOf` — `@id` of the site's `WebSite` node when one exists
+
+**Example**
+
+```json
+{
+  "@type": "CollectionPage",
+  "@id": "https://example.com/blog/identity-exposure#collection",
+  "name": "Identity Exposure: what it is and where to start",
+  "description": "Defines identity exposure and routes to the specific guides beneath it.",
+  "mainEntity": { "@id": "https://example.com/blog/identity-exposure#list" }
+}
+```
+
+---
+
+## ItemList (routing pages only)
+
+The ordered set of child pages a routing page links down to. The order must
+match the order the pages appear in the body — the list describes the page,
+it does not reorder it.
+
+**Required**
+- `@type`
+- `@id` — `<canonical_url>#list`
+- `itemListOrder` — `https://schema.org/ItemListOrderAscending`
+- `numberOfItems`
+- `itemListElement` — one `ListItem` per child, each with `position`, `name`,
+  and `url`
+
+**Rule:** a child page that is not published yet has no URL to give. Leave it
+out of the `ItemList` entirely rather than pointing at a page that 404s — the
+body still mentions it in plain text (D35), and the list is regenerated when
+the child ships.
+
+**Example**
+
+```json
+{
+  "@type": "ItemList",
+  "@id": "https://example.com/blog/identity-exposure#list",
+  "itemListOrder": "https://schema.org/ItemListOrderAscending",
+  "numberOfItems": 2,
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Identity exposure vs identity risk",
+      "url": "https://example.com/blog/identity-exposure-vs-identity-risk"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "What causes identity exposure in hybrid environments",
+      "url": "https://example.com/blog/what-causes-identity-exposure-hybrid"
+    }
+  ]
+}
+```
+
+---
+
 ## ImageObject
 
 The hero image (and any other named images).

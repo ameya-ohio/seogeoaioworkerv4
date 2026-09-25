@@ -7,6 +7,7 @@ import { cls } from "./ui";
 const NAV = [
   { href: "/keywords", label: "Target Keywords" },
   { href: "/strategy", label: "Content Strategy" },
+  { href: "/plans", label: "Content Plans" },
   { href: "/production", label: "Production" },
   { href: "/articles", label: "Articles" },
   { href: "/admin", label: "Admin" },

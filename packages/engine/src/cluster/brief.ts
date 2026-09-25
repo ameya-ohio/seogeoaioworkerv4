@@ -70,9 +70,26 @@ export function renderBriefMarkdown(brief: Omit<SpokeBrief, "markdown">): string
     ``,
     `## Internal links`,
     ``,
-    `- Hub: ${brief.internalLinks.hub}`,
-    ...brief.internalLinks.siblings.map((s) => `- Sibling spoke: ${s}`),
-    ``,
   );
+  // A pillar page has nothing above it, so an empty "Hub:" line would read as
+  // a missing value rather than as "there is no parent".
+  if (brief.internalLinks.hub) lines.push(`- Hub: ${brief.internalLinks.hub}`);
+  lines.push(...brief.internalLinks.siblings.map((s) => `- Sibling spoke: ${s}`));
+  lines.push(``);
+
+  const children = brief.internalLinks.children ?? [];
+  if (children.length > 0) {
+    lines.push(
+      `## Pages this routing page must link down to`,
+      ``,
+      `This is a ROUTING page. Each page below must get a 2-3 sentence answer in`,
+      `the body, in this order, and a pointer onward — never a full treatment`,
+      `(that belongs on the child page). Mention a child in plain text until it`,
+      `exists; a link to an unpublished page fails the edit gate (D35).`,
+      ``,
+      ...children.map((c) => `- ${c}`),
+      ``,
+    );
+  }
   return lines.join("\n");
 }
