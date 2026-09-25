@@ -34,6 +34,19 @@ export interface LinkChecker {
   check(body: string): Promise<LinkReport>;
 }
 
+/**
+ * The reader-visible prose of an article.md: frontmatter, the json-ld fence,
+ * and HTML comments stripped. Both body checks (D34 citations, D35 links)
+ * must run on this — frontmatter carries the article's own canonical_url,
+ * which is never a link and can't resolve before the article is published.
+ */
+export function articleProse(md: string): string {
+  return md
+    .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "")
+    .replace(/```json-ld[\s\S]*?```/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "");
+}
+
 const FETCH_TIMEOUT_MS = 15_000;
 const PAGE_TEXT_CAP = 25_000;
 const USER_AGENT =
@@ -150,13 +163,7 @@ export class LiveCitationVerifier implements CitationVerifier {
     const verified = new Set(research?.verifiedUrls ?? []);
     const normalize = (u: string) => u.replace(/^https?:\/\/(www\.)?/, "").replace(/\/+$/, "");
     const verifiedNorm = new Set([...verified].map(normalize));
-    // Evidence citations live in the prose: strip frontmatter, the json-ld
-    // fence, and HTML comments before extracting URLs.
-    const prose = body
-      .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "")
-      .replace(/```json-ld[\s\S]*?```/gi, "")
-      .replace(/<!--[\s\S]*?-->/g, "");
-    const urls = extractExternalUrls(prose, this.internalHosts).filter((u) => {
+    const urls = extractExternalUrls(articleProse(body), this.internalHosts).filter((u) => {
       try {
         const host = new URL(u).hostname.replace(/^www\./, "");
         return !LiveCitationVerifier.PLUMBING_HOSTS.some(
@@ -281,7 +288,7 @@ export class LiveLinkChecker implements LinkChecker {
   ) {}
 
   async check(body: string): Promise<LinkReport> {
-    const urls = extractInternalLinks(body, this.internalHosts);
+    const urls = extractInternalLinks(articleProse(body), this.internalHosts);
     const results: LinkCheckResult[] = [];
     for (const url of urls) {
       const slug = url.split("/").filter(Boolean).pop() ?? "";

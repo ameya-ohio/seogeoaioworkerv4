@@ -169,4 +169,28 @@ describe("LiveLinkChecker (D35)", () => {
     expect(statusFor("never-planned")?.status).toBe("missing");
     expect(report.missingCount).toBe(2);
   });
+
+  it("ignores the article's own canonical_url, comments, and the json-ld fence", async () => {
+    // Replay of the first live direct-route failure: an absolute self
+    // canonical in frontmatter read as an unpublished internal link.
+    const checker = new LiveLinkChecker(db, "testco", ["saporo.io"], async () => ({ ok: false, note: "HTTP 404" }));
+    const md = `---
+title: "Still in review"
+canonical_url: "https://www.saporo.io/resources/blog/still-in-review"
+---
+
+# Still in review
+
+Prose with no internal links.
+
+<!-- INTERNAL LINK PLACEHOLDER: https://www.saporo.io/resources/blog/never-planned -->
+
+\`\`\`json-ld
+{"@id": "https://www.saporo.io/resources/blog/still-in-review#article"}
+\`\`\`
+`;
+    const report = await checker.check(md);
+    expect(report.results).toEqual([]);
+    expect(report.missingCount).toBe(0);
+  });
 });
