@@ -7,6 +7,10 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 python3-pip python3-venv fontconfig ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
+# Browsers go to a shared path, not /root/.cache: the worker runs as the
+# non-root `node` user (see USER below) and must still reach them.
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
+
 WORKDIR /app
 
 # Install JS deps first for layer caching.
@@ -54,5 +58,12 @@ RUN npm run build -w @blogagent/engine -w @blogagent/worker
 ENV NODE_ENV=production \
     REPO_ROOT=/app \
     PYTHON_BIN=python3
+
+# Claude Code refuses bypassPermissions (the Agent SDK's headless mode) as
+# root, so the worker runs as `node`. It writes only article workspaces and
+# scrape corpora; everything else in the image stays root-owned, read-only.
+RUN mkdir -p /app/outputs \
+  && chown -R node:node /app/articles /app/outputs /opt/ms-playwright
+USER node
 
 CMD ["node", "apps/worker/dist/cli.js", "start"]
