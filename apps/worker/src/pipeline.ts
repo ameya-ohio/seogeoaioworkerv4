@@ -30,8 +30,9 @@ import {
   type Storage,
   type WorkStage,
 } from "@blogagent/engine";
-import type { AgentInvoker } from "./agentRunner.js";
+import type { AgentInvoker, AgentRunOutcome } from "./agentRunner.js";
 import type { WorkerConfig } from "./config.js";
+import type { DirectPhaseRunner } from "./directRunner.js";
 import { PHASE_ORDER, phaseDefs, type PhaseContext } from "./phases.js";
 import type { CitationVerifier, LinkChecker } from "./quality.js";
 import {
@@ -46,6 +47,8 @@ export interface PipelineDeps {
   cfg: WorkerConfig;
   storage: Storage;
   invoker: AgentInvoker;
+  /** 10.3: runs phases whose cfg.direct.routes entry is "direct". */
+  direct: DirectPhaseRunner;
   /** D34: live citation verification — research + edit gates depend on it. */
   citationVerifier: CitationVerifier;
   /** D35: internal-link resolution — edit gate depends on it. */
@@ -197,18 +200,20 @@ async function executePhase(
   let attempt = 0;
   let gateFeedback: string[] | undefined;
 
+  const route = phase === "research" ? "agent" : cfg.direct.routes[phase];
+
   while (attempt < cfg.maxGateAttempts) {
     attempt += 1;
     const startedAt = new Date();
-    const phaseResult: PhaseResult = { phase, status: "running", attempt, startedAt };
+    const phaseResult: PhaseResult = { phase, status: "running", attempt, route, startedAt };
     await pushPhaseResult(db, runId, phaseResult);
     await emitEvent(db, {
       companyId: run.companyId,
       runId,
       articleId,
       type: "phase.started",
-      message: `Phase ${def.title} started (attempt ${attempt})`,
-      data: { phase, attempt, model: cfg.models[phase] },
+      message: `Phase ${def.title} started (attempt ${attempt}, ${route})`,
+      data: { phase, attempt, model: cfg.models[phase], route },
     });
 
     const ctx: PhaseContext = {
@@ -220,15 +225,19 @@ async function executePhase(
       hasCompetitorGaps: existsSync(join(articleDir(cfg, article), "competitor-gaps.md")),
       ...(gateFeedback ? { gateFeedback } : {}),
     };
-    const outcome = await invoker.run({
-      systemPromptFile: def.specFile,
-      prompt: def.buildPrompt(ctx),
-      model: cfg.models[phase],
-      cwd: cfg.repoRoot,
-      allowedTools: def.allowedTools,
-      maxTurns: cfg.maxTurns[phase],
-      onProgress: (text) => deps.log(`[${article.slug}/${phase}] ${text.slice(0, 160)}`),
-    });
+    const onProgress = (text: string) => deps.log(`[${article.slug}/${phase}] ${text.slice(0, 160)}`);
+    const outcome: AgentRunOutcome =
+      phase !== "research" && route === "direct"
+        ? await deps.direct.run(phase, def.specFile, ctx, onProgress)
+        : await invoker.run({
+            systemPromptFile: def.specFile,
+            prompt: def.buildPrompt(ctx),
+            model: cfg.models[phase],
+            cwd: cfg.repoRoot,
+            allowedTools: def.allowedTools,
+            maxTurns: cfg.maxTurns[phase],
+            onProgress,
+          });
 
     if (!outcome.success) {
       const err = `Agent run failed (${outcome.errorSubtype ?? "unknown"})`;

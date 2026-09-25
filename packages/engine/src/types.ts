@@ -97,6 +97,8 @@ export interface PhaseResult {
   phase: WorkStage;
   status: "running" | "succeeded" | "failed";
   attempt: number;
+  /** Invocation route (D25): Agent SDK session or one direct Messages API call. */
+  route?: "agent" | "direct";
   startedAt: Date;
   endedAt?: Date;
   usage?: PhaseUsage;

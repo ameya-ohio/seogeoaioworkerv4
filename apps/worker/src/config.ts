@@ -4,6 +4,18 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { WorkStage } from "@blogagent/engine";
 
+/**
+ * Invocation route per phase (D25 / roadmap 10.3). `agent` runs the phase as
+ * an Agent SDK session with tools; `direct` is one Messages API call with the
+ * inputs inlined and the worker doing all file I/O. Research is agent-only:
+ * its live WebSearch/WebFetch depth is the no-fabrication guardrail.
+ */
+export type PhaseRoute = "agent" | "direct";
+export type DirectPhase = Exclude<WorkStage, "research">;
+export const DIRECT_PHASES: readonly DirectPhase[] = ["outline", "write", "edit", "schema", "design"];
+export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
+const EFFORTS: readonly Effort[] = ["low", "medium", "high", "xhigh", "max"];
+
 export interface WorkerConfig {
   repoRoot: string;
   mongoUri: string;
@@ -18,6 +30,13 @@ export interface WorkerConfig {
   maxGateAttempts: number;
   models: Record<WorkStage, string>;
   maxTurns: Record<WorkStage, number>;
+  /** Direct Messages API route for the tool-less phases (roadmap 10.3). */
+  direct: {
+    routes: Record<DirectPhase, PhaseRoute>;
+    effort: Record<DirectPhase, Effort>;
+    /** Streaming call, so a high ceiling costs nothing unless it is used. */
+    maxTokens: number;
+  };
   /** Topic & Cluster Generator settings (roadmap 4C, D26 tiers). */
   cluster: {
     /** Main reasoning tier (clustering, scoring, architecture, briefs). */
@@ -102,6 +121,24 @@ function phaseModels(): Record<WorkStage, string> {
   };
 }
 
+/**
+ * PHASE_ROUTE_<PHASE>=agent|direct (default direct) is the per-phase
+ * rollback switch; PHASE_EFFORT_<PHASE> tunes direct calls (default high —
+ * the API default, so moving a phase off the Agent SDK doesn't also lower
+ * its reasoning depth). Unknown values fall back to the default.
+ */
+function directConfig(): WorkerConfig["direct"] {
+  const routes = {} as Record<DirectPhase, PhaseRoute>;
+  const effort = {} as Record<DirectPhase, Effort>;
+  for (const phase of DIRECT_PHASES) {
+    const route = process.env[`PHASE_ROUTE_${phase.toUpperCase()}`];
+    routes[phase] = route === "agent" ? "agent" : "direct";
+    const e = process.env[`PHASE_EFFORT_${phase.toUpperCase()}`] as Effort | undefined;
+    effort[phase] = e && EFFORTS.includes(e) ? e : "high";
+  }
+  return { routes, effort, maxTokens: intEnv("PHASE_MAX_TOKENS", 64_000) };
+}
+
 export function loadWorkerConfig(): WorkerConfig {
   const repoRoot = process.env["REPO_ROOT"] ?? findRepoRoot();
   const venvPython = join(repoRoot, "blogheaderimagegen", ".venv", "bin", "python");
@@ -126,6 +163,7 @@ export function loadWorkerConfig(): WorkerConfig {
       schema: intEnv("PHASE_MAX_TURNS_SCHEMA", 60),
       design: intEnv("PHASE_MAX_TURNS_DESIGN", 40),
     },
+    direct: directConfig(),
     cluster: {
       mainModel: process.env["CLUSTER_MODEL"] ?? DEFAULT_MODEL,
       fanoutModel: process.env["CLUSTER_FANOUT_MODEL"] ?? "claude-haiku-4-5-20251001",

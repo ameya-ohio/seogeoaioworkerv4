@@ -135,6 +135,11 @@ beforeAll(async () => {
     maxGateAttempts: 2,
     models: { research: "m", outline: "m", write: "m", edit: "m", schema: "m", design: "m" },
     maxTurns: { research: 1, outline: 1, write: 1, edit: 1, schema: 1, design: 1 },
+    direct: {
+      routes: { outline: "agent", write: "agent", edit: "agent", schema: "agent", design: "agent" },
+      effort: { outline: "high", write: "high", edit: "high", schema: "high", design: "high" },
+      maxTokens: 64_000,
+    },
     verifierModel: "fake-verifier",
     plan: { enrichModel: "fake-enrich", concurrency: 2, maxAttempts: 2 },
     schedule: { enabled: false, pollIntervalMs: 60000, dryRun: false },

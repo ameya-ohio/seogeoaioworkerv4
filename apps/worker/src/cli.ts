@@ -42,6 +42,7 @@ import {
   type WorkStage,
 } from "@blogagent/engine";
 import { SdkAgentInvoker } from "./agentRunner.js";
+import { DirectPhaseRunner, SdkDirectLlm } from "./directRunner.js";
 import { startClusterQueue } from "./clusterQueue.js";
 import type { ClusterDeps } from "./clusterRunner.js";
 import { loadWorkerConfig, type WorkerConfig } from "./config.js";
@@ -181,6 +182,7 @@ async function cmdStart(argv: string[]): Promise<void> {
       cfg,
       storage: storageFromEnv(cfg.repoRoot),
       invoker: new SdkAgentInvoker(),
+      direct: new DirectPhaseRunner(new SdkDirectLlm()),
       citationVerifier: new LiveCitationVerifier(
         new AnthropicLlmClient(),
         cfg.verifierModel,

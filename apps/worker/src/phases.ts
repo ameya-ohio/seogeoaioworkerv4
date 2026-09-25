@@ -42,7 +42,7 @@ function header(ctx: PhaseContext, phaseNo: number, title: string): string {
   ].join("\n");
 }
 
-function feedback(ctx: PhaseContext): string {
+export function feedback(ctx: PhaseContext): string {
   if (!ctx.gateFeedback?.length) return "";
   return [
     ``,

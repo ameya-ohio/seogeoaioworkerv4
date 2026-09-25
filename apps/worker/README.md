@@ -33,6 +33,18 @@ enqueue → runs (queued) ──claim/lease──▶ worker
 - **Models per phase** (D13): `PHASE_MODEL_DEFAULT` / `PHASE_MODEL_<PHASE>`
   env vars; default `claude-sonnet-5` everywhere. Token usage + cost per
   phase land in `runs.phaseResults[].usage`.
+- **Invocation routes** (D25, roadmap 10.3): research runs as an Agent SDK
+  session (it needs WebSearch/WebFetch). The other five phases default to
+  ONE streaming Messages API call each (`directRunner.ts`): the worker
+  inlines every input the spec names, the spec is the system prompt (stable
+  reference material behind a prompt-cache breakpoint), and the model
+  returns files in a `<file name="…">` protocol that the worker writes.
+  Schema: the model returns `schema.json` only; the worker embeds it in
+  `article.md`. Design: the model picks pattern + alt text; the worker runs
+  the header CLI. Gates are unchanged. `runs.phaseResults[].route` records
+  the route; direct-phase `costUsd` is estimated from token counts. Roll a
+  phase back with `PHASE_ROUTE_<PHASE>=agent`; tune with
+  `PHASE_EFFORT_<PHASE>` (default `high`).
 - **Binary storage** (D3): header PNG/HTML go to `STORAGE_DRIVER=local|s3`
   (Railway buckets are S3-compatible).
 
