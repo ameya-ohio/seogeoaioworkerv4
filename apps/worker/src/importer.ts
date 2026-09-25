@@ -22,6 +22,8 @@ export interface ImportOptions {
   /** Re-import folders whose slug already exists (replaces artifacts). */
   update: boolean;
   runAudit: boolean;
+  /** Import only these folders (full `YYYY-MM-DD-slug` names). Unset = all. */
+  only?: string[];
 }
 
 export interface ImportSummary {
@@ -59,7 +61,11 @@ export async function importArticles(
 ): Promise<ImportSummary> {
   const articlesRoot = join(cfg.repoRoot, "articles");
   const summary: ImportSummary = { imported: [], updated: [], skipped: [] };
-  const entries = (await readdir(articlesRoot)).sort();
+  const all = (await readdir(articlesRoot)).sort();
+  // A named folder that isn't on disk is an operator typo, not a no-op.
+  const missing = (opts.only ?? []).filter((f) => !all.includes(f));
+  if (missing.length > 0) throw new Error(`--only folder(s) not found in articles/: ${missing.join(", ")}`);
+  const entries = opts.only ? all.filter((f) => opts.only!.includes(f)) : all;
 
   for (const folder of entries) {
     const dir = join(articlesRoot, folder);

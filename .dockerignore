@@ -2,7 +2,7 @@ node_modules
 **/node_modules
 **/dist
 **/.venv
-articles
+articles/*
 outputs
 config-everworker
 # blogscraper source ships (competitive module, 6.1); its local corpora don't.
@@ -19,3 +19,12 @@ blogsagent
 !standards/*.md
 !templates/*.md
 !context/**/*.md
+
+# Seeded into prod Mongo via `import-articles --only` (2026-09-25): only these
+# folders ship. Must stay after the *.md rule above so their markdown survives.
+!articles/2026-09-15-kerberos-attack-mitigation-healthcare-organizations
+!articles/2026-09-15-what-are-identity-based-attacks-in-healthcare-it
+!articles/2026-09-16-attack-path-analysis
+!articles/2026-09-15-kerberos-attack-mitigation-healthcare-organizations/*.md
+!articles/2026-09-15-what-are-identity-based-attacks-in-healthcare-it/*.md
+!articles/2026-09-16-attack-path-analysis/*.md

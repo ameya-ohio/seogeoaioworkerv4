@@ -44,6 +44,8 @@ COPY scripts ./scripts
 COPY blogheaderimagegen ./blogheaderimagegen
 COPY blogscraper ./blogscraper
 COPY CLAUDE.md ./
+# Only the allowlisted seed folders (see .dockerignore).
+COPY articles ./articles
 
 # Only the engine + worker: apps/web is copied in (via `COPY apps`) but its
 # deps were never installed here — it has its own image (Dockerfile.web).

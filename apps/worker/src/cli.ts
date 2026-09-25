@@ -276,6 +276,9 @@ async function cmdImport(argv: string[]): Promise<void> {
         dryRun: flags["dry-run"] === true,
         update: flags["update"] === true,
         runAudit: flags["audit"] === true,
+        ...(typeof flags["only"] === "string"
+          ? { only: flags["only"].split(",").map((f) => f.trim()).filter(Boolean) }
+          : {}),
       },
       log,
     );
@@ -990,6 +993,7 @@ Commands:
           [--keyword "…"] [--slug s] [--from-stage research|outline|write|edit|schema|design]
   import-articles [--dry-run]        Backfill articles/ folders into Mongo
           [--stage published] [--update] [--audit]
+          [--only <folder>,<folder>]  (full YYYY-MM-DD-slug names)
   status                             Articles by stage + active runs
   events --run <id> [--follow]       Print a run's event stream
   cluster-enqueue --seed "…" [--k 5] Queue a Topic & Cluster Generator run

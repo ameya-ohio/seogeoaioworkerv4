@@ -67,4 +67,34 @@ describe("importArticles against the real articles/ corpus", () => {
     expect(second.skipped.length).toBeGreaterThanOrEqual(summary.imported.length);
     expect(await db.articles.countDocuments({ companyId: "testco" })).toBe(docs.length);
   }, 120_000);
+
+  it("imports only the folders named in `only`", async () => {
+    const cfg = { repoRoot: REAL_REPO, pythonBin: "python3" } as WorkerConfig;
+    const storage = new LocalStorage(mkdtempSync(join(tmpdir(), "blogagent-import-")));
+    const only = ["2026-09-16-attack-path-analysis", "2026-04-29-how-to-build-ai-sdr"];
+
+    const summary = await importArticles(
+      db,
+      cfg,
+      storage,
+      "onlyco",
+      { stage: "review", dryRun: false, update: false, runAudit: false, only },
+      () => {},
+    );
+    expect(summary.imported.sort()).toEqual([...only].sort());
+    const docs = await db.articles.find({ companyId: "onlyco" }).toArray();
+    expect(docs.map((d) => d.folder).sort()).toEqual([...only].sort());
+    for (const doc of docs) expect(doc.stage).toBe("review");
+
+    await expect(
+      importArticles(
+        db,
+        cfg,
+        storage,
+        "onlyco",
+        { stage: "review", dryRun: true, update: false, runAudit: false, only: ["2026-01-01-nope"] },
+        () => {},
+      ),
+    ).rejects.toThrow(/not found/);
+  }, 120_000);
 });
