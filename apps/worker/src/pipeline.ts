@@ -264,6 +264,17 @@ async function executePhase(
     gate = GATES[phase](files);
     await saveGateResult(db, articleId, phase, gate);
 
+    // Gate outcomes otherwise live only in Mongo; the log is where an
+    // operator watching a run (or tuning PHASE_EFFORT_*) actually looks.
+    const u = outcome.usage;
+    deps.log(
+      `[${article.slug}/${phase}] attempt ${attempt} (${route}) ${gate.ok ? "gate passed" : "gate FAILED"} ` +
+        `in ${Math.round((Date.now() - startedAt.getTime()) / 1000)}s` +
+        (u.outputTokens !== undefined ? `, ${u.inputTokens ?? 0} in / ${u.outputTokens} out tokens` : "") +
+        (u.costUsd !== undefined ? `, $${u.costUsd.toFixed(3)}` : "") +
+        (gate.ok ? "" : `: ${gate.problems.join("; ").slice(0, 1500)}`),
+    );
+
     await updateLastPhaseResult(db, runId, {
       ...phaseResult,
       status: gate.ok ? "succeeded" : "failed",
