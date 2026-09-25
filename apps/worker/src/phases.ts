@@ -23,6 +23,8 @@ export interface PhaseContext {
   hasCompetitorGaps?: boolean;
   /** Gate problems from the previous attempt, when retrying. */
   gateFeedback?: string[];
+  /** Edit only: the edit gate's problems on the incoming draft, before attempt 1. */
+  preAudit?: string[];
 }
 
 const FILE_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep"];
@@ -39,6 +41,23 @@ function header(ctx: PhaseContext, phaseNo: number, title: string): string {
     `Target keyword: ${article.targetKeyword ?? "not specified — use what research/strategy chose"}`,
     ``,
     `Follow your phase spec (your system prompt) exactly, including its output format and hard rules.`,
+  ].join("\n");
+}
+
+/**
+ * The machine-checked problems already present in the draft. Reading a
+ * 70-phrase list against a 3,000-word article by eye misses hits; handing
+ * the Editor the gate's exact findings (with quoted context) up front is
+ * what makes attempt 1 pass instead of attempt 2.
+ */
+export function preAuditBlock(ctx: PhaseContext): string {
+  if (!ctx.preAudit?.length || ctx.gateFeedback?.length) return "";
+  return [
+    ``,
+    `PRE-AUDIT — the worker ran the Editor gate's machine checks on the current draft.`,
+    `Every item below fails that gate today; fix each one (quoted context shows where),`,
+    `in addition to your full checklist pass, and don't introduce new ones:`,
+    ...ctx.preAudit.map((p) => `- ${p}`),
   ].join("\n");
 }
 
@@ -143,6 +162,7 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           ``,
           `Walk every checklist item, edit article.md in place to fix all failures,`,
           `and append the HTML-comment edit summary at the bottom.`,
+          preAuditBlock(ctx),
           feedback(ctx),
         ].join("\n"),
     },

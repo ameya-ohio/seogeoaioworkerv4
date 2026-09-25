@@ -202,6 +202,17 @@ async function executePhase(
 
   const route = phase === "research" ? "agent" : cfg.direct.routes[phase];
 
+  // Edit pre-audit: run the edit gate's own checks on the incoming draft so
+  // attempt 1 starts with the exact problems a retry would have been given.
+  let preAudit: string[] | undefined;
+  if (phase === "edit") {
+    const pre = GATES.edit(await loadGateFiles(cfg, article, phase, await runCodeStep(deps, article, phase)));
+    if (!pre.ok) preAudit = pre.problems;
+    deps.log(
+      `[${article.slug}/edit] pre-audit: ${pre.ok ? "draft already passes" : `${pre.problems.length} problem(s) handed to the Editor`}`,
+    );
+  }
+
   while (attempt < cfg.maxGateAttempts) {
     attempt += 1;
     const startedAt = new Date();
@@ -224,6 +235,7 @@ async function executePhase(
       // competitor corpora exist for this company.
       hasCompetitorGaps: existsSync(join(articleDir(cfg, article), "competitor-gaps.md")),
       ...(gateFeedback ? { gateFeedback } : {}),
+      ...(preAudit ? { preAudit } : {}),
     };
     const onProgress = (text: string) => deps.log(`[${article.slug}/${phase}] ${text.slice(0, 160)}`);
     const outcome: AgentRunOutcome =

@@ -490,6 +490,8 @@ class FakeDirectLlm implements DirectLlm {
   calls: { phase: string; req: DirectLlmRequest }[] = [];
   /** Return invalid schema JSON on the first schema call (gate-retry test). */
   badSchemaOnce = false;
+  /** Writer drafts contain a banned phrase (edit pre-audit test). */
+  dirtyDraft = false;
 
   async generate(req: DirectLlmRequest): Promise<DirectLlmResponse> {
     const phase = /You are running the (\w+) phase/.exec(req.prompt)?.[1] ?? "?";
@@ -509,6 +511,10 @@ class FakeDirectLlm implements DirectLlm {
         JSON.stringify({ pattern: "contrarian", subtitle: null, hero_image_alt: "Alt text for the header" }),
       ),
     };
+    if (phase === "write" && this.dirtyDraft) {
+      bodies["write"] = file("article.md", ARTICLE.replace("Body text about layers.", "Body text about the blast radius of layers.")) +
+        "\n" + file("meta.json", JSON.stringify({ title: "t", slug: "pipeline-e2e" }));
+    }
     if (phase === "schema" && this.badSchemaOnce) {
       this.badSchemaOnce = false;
       bodies["schema"] = file("schema.json", "{ not json");
@@ -645,5 +651,35 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
     const doc = await db.articles.findOne({ _id: article._id });
     expect([...(doc?.artifacts.article ?? "").matchAll(/```json-ld/g)]).toHaveLength(1);
     expect(doc?.stage).toBe("review");
+  }, 120_000);
+
+  it("hands the Editor the edit gate's findings on the draft before attempt 1", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "direct-preaudit",
+      folder: "2026-09-14-direct-preaudit",
+      topic: "Pre-audit topic",
+      targetKeyword: "context engineering",
+    });
+    const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const claimed = await claimRun(db, "test-worker", 60_000);
+
+    const llm = new FakeDirectLlm();
+    llm.dirtyDraft = true;
+    const direct = new DirectPhaseRunner(llm, fakeRenderer([]));
+    await runPipeline(makeDeps(new FakeInvoker(), { cfg: directCfg(), direct }), claimed!);
+
+    const editCalls = llm.calls.filter((c) => c.phase === "edit");
+    // The fixture Editor returns a clean article, so the pre-audit is what
+    // lets attempt 1 pass: one edit call, not a gate retry.
+    expect(editCalls).toHaveLength(1);
+    const prompt = editCalls[0]!.req.prompt;
+    expect(prompt).toContain("PRE-AUDIT");
+    expect(prompt).toContain("'blast radius'");
+    expect(prompt).toContain("the blast radius of layers");
+    expect(prompt).not.toContain("GATE FEEDBACK");
+
+    const runDoc = await db.runs.findOne({ _id: run._id });
+    expect(runDoc?.status).toBe("succeeded");
   }, 120_000);
 });

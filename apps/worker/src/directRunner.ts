@@ -7,7 +7,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { PhaseUsage } from "@blogagent/engine";
 import type { AgentRunOutcome } from "./agentRunner.js";
 import type { DirectPhase, Effort, WorkerConfig } from "./config.js";
-import { feedback, type PhaseContext } from "./phases.js";
+import { feedback, preAuditBlock, type PhaseContext } from "./phases.js";
 import { articleDir } from "./workspace.js";
 
 const execFileAsync = promisify(execFile);
@@ -360,6 +360,7 @@ function buildUserPrompt(phase: DirectPhase, ctx: PhaseContext, plan: PhasePlan)
     `…full file content…`,
     `</file>`,
     `Files: ${plan.outputs.join(", ")}. Nothing outside the file tags.`,
+    preAuditBlock(ctx),
     feedback(ctx),
   ].join("\n");
 }
