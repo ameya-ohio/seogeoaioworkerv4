@@ -36,6 +36,8 @@ export interface DirectLlmRequest {
   prompt: string;
   maxTokens: number;
   effort: Effort;
+  /** Heartbeat sink: a direct call is otherwise silent until it returns. */
+  onProgress?: (text: string) => void;
 }
 
 export interface DirectLlmResponse {
@@ -49,6 +51,46 @@ export interface DirectLlm {
   generate(req: DirectLlmRequest): Promise<DirectLlmResponse>;
 }
 
+/**
+ * Periodic progress line for a streaming call. Thinking text is not shown
+ * (display defaults to omitted), so the only observable signals are which
+ * block type is streaming and how much answer text has arrived.
+ */
+export class Heartbeat {
+  private state: "waiting" | "thinking" | "writing" = "waiting";
+  private chars = 0;
+  private readonly startedAt = Date.now();
+  private readonly timer: ReturnType<typeof setInterval>;
+
+  constructor(
+    private readonly emit: (text: string) => void,
+    intervalMs = 30_000,
+  ) {
+    this.timer = setInterval(() => this.emit(this.describe()), intervalMs);
+    this.timer.unref?.();
+  }
+
+  thinking(): void {
+    if (this.state === "waiting") this.state = "thinking";
+  }
+
+  text(totalChars: number): void {
+    this.state = "writing";
+    this.chars = totalChars;
+  }
+
+  describe(): string {
+    const s = Math.round((Date.now() - this.startedAt) / 1000);
+    return this.state === "writing"
+      ? `writing… ${s}s, ${this.chars.toLocaleString("en-US")} chars`
+      : `${this.state}… ${s}s`;
+  }
+
+  stop(): void {
+    clearInterval(this.timer);
+  }
+}
+
 export class SdkDirectLlm implements DirectLlm {
   private client: Anthropic | undefined;
 
@@ -58,16 +100,31 @@ export class SdkDirectLlm implements DirectLlm {
     this.client ??= new Anthropic();
     // Streaming: an article-length response plus adaptive thinking can run
     // past a non-streaming request's HTTP timeout.
-    const message = await this.client.messages
-      .stream({
-        model: req.model,
-        max_tokens: req.maxTokens,
-        thinking: { type: "adaptive" },
-        output_config: { effort: req.effort },
-        system: req.system,
-        messages: [{ role: "user", content: req.prompt }],
-      })
-      .finalMessage();
+    const stream = this.client.messages.stream({
+      model: req.model,
+      max_tokens: req.maxTokens,
+      thinking: { type: "adaptive" },
+      output_config: { effort: req.effort },
+      system: req.system,
+      messages: [{ role: "user", content: req.prompt }],
+    });
+    const beat = req.onProgress ? new Heartbeat(req.onProgress) : undefined;
+    let textChars = 0;
+    if (beat) {
+      stream.on("streamEvent", (event) => {
+        if (event.type === "content_block_start" && event.content_block.type !== "text") beat.thinking();
+      });
+      stream.on("text", (delta) => {
+        textChars += delta.length;
+        beat.text(textChars);
+      });
+    }
+    let message: Anthropic.Message;
+    try {
+      message = await stream.finalMessage();
+    } finally {
+      beat?.stop();
+    }
     const text = message.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
       .map((b) => b.text)
@@ -434,6 +491,7 @@ export class DirectPhaseRunner {
       prompt: buildUserPrompt(phase, ctx, plan),
       maxTokens: cfg.direct.maxTokens,
       effort: cfg.direct.effort[phase],
+      ...(onProgress ? { onProgress } : {}),
     });
     Object.assign(usage, res.usage);
     const cost = estimateCostUsd(model, res.usage);

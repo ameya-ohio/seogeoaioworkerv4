@@ -1,7 +1,33 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { HEADER_PATTERNS, embedSchema, estimateCostUsd, parseFiles, setFrontmatter } from "./directRunner.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  HEADER_PATTERNS,
+  Heartbeat,
+  embedSchema,
+  estimateCostUsd,
+  parseFiles,
+  setFrontmatter,
+} from "./directRunner.js";
+
+describe("Heartbeat", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("reports waiting → thinking → writing on its interval, and stops", () => {
+    vi.useFakeTimers();
+    const lines: string[] = [];
+    const beat = new Heartbeat((t) => lines.push(t), 30_000);
+    vi.advanceTimersByTime(30_000);
+    beat.thinking();
+    vi.advanceTimersByTime(30_000);
+    beat.text(12_400);
+    beat.thinking(); // a later thinking block doesn't hide that text has started
+    vi.advanceTimersByTime(30_000);
+    beat.stop();
+    vi.advanceTimersByTime(90_000);
+    expect(lines).toEqual(["waiting… 30s", "thinking… 60s", "writing… 90s, 12,400 chars"]);
+  });
+});
 
 const REAL_REPO = join(import.meta.dirname, "..", "..", "..");
 
