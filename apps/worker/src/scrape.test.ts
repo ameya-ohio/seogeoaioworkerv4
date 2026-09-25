@@ -136,6 +136,8 @@ beforeAll(async () => {
     models: { research: "m", outline: "m", write: "m", edit: "m", schema: "m", design: "m" },
     maxTurns: { research: 1, outline: 1, write: 1, edit: 1, schema: 1, design: 1 },
     verifierModel: "fake-verifier",
+    plan: { enrichModel: "fake-enrich", concurrency: 2, maxAttempts: 2 },
+    schedule: { enabled: false, pollIntervalMs: 60000, dryRun: false },
     cluster: {
       mainModel: "m",
       fanoutModel: "f",

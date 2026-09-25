@@ -8,6 +8,8 @@ import type {
   SettingDoc,
 } from "./types.js";
 import type { ApiCostDoc, ClusterDoc, ClusterEventDoc, ThemeDoc } from "./cluster/types.js";
+import type { PlanDoc, PlanEventDoc, PlanItemDoc } from "./plan/types.js";
+import type { ScheduleDoc } from "./schedule/types.js";
 import type { ScrapeDoc, ScrapeEventDoc } from "./scrape/types.js";
 
 export interface EngineDb {
@@ -25,6 +27,10 @@ export interface EngineDb {
   apiCosts: Collection<ApiCostDoc>;
   scrapes: Collection<ScrapeDoc>;
   scrapeEvents: Collection<ScrapeEventDoc>;
+  plans: Collection<PlanDoc>;
+  planItems: Collection<PlanItemDoc>;
+  planEvents: Collection<PlanEventDoc>;
+  schedules: Collection<ScheduleDoc>;
   close(): Promise<void>;
 }
 
@@ -47,6 +53,10 @@ export async function connect(uri: string, dbName: string): Promise<EngineDb> {
     apiCosts: db.collection<ApiCostDoc>("api_costs"),
     scrapes: db.collection<ScrapeDoc>("scrapes"),
     scrapeEvents: db.collection<ScrapeEventDoc>("scrape_events"),
+    plans: db.collection<PlanDoc>("plans"),
+    planItems: db.collection<PlanItemDoc>("plan_items"),
+    planEvents: db.collection<PlanEventDoc>("plan_events"),
+    schedules: db.collection<ScheduleDoc>("schedules"),
     close: () => client.close(),
   };
   await ensureIndexes(handle);
@@ -94,5 +104,30 @@ export async function ensureIndexes(h: EngineDb): Promise<void> {
       { key: { companyId: 1, domain: 1, createdAt: -1 } },
     ]),
     h.scrapeEvents.createIndexes([{ key: { scrapeId: 1, seq: 1 }, unique: true }]),
+    h.plans.createIndexes([
+      { key: { companyId: 1, createdAt: -1 } },
+      { key: { companyId: 1, status: 1 } },
+      // Enrichment-job claim, mirroring the scrape queue.
+      { key: { status: 1, leaseUntil: 1 } },
+    ]),
+    h.planItems.createIndexes([
+      { key: { planId: 1, externalId: 1 }, unique: true },
+      // Forces the importer to fully disambiguate before insert, the way
+      // articles.{companyId, slug} does for articles.
+      { key: { planId: 1, slug: 1 }, unique: true },
+      { key: { companyId: 1, slug: 1 } },
+      // The scheduler tick's candidate query.
+      { key: { planId: 1, status: 1, sequence: 1 } },
+      { key: { planId: 1, enrichment: 1 } },
+      { key: { planId: 1, parentItemId: 1 } },
+      { key: { articleId: 1 } },
+    ]),
+    h.planEvents.createIndexes([{ key: { planId: 1, seq: 1 }, unique: true }]),
+    h.schedules.createIndexes([
+      // One schedule per plan.
+      { key: { planId: 1 }, unique: true },
+      // The tick's claim query.
+      { key: { companyId: 1, status: 1, nextFireAt: 1 } },
+    ]),
   ]);
 }

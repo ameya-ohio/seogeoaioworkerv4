@@ -160,7 +160,12 @@ export interface SpokeBrief {
     quotableStatCandidate: string;
   };
   differentiationAngle: string;
-  internalLinks: { hub: string; siblings: string[] };
+  /**
+   * `hub` is the page above (empty for a pillar page, which has none),
+   * `siblings` are peers, and `children` are the pages a ROUTING page must
+   * link down to. Values are page TITLES, not URLs.
+   */
+  internalLinks: { hub: string; siblings: string[]; children?: string[] };
   lengthBand: { min: number; max: number; justification?: string };
   schemaTypes: string[];
   /** Rendered markdown brief — what the Strategist receives (4.12). */

@@ -34,6 +34,21 @@ export interface WorkerConfig {
   };
   /** Cheap tier for citation verification (D34). */
   verifierModel: string;
+  /** Content-plan brief enrichment. */
+  plan: {
+    enrichModel: string;
+    /** Parallel enrichment calls per plan. */
+    concurrency: number;
+    maxAttempts: number;
+  };
+  /** Cadence scheduler. */
+  schedule: {
+    /** Off by default: a cadence must be switched on deliberately. */
+    enabled: boolean;
+    pollIntervalMs: number;
+    /** Report what each tick WOULD enqueue, without enqueueing it. */
+    dryRun: boolean;
+  };
   /** Competitive scrape jobs (roadmap 6.1). */
   scrape: {
     maxAttempts: number;
@@ -120,6 +135,19 @@ export function loadWorkerConfig(): WorkerConfig {
       maxAttempts: intEnv("CLUSTER_MAX_ATTEMPTS", 2),
     },
     verifierModel: process.env["CITATION_MODEL"] ?? "claude-haiku-4-5-20251001",
+    plan: {
+      enrichModel:
+        process.env["PLAN_ENRICH_MODEL"] ??
+        process.env["CLUSTER_FANOUT_MODEL"] ??
+        "claude-haiku-4-5-20251001",
+      concurrency: intEnv("PLAN_ENRICH_CONCURRENCY", 6),
+      maxAttempts: intEnv("PLAN_MAX_ATTEMPTS", 2),
+    },
+    schedule: {
+      enabled: (process.env["SCHEDULER_ENABLED"] ?? "0") === "1",
+      pollIntervalMs: intEnv("SCHEDULE_POLL_INTERVAL_MS", 60_000),
+      dryRun: (process.env["SCHEDULE_DRY_RUN"] ?? "0") === "1",
+    },
     scrape: {
       maxAttempts: intEnv("SCRAPE_MAX_ATTEMPTS", 2),
       timeoutMs: intEnv("SCRAPE_TIMEOUT_MS", 45 * 60 * 1000),

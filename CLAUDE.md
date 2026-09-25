@@ -171,6 +171,10 @@ agents/
   header-designer.md  Phase 6 spec (1200×600 hero image)
   configurator.md     Company onboarding agent (not a pipeline phase;
                       invoked via the /configure-company skill)
+  plan-brief-enricher.md
+                      Sharpens one imported content-plan row into a full spoke
+                      brief (not a pipeline phase; runs on the plan queue in
+                      apps/worker). May describe evidence, never supply it.
   topic-cluster-generator.md
                       Theme-driven research agent (not a pipeline phase; D30/D31):
                       seed → prompt fan-out → themes → hub/spoke architecture →
@@ -205,6 +209,16 @@ scripts/
   validate_hubspot.py Verify token + resolve blog/author IDs + list posts
 
 articles/             One subfolder per article (YYYY-MM-DD-slug)
+
+Content plans      An operator-authored spreadsheet (a pillar map, a content
+                   calendar) imported as `plans` + `plan_items`: every row
+                   becomes a planned article with a reserved slug, a synthesized
+                   spoke brief, and a production `sequence` that puts a pillar
+                   page before its hubs and a hub before its articles. A
+                   per-plan cadence then produces them unattended, stopping at
+                   `review`. Worker CLI: `plan-import`, `plan-status`,
+                   `plan-items`, `plan-enrich`, `schedule-create`,
+                   `schedule-resume`, `schedule-preview`, `schedule-tick`.
 
 packages/engine/      TypeScript engine library for headless mode (Mongo
                       data layer, pipeline stages, code-enforced gates,

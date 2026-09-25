@@ -19,6 +19,23 @@ import {
   scrapeEventsAfter,
   storageFromEnv,
   syncCompany,
+  analyzePlan,
+  commitPlan,
+  createPlan,
+  createSchedule,
+  getPlan,
+  getSchedule,
+  listPlanItems,
+  listPlans,
+  planCounts,
+  previewSchedule,
+  readWorkbook,
+  requestPlanEnrichment,
+  resumeSchedule,
+  pauseSchedule,
+  runScheduleTick,
+  suggestMapping,
+  updateSchedule,
   type CompanyConfig,
   type EngineDb,
   type Stage,
@@ -34,7 +51,12 @@ import type { PipelineDeps } from "./pipeline.js";
 import { LiveCitationVerifier, LiveLinkChecker } from "./quality.js";
 import { installSignalHandlers, startQueue, type QueueController } from "./queue.js";
 import { startScrapeQueue } from "./scrapeQueue.js";
+import { startPlanQueue } from "./planQueue.js";
+import { startScheduleQueue } from "./scheduleQueue.js";
+import type { PlanDeps } from "./planRunner.js";
 import { PythonScraperCli, importScrapedCorpus, type ScrapeDeps } from "./scrapeRunner.js";
+import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
 
 const log = (msg: string) => console.log(`[${new Date().toISOString()}] ${msg}`);
 
@@ -140,13 +162,19 @@ async function cmdStart(argv: string[]): Promise<void> {
   const clusterOnly = flags["cluster-only"] === true;
   const pipelineOnly = flags["pipeline-only"] === true;
   const scrapeOnly = flags["scrape-only"] === true;
-  if ([clusterOnly, pipelineOnly, scrapeOnly].filter(Boolean).length > 1) {
-    console.error("Pass at most one of --cluster-only / --pipeline-only / --scrape-only.");
+  const planOnly = flags["plan-only"] === true;
+  const scheduleOnly = flags["schedule-only"] === true;
+  const onlyFlags = [clusterOnly, pipelineOnly, scrapeOnly, planOnly, scheduleOnly];
+  if (onlyFlags.filter(Boolean).length > 1) {
+    console.error(
+      "Pass at most one of --cluster-only / --pipeline-only / --scrape-only / --plan-only / --schedule-only.",
+    );
     process.exit(2);
   }
+  const anyOnly = onlyFlags.some(Boolean);
   const { cfg, db, companyId, companyName, company } = await setup();
   const controllers: QueueController[] = [];
-  if (!clusterOnly && !scrapeOnly) {
+  if (!anyOnly || pipelineOnly) {
     const hosts = internalHosts(company);
     const deps: PipelineDeps = {
       db,
@@ -166,11 +194,22 @@ async function cmdStart(argv: string[]): Promise<void> {
     };
     controllers.push(startQueue(deps));
   }
-  if (!pipelineOnly && !scrapeOnly) {
+  if (!anyOnly || clusterOnly) {
     controllers.push(startClusterQueue(clusterDeps(cfg, db, company)));
   }
-  if (!clusterOnly && !pipelineOnly) {
+  if (!anyOnly || scrapeOnly) {
     controllers.push(startScrapeQueue(scrapeDeps(cfg, db)));
+  }
+  if (!anyOnly || planOnly) {
+    const planDeps: PlanDeps = { db, cfg, llm: new AnthropicLlmClient(), log };
+    controllers.push(startPlanQueue(planDeps));
+  }
+  // The cadence is off unless switched on deliberately: a scheduler that
+  // starts firing on deploy would spend money nobody asked for.
+  if (cfg.schedule.enabled || scheduleOnly) {
+    controllers.push(startScheduleQueue({ db, cfg, companyId, log }));
+  } else {
+    log("scheduler disabled (set SCHEDULER_ENABLED=1 to run cadences)");
   }
   const controller: QueueController = {
     async stop() {
@@ -558,11 +597,395 @@ async function cmdScrapeImport(argv: string[]): Promise<void> {
   }
 }
 
+
+// ── content plans ─────────────────────────────────────────────────────────
+
+function planIdFlag(flags: Record<string, string | boolean>, name = "plan"): ObjectId {
+  const raw = typeof flags[name] === "string" ? (flags[name] as string) : "";
+  if (!ObjectId.isValid(raw)) {
+    console.error(`--${name} <id> is required (24-character hex id).`);
+    process.exit(2);
+  }
+  return new ObjectId(raw);
+}
+
+async function cmdPlanImport(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const file = typeof flags["file"] === "string" ? (flags["file"] as string) : undefined;
+  if (!file) {
+    console.error(
+      'Usage: plan-import --file <map.xlsx|map.csv> [--sheet "Content Map"] [--commit] [--enrich]',
+    );
+    process.exit(2);
+  }
+  const { db, companyId, companyName } = await setup();
+  try {
+    const path = isAbsolute(file) ? file : resolve(process.cwd(), file);
+    const buf = await readFile(path);
+    const wb = await readWorkbook(buf, basename(path));
+
+    const suggestion = suggestMapping(wb);
+    const mapping = suggestion.mapping;
+    if (typeof flags["sheet"] === "string") mapping.sheet = flags["sheet"] as string;
+
+    // Collisions are reported against what already exists, not guessed at.
+    const existingArticles = await db.articles
+      .find({ companyId })
+      .project<{ slug: string; stage: string }>({ slug: 1, stage: 1 })
+      .toArray();
+    const takenSlugs = new Map(existingArticles.map((a) => [a.slug, a.stage]));
+    const existingKeywordDocs = await db.keywords
+      .find({ companyId })
+      .project<{ text: string; status: string }>({ text: 1, status: 1 })
+      .toArray();
+    const existingKeywords = new Map(existingKeywordDocs.map((k) => [k.text, k.status]));
+
+    const analysis = analyzePlan({
+      workbook: wb,
+      mapping,
+      companyName,
+      takenSlugs,
+      existingKeywords,
+    });
+    const r = analysis.report;
+
+    console.log(`Workbook: ${basename(path)}`);
+    console.log(`Sheets:   ${wb.sheets.map((x) => `${x.name} (${x.rows.length})`).join(", ")}`);
+    console.log(`Payload:  ${r.sheet}`);
+    console.log(`Rows:     ${r.mappedRows} mapped of ${r.totalRows}`);
+    console.log(`Roles:    ${JSON.stringify(r.byPageRole)}`);
+    console.log(`Priority: ${JSON.stringify(r.byPriority)}`);
+    console.log(`Funnel:   ${JSON.stringify(r.byFunnel)}`);
+    console.log(`Intent:   ${JSON.stringify(r.byIntent)}`);
+    if (analysis.promotions.length > 0) {
+      console.log(
+        `\nStructure overrode priority for ${analysis.promotions.length} parent page(s):`,
+      );
+      for (const p of analysis.promotions.slice(0, 10)) {
+        console.log(`  ${p.parentKey} pulled forward so ${p.childKey} is not blocked`);
+      }
+    }
+    if (r.needsQueryTarget.length > 0) {
+      console.log(`\n${r.needsQueryTarget.length} row(s) need a human keyword target:`);
+      for (const id of r.needsQueryTarget.slice(0, 10)) console.log(`  ${id}`);
+    }
+    if (r.skippedRows.length > 0) {
+      console.log(`\nSkipped ${r.skippedRows.length} row(s):`);
+      for (const sk of r.skippedRows.slice(0, 10)) console.log(`  row ${sk.row}: ${sk.reason}`);
+    }
+    if (r.articleCollisions.length > 0) {
+      console.log(`\n${r.articleCollisions.length} slug collision(s) with existing articles:`);
+      for (const c of r.articleCollisions.slice(0, 10)) {
+        console.log(`  ${c.externalId} -> ${c.slug} (existing stage: ${c.stage})`);
+      }
+    }
+    if (r.missingHubs.length > 0) console.log(`\nSubtopics with no hub row: ${r.missingHubs.length}`);
+    if (r.blocking.length > 0) {
+      console.log(`\nBLOCKING:`);
+      for (const b of r.blocking) console.log(`  - ${b}`);
+    }
+
+    if (flags["commit"] !== true) {
+      console.log(`\n(dry run — pass --commit to create the plan)`);
+      return;
+    }
+    if (r.blocking.length > 0) {
+      console.error(`\nRefusing to commit while problems remain.`);
+      process.exit(1);
+    }
+
+    const plan = await createPlan(db, {
+      companyId,
+      filename: basename(path),
+      sheets: wb.sheets,
+      mapping,
+      taxonomy: analysis.taxonomy,
+      concepts: analysis.concepts,
+      ...(analysis.notes ? { notes: analysis.notes } : {}),
+      report: r,
+    });
+    const planId = plan._id as ObjectId;
+    const { itemCount } = await commitPlan(db, {
+      companyId,
+      planId,
+      items: analysis.items,
+      report: r,
+    });
+    console.log(`\nPlan ${planId.toHexString()} committed with ${itemCount} items.`);
+
+    if (flags["enrich"] === true) {
+      const n = await requestPlanEnrichment(db, planId);
+      console.log(`Queued brief enrichment for ${n} items — run the worker to process it.`);
+    } else {
+      console.log(`Briefs are deterministic. Run: plan-enrich --plan ${planId.toHexString()}`);
+    }
+  } finally {
+    await db.close();
+  }
+}
+
+async function cmdPlanStatus(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const { db, companyId } = await setup();
+  try {
+    if (typeof flags["plan"] === "string") {
+      const planId = planIdFlag(flags);
+      const plan = await getPlan(db, planId);
+      if (!plan) {
+        console.error("plan not found");
+        process.exit(1);
+      }
+      const counts = await planCounts(db, planId);
+      console.log(`${plan.filename}  [${plan.status}]`);
+      console.log(`items:      ${counts.total}`);
+      console.log(`status:     ${JSON.stringify(counts.byStatus)}`);
+      console.log(`enrichment: ${JSON.stringify(counts.byEnrichment)}`);
+      console.log(`usage:      ${plan.usage.llmCalls} calls, $${plan.usage.costUsd.toFixed(2)}`);
+      const schedule = await getSchedule(db, planId);
+      if (schedule) {
+        console.log(
+          `schedule:   ${schedule.status} | next ${schedule.nextFireAt?.toISOString() ?? "—"} | ` +
+            `${schedule.cadence.batchSize}/fire on days [${schedule.cadence.daysOfWeek.join(",")}] ` +
+            `at ${schedule.cadence.timeOfDay} ${schedule.cadence.timezone}`,
+        );
+        if (schedule.pause) console.log(`paused:     ${schedule.pause.detail}`);
+      } else {
+        console.log(`schedule:   none — create one with schedule-create`);
+      }
+      return;
+    }
+    const plans = await listPlans(db, companyId);
+    if (plans.length === 0) {
+      console.log("No content plans yet. Import one with plan-import --file <map.xlsx>.");
+      return;
+    }
+    for (const p of plans) {
+      console.log(
+        `${p._id?.toHexString()}  ${p.status.padEnd(9)}  ${String(p.itemCount ?? 0).padStart(4)} items  ${p.filename}`,
+      );
+    }
+  } finally {
+    await db.close();
+  }
+}
+
+async function cmdPlanItems(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const planId = planIdFlag(flags);
+  const { db } = await setup();
+  try {
+    const limit = typeof flags["limit"] === "string" ? Number.parseInt(flags["limit"], 10) : 40;
+    const items = await listPlanItems(db, {
+      planId,
+      limit,
+      ...(typeof flags["status"] === "string"
+        ? { status: [flags["status"] as never] }
+        : {}),
+    });
+    for (const i of items) {
+      console.log(
+        `#${String(i.sequence).padStart(3)}  ${i.status.padEnd(13)} ${i.enrichment.padEnd(8)} ` +
+          `${i.pageRole.padEnd(7)} P${i.priority}  ${i.slug}`,
+      );
+      console.log(`      ${i.title}  [${i.primaryQueryTarget}]${i.needsQueryTarget ? "  <- needs a human target" : ""}`);
+    }
+  } finally {
+    await db.close();
+  }
+}
+
+async function cmdPlanEnrich(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const planId = planIdFlag(flags);
+  const { db } = await setup();
+  try {
+    const n = await requestPlanEnrichment(db, planId, {
+      onlyFailed: flags["only-failed"] === true,
+    });
+    console.log(`Queued ${n} item(s) for enrichment. Run the worker to process them.`);
+  } finally {
+    await db.close();
+  }
+}
+
+async function cmdPlanEvents(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const planId = planIdFlag(flags);
+  const { db } = await setup();
+  try {
+    const events = await db.planEvents.find({ planId }).sort({ seq: 1 }).limit(200).toArray();
+    for (const e of events) {
+      console.log(`${e.ts.toISOString()}  ${e.type.padEnd(24)} ${e.message}`);
+    }
+  } finally {
+    await db.close();
+  }
+}
+
+// ── schedules ─────────────────────────────────────────────────────────────
+
+function intFlag(flags: Record<string, string | boolean>, name: string): number | undefined {
+  const raw = flags[name];
+  if (typeof raw !== "string") return undefined;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+async function cmdScheduleCreate(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const planId = planIdFlag(flags);
+  const { db, companyId } = await setup();
+  try {
+    const plan = await getPlan(db, planId);
+    if (!plan) {
+      console.error("plan not found");
+      process.exit(1);
+    }
+    const days =
+      typeof flags["days"] === "string"
+        ? (flags["days"] as string).split(",").map((d) => Number.parseInt(d.trim(), 10))
+        : undefined;
+    const limits: Record<string, number> = {};
+    for (const [flag, key] of [
+      ["max-in-flight", "maxInFlight"],
+      ["max-review", "maxAwaitingReview"],
+      ["max-per-week", "maxPerCalendarWeek"],
+      ["max-total", "maxTotalArticles"],
+      ["max-cost", "maxCostUsd"],
+    ] as const) {
+      const v = intFlag(flags, flag);
+      if (v !== undefined) limits[key] = v;
+    }
+    const schedule = await createSchedule(db, {
+      companyId,
+      planId,
+      name: typeof flags["name"] === "string" ? (flags["name"] as string) : plan.filename,
+      cadence: {
+        ...(days ? { daysOfWeek: days } : {}),
+        ...(typeof flags["time"] === "string" ? { timeOfDay: flags["time"] as string } : {}),
+        ...(typeof flags["tz"] === "string" ? { timezone: flags["tz"] as string } : {}),
+        ...(intFlag(flags, "batch") !== undefined ? { batchSize: intFlag(flags, "batch") as number } : {}),
+      },
+      ...(Object.keys(limits).length ? { limits } : {}),
+      ...(flags["require-approval"] === true ? { requireApproval: true } : {}),
+    });
+    console.log(
+      `Schedule created for plan ${planId.toHexString()} — PAUSED.\n` +
+        `  ${schedule.cadence.batchSize}/fire on days [${schedule.cadence.daysOfWeek.join(",")}] ` +
+        `at ${schedule.cadence.timeOfDay} ${schedule.cadence.timezone}\n` +
+        `  limits: ${JSON.stringify(schedule.limits)}\n` +
+        `Start it with: schedule-resume --plan ${planId.toHexString()}`,
+    );
+  } finally {
+    await db.close();
+  }
+}
+
+async function cmdScheduleResume(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const planId = planIdFlag(flags);
+  const { db } = await setup();
+  try {
+    const s = await resumeSchedule(db, planId);
+    console.log(`Schedule active. Next fire: ${s?.nextFireAt?.toISOString() ?? "—"}`);
+  } finally {
+    await db.close();
+  }
+}
+
+async function cmdSchedulePause(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const planId = planIdFlag(flags);
+  const { db } = await setup();
+  try {
+    await pauseSchedule(db, planId, "operator", "paused from the CLI");
+    console.log("Schedule paused.");
+  } finally {
+    await db.close();
+  }
+}
+
+async function cmdSchedulePreview(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const planId = planIdFlag(flags);
+  const { db } = await setup();
+  try {
+    const schedule = await getSchedule(db, planId);
+    if (!schedule) {
+      console.error("no schedule for this plan");
+      process.exit(1);
+    }
+    const items = await listPlanItems(db, { planId, limit: 2000 });
+    const inFlight = items.filter((i) => i.status === "enqueued" || i.status === "in_progress").length;
+    const entries = previewSchedule(
+      items.map((i) => ({
+        key: i._id?.toHexString() ?? i.externalId,
+        sequence: i.sequence,
+        slug: i.slug,
+        title: i.title,
+        role: i.pageRole,
+        status: i.status,
+        parentKey: i.parentItemId?.toHexString() ?? null,
+        failureCount: i.failureCount,
+        retryAfter: i.retryAfter,
+        dependencyOverride: i.dependencyOverride,
+      })),
+      new Date(),
+      intFlag(flags, "count") ?? 10,
+      {
+        cadence: schedule.cadence,
+        limits: schedule.limits,
+        requireApproval: schedule.requireApproval,
+        estimatedArticleMinutes: schedule.estimatedArticleMinutes,
+        inFlightNow: inFlight,
+      },
+    );
+    console.log(`Projection (not a commitment):`);
+    for (const e of entries) {
+      const when = e.fireAt.toISOString().replace("T", " ").slice(0, 16);
+      if (e.items.length === 0) {
+        console.log(`  ${when}  —  ${e.note ?? "nothing"}`);
+        continue;
+      }
+      for (const i of e.items) console.log(`  ${when}  #${String(i.sequence).padStart(3)} ${i.slug}`);
+      if (e.note) console.log(`  ${" ".repeat(16)}  (${e.note})`);
+    }
+  } finally {
+    await db.close();
+  }
+}
+
+async function cmdScheduleTick(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const { cfg, db, companyId } = await setup();
+  try {
+    const dryRun = flags["dry-run"] === true;
+    const outcome = await runScheduleTick({
+      db,
+      companyId,
+      workerId: `${cfg.workerId}-cli`,
+      leaseMs: cfg.leaseMs,
+      heartbeatMs: cfg.heartbeatMs,
+      maxRunAttempts: cfg.maxRunAttempts,
+      dryRun,
+      log,
+    });
+    console.log(`${outcome.status}${dryRun ? " (dry run — nothing was written)" : ""}`);
+    for (const e of outcome.enqueued) console.log(`  queued #${e.sequence} ${e.slug}`);
+    if (outcome.binding) console.log(`  held by: ${outcome.binding}`);
+    if (outcome.detail) console.log(`  ${outcome.detail}`);
+    if (outcome.nextFireAt) console.log(`  next fire: ${outcome.nextFireAt.toISOString()}`);
+  } finally {
+    await db.close();
+  }
+}
+
 const HELP = `blogagent-worker <command>
 
 Commands:
-  start [--cluster-only|--pipeline-only|--scrape-only]
-                                     Run the queue worker (article pipeline + cluster + scrape runs)
+  start [--pipeline-only|--cluster-only|--scrape-only|--plan-only|--schedule-only]
+                                     Run the queue worker (article pipeline, cluster, scrape, plan
+                                     enrichment; the cadence scheduler needs SCHEDULER_ENABLED=1)
   enqueue --topic "…"                Queue an article run
           [--keyword "…"] [--slug s] [--from-stage research|outline|write|edit|schema|design]
   import-articles [--dry-run]        Backfill articles/ folders into Mongo
@@ -583,11 +1006,31 @@ Commands:
   scrape-import --dir <corpus dir> --url <blog url>
                                      Backfill an existing blogscraper corpus folder
 
+  plan-import --file <map.xlsx|.csv> Analyse an SEO content plan; prints the import report
+          [--sheet "Content Map"] [--commit] [--enrich]
+                                     (dry run unless --commit; --enrich queues the brief pass)
+  plan-status [--plan <id>]          List content plans, or show one with its schedule
+  plan-items --plan <id>             List planned articles in production order
+          [--status planned|done|failed|…] [--limit N]
+  plan-enrich --plan <id>            Queue the brief-enrichment pass [--only-failed]
+  plan-events --plan <id>            Print a plan's event stream
+
+  schedule-create --plan <id>        Create a cadence (starts PAUSED)
+          [--days 1,2,3,4,5] [--time 07:00] [--tz Europe/Zurich] [--batch 1]
+          [--max-in-flight N] [--max-review N] [--max-per-week N]
+          [--max-total N] [--max-cost N] [--require-approval]
+  schedule-resume --plan <id>        Start (or restart) the cadence
+  schedule-pause --plan <id>         Stop firing; nothing is lost
+  schedule-preview --plan <id>       Project the next N articles with dates [--count 10]
+  schedule-tick [--dry-run]          Run one tick now (dry run writes nothing)
+
 Env: MONGODB_URI, MONGODB_DB, ANTHROPIC_API_KEY, WORKER_CONCURRENCY,
      PHASE_MODEL_DEFAULT / PHASE_MODEL_<PHASE>, STORAGE_DRIVER (local|s3),
      CLUSTER_MODEL, CLUSTER_FANOUT_MODEL, CLUSTER_FANOUT_K, CLUSTER_MAX_VALIDATIONS,
      GEMINI_API_KEY (observed fan-out), DATAFORSEO_LOGIN/PASSWORD (+_SANDBOX=1),
      SCRAPER_PYTHON, SCRAPE_MAX_ATTEMPTS, SCRAPE_TIMEOUT_MS,
+     PLAN_ENRICH_MODEL, PLAN_ENRICH_CONCURRENCY,
+     SCHEDULER_ENABLED (0|1), SCHEDULE_POLL_INTERVAL_MS, SCHEDULE_DRY_RUN (0|1),
      COMPANY_CONFIG, REPO_ROOT. See apps/worker/README.md.`;
 
 async function main(): Promise<void> {
@@ -621,6 +1064,26 @@ async function main(): Promise<void> {
       return cmdScrapeEvents(rest);
     case "scrape-import":
       return cmdScrapeImport(rest);
+    case "plan-import":
+      return cmdPlanImport(rest);
+    case "plan-status":
+      return cmdPlanStatus(rest);
+    case "plan-items":
+      return cmdPlanItems(rest);
+    case "plan-enrich":
+      return cmdPlanEnrich(rest);
+    case "plan-events":
+      return cmdPlanEvents(rest);
+    case "schedule-create":
+      return cmdScheduleCreate(rest);
+    case "schedule-resume":
+      return cmdScheduleResume(rest);
+    case "schedule-pause":
+      return cmdSchedulePause(rest);
+    case "schedule-preview":
+      return cmdSchedulePreview(rest);
+    case "schedule-tick":
+      return cmdScheduleTick(rest);
     default:
       console.log(HELP);
       process.exit(cmd ? 2 : 0);

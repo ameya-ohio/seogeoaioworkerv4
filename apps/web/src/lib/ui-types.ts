@@ -11,6 +11,11 @@ import type {
   SpokeBrief,
   Stage,
   ThemeDoc,
+  PlanDoc,
+  PlanEventDoc,
+  PlanItemDoc,
+  ScheduleDoc,
+  PreviewEntry,
 } from "@blogagent/engine";
 
 /**
@@ -405,5 +410,241 @@ export function toUiScrapeEvent(doc: ScrapeEventDoc): UiScrapeEvent {
     ts: doc.ts.toISOString(),
     type: doc.type,
     message: doc.message,
+  };
+}
+
+// ── content plans ────────────────────────────────────────────────────────
+// The row/detail split matters: a 504-row plan carrying ~2 KB of brief
+// markdown per row would be ~1 MB of payload on every table render.
+
+export interface UiPlanSummary {
+  id: string;
+  filename: string;
+  status: string;
+  itemCount: number;
+  produced: number;
+  byStatus: Record<string, number>;
+  byEnrichment: Record<string, number>;
+  llmCalls: number;
+  costUsd: number;
+  blocking: number;
+  createdAt: string;
+}
+
+export interface UiPlanItemRow {
+  id: string;
+  externalId: string;
+  sequence: number;
+  title: string;
+  slug: string;
+  pageRole: string;
+  pillarName: string;
+  subtopicName: string | null;
+  format: string;
+  funnel: string;
+  priority: number;
+  status: string;
+  enrichment: string;
+  primaryQueryTarget: string;
+  needsQueryTarget: boolean;
+  failureCount: number;
+  lastError: string | null;
+  articleSlug: string | null;
+}
+
+export interface UiPlanItemDetail extends UiPlanItemRow {
+  briefMarkdown: string;
+  lengthBand: { min: number; max: number; justification?: string };
+  schemaTypes: string[];
+  internalLinks: { hub: string; siblings: string[]; children: string[] };
+  enrichmentProblems: string[];
+}
+
+export interface UiPlanReport {
+  sheet: string;
+  totalRows: number;
+  mappedRows: number;
+  byPageRole: Record<string, number>;
+  byFunnel: Record<string, number>;
+  byPriority: Record<string, number>;
+  byIntent: Record<string, number>;
+  byFormat: Record<string, number>;
+  unrecognized: { field: string; value: string; rows: number[] }[];
+  skippedRows: { row: number; reason: string }[];
+  duplicateSlugs: { slug: string; externalIds: string[] }[];
+  articleCollisions: { externalId: string; slug: string; stage: string }[];
+  keywordCollisions: { externalId: string; text: string; status: string }[];
+  missingHubs: string[];
+  missingPillars: string[];
+  needsQueryTarget: string[];
+  blocking: string[];
+}
+
+export interface UiSchedule {
+  planId: string;
+  name: string;
+  status: string;
+  timezone: string;
+  daysOfWeek: number[];
+  timeOfDay: string;
+  batchSize: number;
+  limits: {
+    maxInFlight: number;
+    maxAwaitingReview: number;
+    maxPerCalendarWeek: number | null;
+    maxTotalArticles: number | null;
+    maxCostUsd: number | null;
+    consecutiveFailureLimit: number;
+    itemMaxAttempts: number;
+  };
+  requireApproval: boolean;
+  estimatedArticleMinutes: number;
+  nextFireAt: string | null;
+  lastFiredAt: string | null;
+  consecutiveFailures: number;
+  pause: { reason: string; at: string; detail: string } | null;
+  completedReason: string | null;
+}
+
+export interface UiPlanEvent {
+  id: string;
+  planId: string;
+  seq: number;
+  ts: string;
+  type: string;
+  message: string;
+}
+
+export interface UiPreviewEntry {
+  fireAt: string;
+  items: { sequence: number; slug: string; title: string; role: string }[];
+  note: string | null;
+}
+
+export function toUiPlanSummary(
+  doc: PlanDoc,
+  counts: { total: number; byStatus: Record<string, number>; byEnrichment: Record<string, number>; produced: number },
+): UiPlanSummary {
+  return {
+    id: doc._id?.toHexString() ?? "",
+    filename: doc.filename,
+    status: doc.status,
+    itemCount: counts.total || (doc.itemCount ?? 0),
+    produced: counts.produced,
+    byStatus: counts.byStatus,
+    byEnrichment: counts.byEnrichment,
+    llmCalls: doc.usage.llmCalls,
+    costUsd: doc.usage.costUsd,
+    blocking: doc.report?.blocking.length ?? 0,
+    createdAt: doc.createdAt.toISOString(),
+  };
+}
+
+export function toUiPlanItemRow(doc: PlanItemDoc, articleSlug?: string): UiPlanItemRow {
+  return {
+    id: doc._id?.toHexString() ?? "",
+    externalId: doc.externalId,
+    sequence: doc.sequence,
+    title: doc.title,
+    slug: doc.slug,
+    pageRole: doc.pageRole,
+    pillarName: doc.pillarName,
+    subtopicName: doc.subtopicName,
+    format: doc.format,
+    funnel: doc.funnel,
+    priority: doc.priority,
+    status: doc.status,
+    enrichment: doc.enrichment,
+    primaryQueryTarget: doc.primaryQueryTarget,
+    needsQueryTarget: doc.needsQueryTarget,
+    failureCount: doc.failureCount,
+    lastError: doc.lastError ?? null,
+    articleSlug: articleSlug ?? null,
+  };
+}
+
+export function toUiPlanItemDetail(doc: PlanItemDoc, articleSlug?: string): UiPlanItemDetail {
+  return {
+    ...toUiPlanItemRow(doc, articleSlug),
+    briefMarkdown: doc.brief.markdown,
+    lengthBand: doc.brief.lengthBand,
+    schemaTypes: doc.brief.schemaTypes,
+    internalLinks: {
+      hub: doc.brief.internalLinks.hub,
+      siblings: doc.brief.internalLinks.siblings,
+      children: doc.brief.internalLinks.children ?? [],
+    },
+    enrichmentProblems: doc.enrichmentProblems ?? [],
+  };
+}
+
+export function toUiPlanReport(r: NonNullable<PlanDoc["report"]>): UiPlanReport {
+  return {
+    sheet: r.sheet,
+    totalRows: r.totalRows,
+    mappedRows: r.mappedRows,
+    byPageRole: r.byPageRole,
+    byFunnel: r.byFunnel,
+    byPriority: r.byPriority,
+    byIntent: r.byIntent,
+    byFormat: r.byFormat,
+    unrecognized: r.unrecognized.map((u) => ({ field: u.field, value: u.value, rows: u.rows })),
+    skippedRows: r.skippedRows,
+    duplicateSlugs: r.duplicateSlugs,
+    articleCollisions: r.articleCollisions,
+    keywordCollisions: r.keywordCollisions,
+    missingHubs: r.missingHubs,
+    missingPillars: r.missingPillars,
+    needsQueryTarget: r.needsQueryTarget,
+    blocking: r.blocking,
+  };
+}
+
+export function toUiSchedule(doc: ScheduleDoc): UiSchedule {
+  return {
+    planId: doc.planId.toHexString(),
+    name: doc.name,
+    status: doc.status,
+    timezone: doc.cadence.timezone,
+    daysOfWeek: doc.cadence.daysOfWeek,
+    timeOfDay: doc.cadence.timeOfDay,
+    batchSize: doc.cadence.batchSize,
+    limits: {
+      maxInFlight: doc.limits.maxInFlight,
+      maxAwaitingReview: doc.limits.maxAwaitingReview,
+      maxPerCalendarWeek: doc.limits.maxPerCalendarWeek ?? null,
+      maxTotalArticles: doc.limits.maxTotalArticles ?? null,
+      maxCostUsd: doc.limits.maxCostUsd ?? null,
+      consecutiveFailureLimit: doc.limits.consecutiveFailureLimit,
+      itemMaxAttempts: doc.limits.itemMaxAttempts,
+    },
+    requireApproval: doc.requireApproval,
+    estimatedArticleMinutes: doc.estimatedArticleMinutes,
+    nextFireAt: doc.nextFireAt?.toISOString() ?? null,
+    lastFiredAt: doc.lastFiredAt?.toISOString() ?? null,
+    consecutiveFailures: doc.consecutiveFailures,
+    pause: doc.pause
+      ? { reason: doc.pause.reason, at: doc.pause.at.toISOString(), detail: doc.pause.detail }
+      : null,
+    completedReason: doc.completedReason ?? null,
+  };
+}
+
+export function toUiPlanEvent(doc: PlanEventDoc): UiPlanEvent {
+  return {
+    id: doc._id?.toHexString() ?? "",
+    planId: doc.planId.toHexString(),
+    seq: doc.seq,
+    ts: doc.ts.toISOString(),
+    type: doc.type,
+    message: doc.message,
+  };
+}
+
+export function toUiPreviewEntry(e: PreviewEntry): UiPreviewEntry {
+  return {
+    fireAt: e.fireAt.toISOString(),
+    items: e.items.map((i) => ({ sequence: i.sequence, slug: i.slug, title: i.title, role: i.role })),
+    note: e.note ?? null,
   };
 }

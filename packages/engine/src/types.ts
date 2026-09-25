@@ -1,5 +1,7 @@
 import type { ObjectId } from "mongodb";
 import type { CitationReport, LinkReport } from "./citations.js";
+import type { SpokeBrief } from "./cluster/types.js";
+import type { PageRole } from "./plan/types.js";
 
 /**
  * Article lifecycle stages (roadmap §4). The six work stages map 1:1 to the
@@ -115,6 +117,51 @@ export interface ArticleArtifacts {
   headerHtml?: string;
 }
 
+/**
+ * What every brief carries, whatever produced it. These are the only fields
+ * the pipeline actually reads: materializeWorkspace writes `markdown` to
+ * brief.md, and the Strategist prompt quotes `lengthBand`.
+ */
+export interface ArticleBriefBase {
+  /** Rendered brief the Strategist receives (materialized as brief.md). */
+  markdown: string;
+  /** D31: replaces the SERP-median word-count rule for this article. */
+  lengthBand: { min: number; max: number; justification?: string };
+  /**
+   * The structured brief. Previously only markdown + lengthBand survived onto
+   * the article, so h2Outline / evidence / internalLinks were unqueryable.
+   */
+  spec?: SpokeBrief;
+  /** Routing pages (pillar, hub) are briefed differently from spokes. */
+  pageRole?: PageRole;
+}
+
+/**
+ * Brief from the Topic & Cluster Generator (4.12, D31).
+ *
+ * `source` is OPTIONAL here on purpose: article docs written before plans
+ * existed carry no `source` field, so absence means "cluster" and no data
+ * migration is needed. TypeScript still narrows correctly on
+ * `brief.source === "plan"`.
+ */
+export interface ClusterArticleBrief extends ArticleBriefBase {
+  source?: "cluster";
+  clusterId: ObjectId;
+  themeId: ObjectId;
+  themeName: string;
+}
+
+/** Brief from an imported SEO content plan (a pillar map). */
+export interface PlanArticleBrief extends ArticleBriefBase {
+  source: "plan";
+  /** The workbook's own id, e.g. "P01-S03-A07". */
+  externalId: string;
+  /** Subtopic (or pillar) name — display parity with the cluster arm. */
+  themeName: string;
+}
+
+export type ArticleBrief = ClusterArticleBrief | PlanArticleBrief;
+
 export interface ArticleDoc {
   _id?: ObjectId;
   companyId: string;
@@ -134,17 +181,14 @@ export interface ArticleDoc {
   gates?: Partial<Record<WorkStage, GateResult>>;
   hubspot?: { postId?: string; url?: string; state?: string };
   /**
-   * Spoke brief from the Topic & Cluster Generator (4.12, D31). When set,
-   * the Strategist receives it as a first-class input and its length band
-   * overrides the SERP-median word-count rule.
+   * Brief from the Topic & Cluster Generator or from an imported content
+   * plan. When set, the Strategist receives it as a first-class input and its
+   * length band overrides the SERP-median word-count rule (D31).
    */
-  brief?: {
-    clusterId: ObjectId;
-    themeId: ObjectId;
-    themeName: string;
-    markdown: string;
-    lengthBand: { min: number; max: number; justification?: string };
-  };
+  brief?: ArticleBrief;
+  /** Set when this article was produced from a content plan item. */
+  planId?: ObjectId;
+  planItemId?: ObjectId;
   /** Live citation verification (D34) — research-stage, refreshed at edit. */
   citationChecks?: CitationReport;
   /** Internal-link resolution (D35) — edit-stage. */
@@ -154,6 +198,13 @@ export interface ArticleDoc {
    * Phase 5 turns them into links when the siblings publish (D35).
    */
   pendingLinks?: string[];
+  /**
+   * Internal links that resolved against a same-plan sibling's RESERVED
+   * canonical URL rather than a live page (the sibling is produced but not
+   * published yet). They are real hyperlinks in the body, so Phase 5 must
+   * re-verify every one of them strictly before publishing.
+   */
+  deferredLinks?: string[];
   /** Set when stage === "failed". */
   error?: string;
   /** True for docs backfilled from pre-Mongo article folders. */

@@ -3,7 +3,7 @@ import type { EngineDb } from "./db.js";
 import { createArticle, getArticleBySlug } from "./dal/articles.js";
 import { enqueueRun } from "./dal/runs.js";
 import { emitEvent } from "./dal/events.js";
-import type { ArticleDoc, RunDoc, WorkStage } from "./types.js";
+import type { ArticleBrief, ArticleDoc, RunDoc, WorkStage } from "./types.js";
 
 /** Mirrors scripts/new_article.py slug rules (lowercase, hyphenated, ≤ 60). */
 export function slugify(raw: string): string {
@@ -31,6 +31,13 @@ export interface EnqueueArticleInput {
    * collections and stamped onto the article doc.
    */
   themeId?: ObjectId;
+  /**
+   * Plan item whose brief should ride along the same way. Mutually exclusive
+   * with themeId in practice; themeId wins if both are given.
+   */
+  planItemId?: ObjectId;
+  /** Extra provenance for the run.queued event (plan id, sequence, fire). */
+  eventData?: Record<string, unknown>;
 }
 
 export class SlugTakenError extends Error {
@@ -55,25 +62,56 @@ export async function enqueueArticlePipeline(
   const existing = await getArticleBySlug(db, input.companyId, slug);
   if (existing) throw new SlugTakenError(slug, existing.stage);
 
-  let brief: ArticleDoc["brief"];
+  let brief: ArticleBrief | undefined;
   let pendingLinks: string[] | undefined;
+  let planId: ObjectId | undefined;
   if (input.themeId) {
     const theme = await db.themes.findOne({ _id: input.themeId });
     const cluster = theme ? await db.clusters.findOne({ _id: theme.clusterId }) : null;
     const spokeBrief = cluster?.spokeBriefs?.find((b) => b.themeName === theme?.name);
     if (theme?._id && cluster?._id && spokeBrief) {
       brief = {
+        source: "cluster",
         clusterId: cluster._id,
         themeId: theme._id,
         themeName: theme.name,
         markdown: spokeBrief.markdown,
         lengthBand: spokeBrief.lengthBand,
+        // Carry the structured brief so h2Outline / evidence / internalLinks
+        // are queryable per article, not just embedded in the markdown.
+        spec: spokeBrief,
       };
       // D35: hub + sibling spokes are PLANNED pages — plain mentions until
       // they publish; Phase 5 backfills the links.
       pendingLinks = [spokeBrief.internalLinks.hub, ...spokeBrief.internalLinks.siblings].filter(
         Boolean,
       );
+    }
+  } else if (input.planItemId) {
+    const item = await db.planItems.findOne({ _id: input.planItemId });
+    if (item) {
+      planId = item.planId;
+      brief = {
+        source: "plan",
+        externalId: item.externalId,
+        themeName: item.subtopicName ?? item.pillarName,
+        markdown: item.brief.markdown,
+        lengthBand: item.brief.lengthBand,
+        spec: item.brief,
+        pageRole: item.pageRole,
+      };
+      // A routing page also links DOWN to its children; all of them are
+      // planned pages, so they are plain mentions until they exist (D35).
+      pendingLinks = [
+        item.brief.internalLinks.hub,
+        ...item.brief.internalLinks.siblings,
+        ...(item.brief.internalLinks.children ?? []),
+      ].filter(Boolean);
+      // A parent deliberately skipped by the operator may never exist, so do
+      // not ask the writer to mention it.
+      if (item.parentSkipped) {
+        pendingLinks = pendingLinks.filter((l) => l !== item.brief.internalLinks.hub);
+      }
     }
   }
 
@@ -86,6 +124,8 @@ export async function enqueueArticlePipeline(
     ...(input.keyword ? { targetKeyword: input.keyword } : {}),
     ...(brief ? { brief } : {}),
     ...(pendingLinks?.length ? { pendingLinks } : {}),
+    ...(planId ? { planId } : {}),
+    ...(input.planItemId ? { planItemId: input.planItemId } : {}),
   });
   const run = await enqueueRun(db, {
     companyId: input.companyId,
@@ -99,6 +139,7 @@ export async function enqueueArticlePipeline(
     articleId: article._id as ObjectId,
     type: "run.queued",
     message: `Queued: "${input.topic}"${input.keyword ? ` (keyword: ${input.keyword})` : ""}`,
+    ...(input.eventData ? { data: input.eventData } : {}),
   });
   return { article, run };
 }

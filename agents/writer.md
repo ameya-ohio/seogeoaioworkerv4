@@ -65,6 +65,15 @@ Every article must have:
 7. **Defined terms** inline where useful — bold the term, then define it.
 8. **Closing / CTA** — short. One paragraph plus the action.
 
+### Routing pages
+
+When the outline says this is a **routing page** (a pillar page or a subtopic hub), the body's job is to send readers onward, not to cover everything itself:
+
+- Each child page gets its own short block: a self-contained 2–3 sentence answer that stands on its own if extracted, then a pointer to the fuller page.
+- Keep the outline's order. It reflects how the plan wants a reader to move.
+- Name a child page in plain text unless it is already published. A link to a page that does not exist yet fails the edit gate and would ship a 404 (D35).
+- Anti-pattern: **a routing page that re-explains every child in 600 words is an encyclopedic pillar in disguise** (D31). If a section starts growing its own subsections, it belongs on the child page.
+
 ---
 
 ## Frontmatter format
