@@ -1,6 +1,7 @@
 # Canonical machine-checked banned-phrase list — ONE place.
 # Consumed by scripts/seo_audit.py and enforced by the Editor (Phase 4).
-# One phrase per line, matched case-insensitively as a substring of the body.
+# One phrase per line, matched case-insensitively; a phrase edge that is a
+# letter or digit must sit on a word boundary ("gate" never flags "navigate").
 # Wrap a phrase in double quotes to preserve leading/trailing spaces.
 # Only phrases that are safe to flag with zero context go here; judgment
 # calls ("leverage", "transformative", em-dash cadence) live in

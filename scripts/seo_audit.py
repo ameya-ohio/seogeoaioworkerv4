@@ -35,6 +35,24 @@ from company_config import load_banned_phrases, load_config  # noqa: E402
 # voice.banned_phrases (company-specific additions).
 BANNED_PHRASES = load_banned_phrases(load_config(strict=False))
 
+
+def banned_hits(text: str, phrase: str) -> list[str]:
+    """Occurrences of a banned phrase, each as a short context snippet.
+
+    Case-insensitive. An edge of the phrase that is a word character must
+    sit on a word boundary, so "gate" flags "gate" but not "navigate" or
+    "investigate", and "just" doesn't flag "adjust". An edge that is a
+    space or punctuation (e.g. the deliberate trailing space in
+    "the world of ") matches exactly as written, as before.
+    """
+    pre = r"(?<!\w)" if re.match(r"\w", phrase) else ""
+    post = r"(?!\w)" if re.search(r"\w$", phrase) else ""
+    out = []
+    for m in re.finditer(pre + re.escape(phrase) + post, text, flags=re.IGNORECASE):
+        s, e = max(0, m.start() - 40), min(len(text), m.end() + 40)
+        out.append(" ".join(text[s:e].split()))
+    return out
+
 REQUIRED_FRONTMATTER = [
     "title",
     "slug",
@@ -299,12 +317,13 @@ def audit(folder: Path) -> int:
         a.fail("json-ld fenced block missing from article.md")
 
     # banned phrases
-    body_lc = body_clean.lower()
-    hits = [(p, body_lc.count(p)) for p in BANNED_PHRASES]
-    hits = [(p, n) for p, n in hits if n > 0]
+    hits = [(p, banned_hits(body_clean, p)) for p in BANNED_PHRASES]
+    hits = [(p, found) for p, found in hits if found]
     if hits:
-        for p, n in hits:
-            a.fail(f"Banned phrase found ({n}×): {p!r}")
+        for p, found in hits:
+            # Quote where each hit sits: the Editor has to find it to fix it.
+            where = "; ".join(f"…{c}…" for c in found[:3])
+            a.fail(f"Banned phrase found ({len(found)}×): {p!r} — {where}")
     else:
         a.ok("No banned phrases found.")
 
