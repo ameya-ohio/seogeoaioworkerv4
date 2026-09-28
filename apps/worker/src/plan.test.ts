@@ -77,6 +77,7 @@ beforeAll(async () => {
       effort: { outline: "high", write: "high", edit: "high", schema: "high", design: "high" },
       maxTokens: 64_000,
     },
+    techReview: { enabled: false, model: "fake-reviewer", effort: "high" },
     verifierModel: "fake-verifier",
     plan: { enrichModel: "fake-enrich", concurrency: 2, maxAttempts: 2 },
     schedule: { enabled: false, pollIntervalMs: 60_000, dryRun: false },

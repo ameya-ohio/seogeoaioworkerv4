@@ -24,6 +24,7 @@ import {
   type HeaderRenderer,
 } from "./directRunner.js";
 import { runPipeline, type PipelineDeps } from "./pipeline.js";
+import type { TechReviewer } from "./techReview.js";
 import type { CitationVerifier, LinkChecker } from "./quality.js";
 
 const REAL_REPO = join(import.meta.dirname, "..", "..", "..");
@@ -70,6 +71,7 @@ beforeAll(async () => {
       effort: { outline: "high", write: "high", edit: "high", schema: "high", design: "high" },
       maxTokens: 64_000,
     },
+    techReview: { enabled: false, model: "fake-reviewer", effort: "high" },
     verifierModel: "fake-verifier",
     plan: { enrichModel: "fake-enrich", concurrency: 2, maxAttempts: 2 },
     schedule: { enabled: false, pollIntervalMs: 60000, dryRun: false },
@@ -391,9 +393,10 @@ const noDirectLlm: DirectLlm = {
 
 function makeDeps(
   invoker: AgentInvoker,
-  opts: { cfg?: WorkerConfig; direct?: DirectPhaseRunner } = {},
+  opts: { cfg?: WorkerConfig; direct?: DirectPhaseRunner; techReviewer?: TechReviewer } = {},
 ): PipelineDeps {
   return {
+    ...(opts.techReviewer ? { techReviewer: opts.techReviewer } : {}),
     db,
     cfg: opts.cfg ?? cfg,
     storage: new LocalStorage(join(repoRoot, "storage")),
@@ -681,5 +684,73 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
 
     const runDoc = await db.runs.findOne({ _id: run._id });
     expect(runDoc?.status).toBe("succeeded");
+  }, 120_000);
+
+  it("hands the technical reviewer's findings to the Editor and stores them", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "direct-techreview",
+      folder: "2026-09-14-direct-techreview",
+      topic: "Tech review topic",
+      targetKeyword: "context engineering",
+    });
+    const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const claimed = await claimRun(db, "test-worker", 60_000);
+
+    const seen: string[] = [];
+    const reviewer: TechReviewer = {
+      review: async ({ articleMd }) => {
+        seen.push(articleMd);
+        return {
+          ranAt: new Date(),
+          model: "fake-reviewer",
+          droppedUnquoted: 0,
+          issues: [
+            {
+              kind: "technical_error",
+              quote: "Four layers cover most teams.",
+              problem: "The outline defines five layers.",
+              fix: "Say five layers.",
+            },
+          ],
+        };
+      },
+    };
+    const llm = new FakeDirectLlm();
+    const direct = new DirectPhaseRunner(llm, fakeRenderer([]));
+    const c = { ...directCfg(), techReview: { ...cfg.techReview, enabled: true } };
+    await runPipeline(makeDeps(new FakeInvoker(), { cfg: c, direct, techReviewer: reviewer }), claimed!);
+
+    // Reviewed the Writer's draft, before the Editor touched it.
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).not.toContain("EDIT SUMMARY");
+    const editPrompt = llm.calls.find((x) => x.phase === "edit")!.req.prompt;
+    expect(editPrompt).toContain('technical review (technical_error): "Four layers cover most teams."');
+    const doc = await db.articles.findOne({ _id: article._id });
+    expect(doc?.technicalReview?.issues).toHaveLength(1);
+    expect((await db.runs.findOne({ _id: run._id }))?.status).toBe("succeeded");
+  }, 120_000);
+
+  it("runs the Editor normally when the technical review is skipped", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "direct-techreview-skip",
+      folder: "2026-09-14-direct-techreview-skip",
+      topic: "Tech review skip",
+      targetKeyword: "context engineering",
+    });
+    const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const claimed = await claimRun(db, "test-worker", 60_000);
+    const reviewer: TechReviewer = {
+      review: async () => ({ ranAt: new Date(), model: "m", issues: [], droppedUnquoted: 0, skipped: "stop_reason refusal" }),
+    };
+    const c = { ...directCfg(), techReview: { ...cfg.techReview, enabled: true } };
+    await runPipeline(
+      makeDeps(new FakeInvoker(), { cfg: c, direct: new DirectPhaseRunner(new FakeDirectLlm(), fakeRenderer([])), techReviewer: reviewer }),
+      claimed!,
+    );
+    const doc = await db.articles.findOne({ _id: article._id });
+    expect(doc?.technicalReview?.skipped).toBe("stop_reason refusal");
+    expect((await db.runs.findOne({ _id: run._id }))?.status).toBe("succeeded");
   }, 120_000);
 });

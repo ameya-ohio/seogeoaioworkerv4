@@ -35,6 +35,7 @@ import type { WorkerConfig } from "./config.js";
 import type { DirectPhaseRunner } from "./directRunner.js";
 import { PHASE_ORDER, phaseDefs, type PhaseContext } from "./phases.js";
 import type { CitationVerifier, LinkChecker } from "./quality.js";
+import { formatIssue, type TechReviewer } from "./techReview.js";
 import {
   articleDir,
   materializeCompetitorGaps,
@@ -53,6 +54,8 @@ export interface PipelineDeps {
   citationVerifier: CitationVerifier;
   /** D35: internal-link resolution — edit gate depends on it. */
   linkChecker: LinkChecker;
+  /** Pre-edit expert read of the draft; findings join the edit pre-audit. */
+  techReviewer?: TechReviewer;
   companyName: string;
   log: (msg: string) => void;
 }
@@ -178,6 +181,38 @@ async function runCodeStep(
   return {};
 }
 
+/**
+ * Expert read of the Writer's draft (agents/technical-reviewer.md), stored
+ * on the article and returned as pre-audit lines. Never blocks: a skipped
+ * review is logged and the Editor runs without it.
+ */
+async function runTechnicalReview(deps: PipelineDeps, article: ArticleDoc): Promise<string[]> {
+  const { cfg, db } = deps;
+  if (!deps.techReviewer || !cfg.techReview.enabled) return [];
+  const dir = articleDir(cfg, article);
+  const read = async (name: string) =>
+    existsSync(join(dir, name)) ? await readFile(join(dir, name), "utf-8") : "";
+  const review = await deps.techReviewer.review({
+    articleMd: await read("article.md"),
+    researchNotes: await read("research-notes.md"),
+    onProgress: (t) => deps.log(`[${article.slug}/tech-review] ${t}`),
+  });
+  if (article._id) {
+    await db.articles.updateOne(
+      { _id: article._id },
+      { $set: { technicalReview: review, updatedAt: new Date() } },
+    );
+  }
+  deps.log(
+    `[${article.slug}/tech-review] ` +
+      (review.skipped
+        ? `skipped (${review.skipped})`
+        : `${review.issues.length} issue(s)${review.droppedUnquoted ? `, ${review.droppedUnquoted} dropped (quote not in draft)` : ""}`) +
+      ` — ${review.model}${review.costUsd !== undefined ? `, $${review.costUsd.toFixed(3)}` : ""}`,
+  );
+  return review.issues.map(formatIssue);
+}
+
 export interface PhaseOutcome {
   gate: GateResult;
   attempts: number;
@@ -213,11 +248,12 @@ async function executePhase(
     const advisory = (preOutputs.report?.checks ?? [])
       .filter((c) => c.level === "warn" && c.message.startsWith("Style:"))
       .map((c) => `(advisory) ${c.message}`);
-    const items = [...(pre.ok ? [] : pre.problems), ...advisory];
+    const technical = await runTechnicalReview(deps, article);
+    const items = [...(pre.ok ? [] : pre.problems), ...technical, ...advisory];
     if (items.length) preAudit = items;
     deps.log(
       `[${article.slug}/edit] pre-audit: ${pre.ok ? "draft passes the gate" : `${pre.problems.length} gate problem(s)`}` +
-        (advisory.length ? `, ${advisory.length} advisory` : ""),
+        `, ${technical.length} technical, ${advisory.length} advisory`,
     );
   }
 

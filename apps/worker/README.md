@@ -45,6 +45,14 @@ enqueue → runs (queued) ──claim/lease──▶ worker
   the route; direct-phase `costUsd` is estimated from token counts. Roll a
   phase back with `PHASE_ROUTE_<PHASE>=agent`; tune with
   `PHASE_EFFORT_<PHASE>` (default `high`).
+- **Edit pre-audit + technical review**: before the Editor's first attempt
+  the worker runs the edit gate's own checks on the draft (audit incl. the
+  `scripts/style_checks.py` AI-cadence limits, body citations, internal
+  links) and an expert read of the draft (`agents/technical-reviewer.md`,
+  `TECH_REVIEW_MODEL`, default `claude-opus-5-5` with server-side refusal
+  fallbacks). Everything found is handed to the Editor with quoted context;
+  the review result is stored as `articles.technicalReview` and never blocks
+  a run (`TECH_REVIEW=0` turns it off).
 - **Binary storage** (D3): header PNG/HTML go to `STORAGE_DRIVER=local|s3`
   (Railway buckets are S3-compatible).
 

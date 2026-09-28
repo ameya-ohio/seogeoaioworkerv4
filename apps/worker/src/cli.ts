@@ -43,6 +43,7 @@ import {
 } from "@blogagent/engine";
 import { SdkAgentInvoker } from "./agentRunner.js";
 import { DirectPhaseRunner, SdkDirectLlm } from "./directRunner.js";
+import { LlmTechReviewer } from "./techReview.js";
 import { startClusterQueue } from "./clusterQueue.js";
 import type { ClusterDeps } from "./clusterRunner.js";
 import { loadWorkerConfig, type WorkerConfig } from "./config.js";
@@ -191,6 +192,7 @@ async function cmdStart(argv: string[]): Promise<void> {
         log,
       ),
       linkChecker: new LiveLinkChecker(db, companyId, hosts),
+      techReviewer: new LlmTechReviewer(new SdkDirectLlm(), cfg),
       companyName,
       log,
     };

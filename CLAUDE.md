@@ -88,7 +88,7 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   - `standards/geo-checklist.md`
   - `standards/aio-checklist.md`
   - The current `article.md`
-- **Action:** Walk every checklist item explicitly (pass/fail/notes). Edit `article.md` in place to fix all failures. Strip every banned phrase. Verify every citation traces back to `research-notes.md`. Append an HTML-comment edit summary to the bottom of `article.md`.
+- **Action:** Run `python scripts/seo_audit.py` on the draft first and fix every FAIL it reports (banned phrases and the machine-checked style limits in `standards/quality-bar.md` included), and apply `agents/technical-reviewer.md` to the draft. Then walk every checklist item explicitly (pass/fail/notes). Edit `article.md` in place to fix all failures. Strip every banned phrase. Verify every citation traces back to `research-notes.md`. Append an HTML-comment edit summary to the bottom of `article.md`.
 - **Output:** Updated `articles/YYYY-MM-DD-slug/article.md` + edit summary as `<!-- EDIT SUMMARY: ... -->`.
 - **Gate:** Zero banned phrases; all checklist items pass or have a documented justified exception; meta description 140–160 chars; title 50–60 chars; primary keyword present in first 100 words.
 
@@ -175,6 +175,12 @@ agents/
                       Sharpens one imported content-plan row into a full spoke
                       brief (not a pipeline phase; runs on the plan queue in
                       apps/worker). May describe evidence, never supply it.
+  technical-reviewer.md
+                      Expert read of the Writer's draft (not a pipeline phase):
+                      technical errors, contradictions, stale stats, vaguely
+                      sourced numbers. The worker runs it before the Editor and
+                      hands the findings over; in terminal mode, apply it to the
+                      draft yourself at the start of Phase 4.
   topic-cluster-generator.md
                       Theme-driven research agent (not a pipeline phase; D30/D31):
                       seed → prompt fan-out → themes → hub/spoke architecture →

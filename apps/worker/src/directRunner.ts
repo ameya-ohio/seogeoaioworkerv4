@@ -38,12 +38,21 @@ export interface DirectLlmRequest {
   effort: Effort;
   /** Heartbeat sink: a direct call is otherwise silent until it returns. */
   onProgress?: (text: string) => void;
+  /**
+   * Server-side refusal fallback (`fallbacks: "default"`): a classifier
+   * decline re-runs on Anthropic's recommended model for that category
+   * (cyber → Opus 4.8) inside the same call. Security content trips the
+   * cyber classifier on Opus-tier models, so Opus callers turn this on.
+   */
+  fallbacks?: boolean;
 }
 
 export interface DirectLlmResponse {
   text: string;
   stopReason: string | null;
   usage: Required<Omit<PhaseUsage, "costUsd" | "numTurns" | "model">>;
+  /** The model that actually answered (differs from the request after a fallback). */
+  servedModel?: string;
 }
 
 /** Injectable so the pipeline E2E runs the direct route with zero API spend. */
@@ -100,38 +109,49 @@ export class SdkDirectLlm implements DirectLlm {
     this.client ??= new Anthropic();
     // Streaming: an article-length response plus adaptive thinking can run
     // past a non-streaming request's HTTP timeout.
-    const stream = this.client.messages.stream({
+    const params = {
       model: req.model,
       max_tokens: req.maxTokens,
-      thinking: { type: "adaptive" },
+      thinking: { type: "adaptive" as const },
       output_config: { effort: req.effort },
       system: req.system,
-      messages: [{ role: "user", content: req.prompt }],
-    });
+      messages: [{ role: "user" as const, content: req.prompt }],
+    };
     const beat = req.onProgress ? new Heartbeat(req.onProgress) : undefined;
     let textChars = 0;
-    if (beat) {
-      stream.on("streamEvent", (event) => {
-        if (event.type === "content_block_start" && event.content_block.type !== "text") beat.thinking();
-      });
-      stream.on("text", (delta) => {
-        textChars += delta.length;
-        beat.text(textChars);
-      });
-    }
-    let message: Anthropic.Message;
+    const onEvent = (event: { type: string; content_block?: { type: string } }) => {
+      if (event.type === "content_block_start" && event.content_block?.type !== "text") beat?.thinking();
+    };
+    const onText = (delta: string) => {
+      textChars += delta.length;
+      beat?.text(textChars);
+    };
+    let message: Anthropic.Message | Anthropic.Beta.BetaMessage;
     try {
-      message = await stream.finalMessage();
+      if (req.fallbacks) {
+        const stream = this.client.beta.messages.stream({
+          ...params,
+          betas: ["server-side-fallback-2026-07-01"],
+          fallbacks: "default",
+        });
+        stream.on("streamEvent", onEvent).on("text", onText);
+        message = await stream.finalMessage();
+      } else {
+        const stream = this.client.messages.stream(params);
+        stream.on("streamEvent", onEvent).on("text", onText);
+        message = await stream.finalMessage();
+      }
     } finally {
       beat?.stop();
     }
-    const text = message.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
+    const text = (message.content as { type: string; text?: string }[])
+      .filter((b) => b.type === "text" && typeof b.text === "string")
+      .map((b) => b.text as string)
       .join("\n");
     return {
       text,
       stopReason: message.stop_reason,
+      servedModel: message.model,
       usage: {
         inputTokens: message.usage.input_tokens,
         outputTokens: message.usage.output_tokens,
@@ -178,7 +198,7 @@ export const HEADER_PATTERNS = [
   "report-cover",
 ] as const;
 
-interface InputFile {
+export interface InputFile {
   path: string;
   content: string;
 }
@@ -222,7 +242,7 @@ async function readAll(cfg: WorkerConfig, rels: string[]): Promise<InputFile[]> 
   return out;
 }
 
-function renderInputs(files: InputFile[]): string {
+export function renderInputs(files: InputFile[]): string {
   return files.map((f) => `<input path="${f.path}">\n${f.content.trimEnd()}\n</input>`).join("\n\n");
 }
 
@@ -495,7 +515,7 @@ export class DirectPhaseRunner {
       ...(onProgress ? { onProgress } : {}),
     });
     Object.assign(usage, res.usage);
-    const cost = estimateCostUsd(model, res.usage);
+    const cost = estimateCostUsd(res.servedModel ?? model, res.usage);
     if (cost !== undefined) usage.costUsd = cost;
 
     // A truncated or refused response must never reach disk as a "file".

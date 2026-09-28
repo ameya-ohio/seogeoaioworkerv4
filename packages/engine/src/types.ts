@@ -83,6 +83,27 @@ export interface GateResult {
   checkedAt: Date;
 }
 
+export type TechnicalIssueKind = "technical_error" | "contradiction" | "outdated" | "unsupported_number";
+
+export interface TechnicalIssue {
+  kind: TechnicalIssueKind;
+  /** Exact text from the article (verified present before it is kept). */
+  quote: string;
+  problem: string;
+  fix: string;
+}
+
+export interface TechnicalReview {
+  ranAt: Date;
+  model: string;
+  issues: TechnicalIssue[];
+  /** Issues the model returned whose quote isn't in the article (dropped). */
+  droppedUnquoted: number;
+  /** Set when the review didn't run to completion; the pipeline carries on. */
+  skipped?: string;
+  costUsd?: number;
+}
+
 export interface PhaseUsage {
   inputTokens?: number;
   outputTokens?: number;
@@ -195,6 +216,8 @@ export interface ArticleDoc {
   citationChecks?: CitationReport;
   /** Internal-link resolution (D35) — edit-stage. */
   linkChecks?: LinkReport;
+  /** Expert read of the Writer's draft (agents/technical-reviewer.md), handed to the Editor. */
+  technicalReview?: TechnicalReview;
   /**
    * Planned cluster-sibling pages the article references as plain mentions;
    * Phase 5 turns them into links when the siblings publish (D35).

@@ -37,6 +37,12 @@ export interface WorkerConfig {
     /** Streaming call, so a high ceiling costs nothing unless it is used. */
     maxTokens: number;
   };
+  /** Pre-edit expert read of the draft (agents/technical-reviewer.md). */
+  techReview: {
+    enabled: boolean;
+    model: string;
+    effort: Effort;
+  };
   /** Topic & Cluster Generator settings (roadmap 4C, D26 tiers). */
   cluster: {
     /** Main reasoning tier (clustering, scoring, architecture, briefs). */
@@ -164,6 +170,14 @@ export function loadWorkerConfig(): WorkerConfig {
       design: intEnv("PHASE_MAX_TURNS_DESIGN", 40),
     },
     direct: directConfig(),
+    techReview: {
+      // On by default: it's one call per article and catches what fluent drafts get wrong.
+      enabled: (process.env["TECH_REVIEW"] ?? "1") !== "0",
+      model: process.env["TECH_REVIEW_MODEL"] ?? "claude-opus-5-5",
+      effort: EFFORTS.includes(process.env["TECH_REVIEW_EFFORT"] as Effort)
+        ? (process.env["TECH_REVIEW_EFFORT"] as Effort)
+        : "high",
+    },
     cluster: {
       mainModel: process.env["CLUSTER_MODEL"] ?? DEFAULT_MODEL,
       fanoutModel: process.env["CLUSTER_FANOUT_MODEL"] ?? "claude-haiku-4-5-20251001",
