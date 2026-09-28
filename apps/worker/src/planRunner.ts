@@ -13,6 +13,7 @@ import {
   type PlanDoc,
   type PlanItemDoc,
 } from "@blogagent/engine";
+import { applyRepoFiles } from "@blogagent/engine";
 import type { WorkerConfig } from "./config.js";
 import type { LlmClient } from "./llm.js";
 
@@ -172,6 +173,7 @@ async function enrichOne(
 
 export async function runPlanEnrichment(deps: PlanDeps, plan: PlanDoc): Promise<void> {
   const planId = plan._id as ObjectId;
+  await applyRepoFiles(deps.db, plan.companyId, deps.cfg.repoRoot);
   const spec = await readFile(join(deps.cfg.repoRoot, SPEC_FILE), "utf-8");
   const concurrency = Math.max(1, deps.cfg.plan.concurrency);
 

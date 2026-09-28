@@ -4,6 +4,7 @@ import type {
   CompanyDoc,
   EventDoc,
   KeywordDoc,
+  RepoFileDoc,
   RunDoc,
   SettingDoc,
 } from "./types.js";
@@ -31,6 +32,7 @@ export interface EngineDb {
   planItems: Collection<PlanItemDoc>;
   planEvents: Collection<PlanEventDoc>;
   schedules: Collection<ScheduleDoc>;
+  repoFiles: Collection<RepoFileDoc>;
   close(): Promise<void>;
 }
 
@@ -57,6 +59,7 @@ export async function connect(uri: string, dbName: string): Promise<EngineDb> {
     planItems: db.collection<PlanItemDoc>("plan_items"),
     planEvents: db.collection<PlanEventDoc>("plan_events"),
     schedules: db.collection<ScheduleDoc>("schedules"),
+    repoFiles: db.collection<RepoFileDoc>("repo_files"),
     close: () => client.close(),
   };
   await ensureIndexes(handle);
@@ -86,6 +89,7 @@ export async function ensureIndexes(h: EngineDb): Promise<void> {
     ]),
     h.companies.createIndexes([{ key: { companyId: 1 }, unique: true }]),
     h.settings.createIndexes([{ key: { companyId: 1, key: 1 }, unique: true }]),
+    h.repoFiles.createIndexes([{ key: { companyId: 1, path: 1 }, unique: true }]),
     h.clusters.createIndexes([
       { key: { status: 1, queuedAt: 1 } },
       { key: { status: 1, leaseUntil: 1 } },

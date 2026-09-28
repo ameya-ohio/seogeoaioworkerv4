@@ -332,6 +332,24 @@ export interface CompanyDoc {
   updatedAt: Date;
 }
 
+/**
+ * A repo file (standards/, templates/, agents/, context/) saved from the
+ * web Admin. The container filesystem is rebuilt on every deploy and the
+ * worker is a separate container, so Admin edits live here and the worker
+ * writes them over its repo copy before each run (applyRepoFiles).
+ */
+export interface RepoFileDoc {
+  _id?: ObjectId;
+  companyId: string;
+  /** Repo-relative, e.g. "context/case-studies/regional-health-system.md". */
+  path: string;
+  content: string;
+  /** A deleted file stays as a tombstone so the worker removes its copy too. */
+  deleted?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface SettingDoc {
   _id?: ObjectId;
   companyId: string;

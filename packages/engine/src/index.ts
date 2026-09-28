@@ -39,3 +39,4 @@ export * from "./dal/events.js";
 export * from "./dal/companies.js";
 export * from "./dal/clusters.js";
 export * from "./dal/scrapes.js";
+export * from "./dal/repoFiles.js";

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { getCompany } from "@/lib/db";
 import { listAdminFiles, readAdminFile } from "@/lib/actions/admin";
 import { Card, EmptyState, PageHeader, TabNav, cls } from "@/components/ui";
-import { AdminEditor } from "@/components/admin-editor";
+import { AdminEditor, NewCaseStudy } from "@/components/admin-editor";
 import { CompetitiveTab } from "./competitive-tab";
 
 export const dynamic = "force-dynamic";
@@ -74,13 +74,19 @@ async function EditorTab({ area, file }: { area: string; file: string | null }) 
                       ? "bg-accent-soft font-medium text-accent"
                       : "text-slate-600 hover:bg-slate-100",
                   )}
-                  title={f.path}
+                  title={f.source === "app" ? `${f.path} — saved in the app` : f.path}
                 >
                   {f.path}
+                  {f.source === "app" && <span className="ml-1 text-[10px] text-slate-400">· saved</span>}
                 </Link>
               </li>
             ))}
           </ul>
+        )}
+        {area === "context" && (
+          <div className="mt-4 border-t border-slate-100 pt-3">
+            <NewCaseStudy />
+          </div>
         )}
       </Card>
       {file && content !== null ? (
@@ -88,7 +94,10 @@ async function EditorTab({ area, file }: { area: string; file: string | null }) 
       ) : error ? (
         <EmptyState title={error} />
       ) : (
-        <EmptyState title="Pick a file to edit." hint="Changes are written straight to the repo file the agents read." />
+        <EmptyState
+          title="Pick a file to edit."
+          hint="Saved changes are stored in the app and reach the pipeline from the next article run."
+        />
       )}
     </div>
   );

@@ -48,6 +48,7 @@ import {
   type SpokeBrief,
   type ThemeDoc,
 } from "@blogagent/engine";
+import { applyRepoFiles } from "@blogagent/engine";
 import type { WorkerConfig } from "./config.js";
 import type { FanoutObserver, LlmClient } from "./llm.js";
 
@@ -1056,6 +1057,8 @@ const STAGE_FNS: Record<ClusterStage, (ctx: StageCtx) => Promise<void>> = {
 export async function runCluster(deps: ClusterDeps, cluster: ClusterDoc): Promise<void> {
   const clusterId = cluster._id;
   if (!clusterId) throw new Error("cluster missing _id");
+  // Admin-saved specs/context (repo_files) take effect on the next run.
+  await applyRepoFiles(deps.db, cluster.companyId, deps.cfg.repoRoot);
   const ctx: StageCtx = {
     deps,
     clusterId,

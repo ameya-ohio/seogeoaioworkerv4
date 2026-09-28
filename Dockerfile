@@ -60,10 +60,13 @@ ENV NODE_ENV=production \
     PYTHON_BIN=python3
 
 # Claude Code refuses bypassPermissions (the Agent SDK's headless mode) as
-# root, so the worker runs as `node`. It writes only article workspaces and
-# scrape corpora; everything else in the image stays root-owned, read-only.
+# root, so the worker runs as `node`. It writes article workspaces, scrape
+# corpora, and the four Admin-editable areas (Admin-saved files from
+# repo_files are applied over them before each run); everything else in the
+# image stays root-owned, read-only.
 RUN mkdir -p /app/outputs \
-  && chown -R node:node /app/articles /app/outputs /opt/ms-playwright
+  && chown -R node:node /app/articles /app/outputs /opt/ms-playwright \
+     /app/standards /app/templates /app/agents /app/context
 USER node
 
 CMD ["node", "apps/worker/dist/cli.js", "start"]

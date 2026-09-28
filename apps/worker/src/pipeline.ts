@@ -3,6 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   GATES,
+  applyRepoFiles,
   MIN_VERIFIED_SOURCES,
   pruneUnverifiedCitations,
   trimExcessClaims,
@@ -400,6 +401,12 @@ export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<void
     message: `Run started (attempt ${run.attempts}/${run.maxAttempts}) from ${run.fromStage}`,
   });
 
+  // Admin-saved specs, standards and context (repo_files) take effect on the
+  // next run without a redeploy — including new case studies.
+  const applied = await applyRepoFiles(db, run.companyId, cfg.repoRoot);
+  if (applied.written || applied.removed) {
+    deps.log(`[${article.slug}] applied ${applied.written} Admin-saved file(s), removed ${applied.removed}`);
+  }
   await materializeWorkspace(cfg, article);
   await materializeCompetitorGaps(db, cfg, article);
 
