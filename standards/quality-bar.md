@@ -75,6 +75,25 @@ If a banned phrase is the *exact* term of art (e.g. "synergy" in an M&A discussi
 
 --- 
 
+## Machine-checked style limits (the edit gate enforces these)
+
+`scripts/style_checks.py` measures the patterns below on every draft; the
+Editor gate FAILs on the first three, and the Editor is handed every hit
+with its sentence quoted. Write to the limit, don't write to the checker:
+the rules further down say *why* each pattern reads as generated.
+
+| Pattern | Limit | Level |
+|---|---|---|
+| "Not X, but Y" in any form (`…, not X`; `not X, but Y`; `X isn't Y. It's Z.`; `not because`), headings included | max(3, one per 600 words) | FAIL |
+| The same claim restated (≥ 6 shared content words, ≥ 60% overlap) | 2 occurrences — a third copy fails | FAIL |
+| Hedge words (typically, usually, often, sometimes, generally, tends to, likely, potentially, …) | 4 per 1,000 words (≥ 6 hits) | FAIL |
+| Lists of three in prose ("A, B, and C") | 6 per 1,000 words | WARN |
+| Uniform sentence length (stdev ÷ mean of prose sentences) | ≥ 0.45 | WARN |
+| Paragraphs opening with a signpost ("That's why…", "This is also why…") | 3 | WARN |
+
+The thesis belongs in the intro and the conclusion. Key Takeaways and FAQ
+answers support it with specifics; they don't repeat it.
+
 ## Forbidden AI Slop Patterns (Editor enforces) 
 
 ### RULE: No Assertion Chaining.

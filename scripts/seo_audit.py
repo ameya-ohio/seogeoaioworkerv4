@@ -20,6 +20,9 @@ Reports per-check PASS / WARN / FAIL on:
   - FAQ section present with at least 2 Q/A pairs
   - json-ld fenced block present
   - banned phrases found (count per phrase)
+  - style limits (scripts/style_checks.py): 'not X, but Y' contrasts, a claim
+    restated 3+ times, hedge density (FAIL); lists of three, uniform sentence
+    length, signpost openers (WARN)
   - schema.json file present
 """
 from __future__ import annotations
@@ -30,6 +33,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from company_config import load_banned_phrases, load_config  # noqa: E402
+from style_checks import format_finding, run_all as run_style_checks  # noqa: E402
 
 # Single source: standards/banned-phrases.txt + config/company.yaml
 # voice.banned_phrases (company-specific additions).
@@ -326,6 +330,13 @@ def audit(folder: Path) -> int:
             a.fail(f"Banned phrase found ({len(found)}×): {p!r} — {where}")
     else:
         a.ok("No banned phrases found.")
+
+    # AI-cadence limits from standards/quality-bar.md, machine-checked
+    style = run_style_checks(body_clean, count_words(body_clean))
+    for f in style:
+        (a.fail if f.level == "fail" else a.warn)(format_finding(f))
+    if not any(f.level == "fail" for f in style):
+        a.ok("Style: contrast, repetition and hedging within limits.")
 
     return a.report()
 

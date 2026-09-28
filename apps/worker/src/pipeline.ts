@@ -206,10 +206,18 @@ async function executePhase(
   // attempt 1 starts with the exact problems a retry would have been given.
   let preAudit: string[] | undefined;
   if (phase === "edit") {
-    const pre = GATES.edit(await loadGateFiles(cfg, article, phase, await runCodeStep(deps, article, phase)));
-    if (!pre.ok) preAudit = pre.problems;
+    const preOutputs = await runCodeStep(deps, article, phase);
+    const pre = GATES.edit(await loadGateFiles(cfg, article, phase, preOutputs));
+    // Style WARNs (rhythm, lists of three, signposts) don't fail the gate,
+    // but they're the same class of problem — hand them over as advisory.
+    const advisory = (preOutputs.report?.checks ?? [])
+      .filter((c) => c.level === "warn" && c.message.startsWith("Style:"))
+      .map((c) => `(advisory) ${c.message}`);
+    const items = [...(pre.ok ? [] : pre.problems), ...advisory];
+    if (items.length) preAudit = items;
     deps.log(
-      `[${article.slug}/edit] pre-audit: ${pre.ok ? "draft already passes" : `${pre.problems.length} problem(s) handed to the Editor`}`,
+      `[${article.slug}/edit] pre-audit: ${pre.ok ? "draft passes the gate" : `${pre.problems.length} gate problem(s)`}` +
+        (advisory.length ? `, ${advisory.length} advisory` : ""),
     );
   }
 
