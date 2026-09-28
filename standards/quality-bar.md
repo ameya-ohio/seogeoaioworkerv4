@@ -78,7 +78,7 @@ If a banned phrase is the *exact* term of art (e.g. "synergy" in an M&A discussi
 ## Machine-checked style limits (the edit gate enforces these)
 
 `scripts/style_checks.py` measures the patterns below on every draft; the
-Editor gate FAILs on the first three, and the Editor is handed every hit
+Editor gate FAILs on every FAIL row, and the Editor is handed every hit
 with its sentence quoted. Write to the limit, don't write to the checker:
 the rules further down say *why* each pattern reads as generated.
 
@@ -89,6 +89,7 @@ the rules further down say *why* each pattern reads as generated.
 | Hedge words (typically, usually, often, sometimes, generally, tends to, likely, potentially, …) | 4 per 1,000 words (≥ 6 hits) | FAIL |
 | Lists of three in prose ("A, B, and C") | 6 per 1,000 words | WARN |
 | Uniform sentence length (stdev ÷ mean of prose sentences) | ≥ 0.45 | WARN |
+| Invented scenarios ("Picture a…", "Imagine a…", "Suppose…", "Let's say…", "hypothetical") | 0 — use a case study or a cited incident | FAIL |
 | Paragraphs opening with a signpost ("That's why…", "This is also why…") | 3 | WARN |
 
 The thesis belongs in the intro and the conclusion. Key Takeaways and FAQ
@@ -398,6 +399,7 @@ Banned outright. Acceptable only for genuine acronyms (LLM, RAG, CRM, GTM). Neve
 
 ### Every statistic traces to research-notes.md
 - The number, the date, the publisher, the URL — all must come from `research-notes.md`.
+- The one exception is the real-world example: facts from the case study the outline names (`context/case-studies/`) are sourced — they are the company's own engagements — as long as they stay inside that file's *Publishing boundary*.
 - If the article cites a number not in research notes, the Editor either (a) removes it, (b) replaces it with a sourced one, or (c) escalates back to Phase 1 with `[NEEDS RESEARCH: <claim>]`.
 
 ### Every quote traces to research-notes.md

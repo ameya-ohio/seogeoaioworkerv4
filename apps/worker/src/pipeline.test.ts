@@ -10,6 +10,7 @@ import {
   createArticle,
   enqueueRun,
   eventsAfter,
+  saveRepoFile,
   type EngineDb,
 } from "@blogagent/engine";
 import type { ObjectId } from "mongodb";
@@ -752,5 +753,46 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
     const doc = await db.articles.findOne({ _id: article._id });
     expect(doc?.technicalReview?.skipped).toBe("stop_reason refusal");
     expect((await db.runs.findOne({ _id: run._id }))?.status).toBe("succeeded");
+  }, 120_000);
+
+  it("feeds Admin-saved case studies to the direct phases, never internal-only ones", async () => {
+    // Saved the way the web Admin saves them (repo_files); applied before the run.
+    await saveRepoFile(
+      db,
+      "testco",
+      "context/case-studies/regional-health.md",
+      "# Case study: Regional health system\n\n## Publishing boundary\n- Permission: anonymized OK\n\n## What we found\n- 41 crackable service accounts\n",
+    );
+    await saveRepoFile(
+      db,
+      "testco",
+      "context/case-studies/secret-bank.md",
+      "# Case study: Bank\n\n## Publishing boundary\n- Permission: internal only — do not use\n",
+    );
+    await saveRepoFile(db, "testco", "context/case-studies/_template.md", "# Case study: {{title}}\n");
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "direct-casestudy",
+      folder: "2026-09-14-direct-casestudy",
+      topic: "Case study topic",
+      targetKeyword: "context engineering",
+    });
+    await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const claimed = await claimRun(db, "test-worker", 60_000);
+    const llm = new FakeDirectLlm();
+    await runPipeline(
+      makeDeps(new FakeInvoker(), { cfg: directCfg(), direct: new DirectPhaseRunner(llm, fakeRenderer([])) }),
+      claimed!,
+    );
+
+    for (const phase of ["outline", "write", "edit"]) {
+      const reference = llm.calls.find((c) => c.phase === phase)!.req.system.map((b) => b.text).join("\n");
+      expect(reference, phase).toContain('<input path="context/case-studies/regional-health.md">');
+      expect(reference, phase).toContain("41 crackable service accounts");
+      expect(reference, phase).not.toContain('<input path="context/case-studies/secret-bank.md">');
+      expect(reference, phase).not.toContain('<input path="context/case-studies/_template.md">');
+      expect(reference, phase).not.toContain("Permission: internal only — do not use");
+    }
+    expect(llm.calls.find((c) => c.phase === "outline")!.req.prompt).toContain("real-world anchor");
   }, 120_000);
 });

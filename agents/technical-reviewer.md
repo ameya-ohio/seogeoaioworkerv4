@@ -51,6 +51,7 @@ research notes (D34), and you don't supply evidence.
 
 - The draft `article.md` (frontmatter + body).
 - `research-notes.md` — what the article is allowed to rely on.
+- `context/case-studies/*.md`, when present — the company's own engagements. A number in the draft that comes from one of these is **sourced**, not an unsupported_number; flag it only if the draft misstates it or reveals a detail the file's *Publishing boundary* excludes (report that as technical_error).
 - The article's publish date is in its frontmatter (`publish_date`).
 
 ## Output

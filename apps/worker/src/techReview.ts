@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { TechnicalIssue, TechnicalIssueKind, TechnicalReview } from "@blogagent/engine";
 import type { WorkerConfig } from "./config.js";
-import { estimateCostUsd, parseFiles, renderInputs, type DirectLlm } from "./directRunner.js";
+import { caseStudies, estimateCostUsd, parseFiles, renderInputs, type DirectLlm } from "./directRunner.js";
 
 /**
  * Pre-edit expert read of the Writer's draft (agents/technical-reviewer.md).
@@ -86,6 +86,8 @@ export class LlmTechReviewer implements TechReviewer {
           renderInputs([
             { path: "article.md", content: input.articleMd },
             { path: "research-notes.md", content: input.researchNotes },
+            // Case-study facts are sourced (the company's own engagements), not unsupported numbers.
+            ...(await caseStudies(this.cfg)),
           ]),
           ``,
           `Review the draft per your spec and return review.json.`,

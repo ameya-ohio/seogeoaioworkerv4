@@ -53,6 +53,16 @@ _SIGNPOST = re.compile(
     re.I,
 )
 
+# Invented scenarios ("Picture a domain with roughly 400…"). A real example
+# comes from context/case-studies/ or a cited incident in the research notes.
+_HYPOTHETICAL = re.compile(
+    r"\b(?:picture|imagine)\s+(?:a|an|your|this|that|the|you(?:'re|’re| are))\b"
+    r"|\bsuppose\s+(?:that|a|an|your|you)\b"
+    r"|\blet(?:'s|’s| us) say\b"
+    r"|\bhypothetical(?:ly)?\b",
+    re.I,
+)
+
 _STOP = set(
     """
     about above after again against also although among another because been before being below between
@@ -170,6 +180,18 @@ def check_repetition(blocks: list[str]) -> list[Finding]:
     return out
 
 
+def check_hypotheticals(blocks: list[str]) -> Finding | None:
+    hits = [_snip(b, m.start(), m.end(), 50) for b in blocks for m in _HYPOTHETICAL.finditer(b)]
+    if not hits:
+        return None
+    return Finding(
+        "fail",
+        "Style: invented scenario — anchor the example on a case study from context/case-studies/ "
+        "or a cited incident from the research notes, or cut it",
+        hits,
+    )
+
+
 def check_hedges(prose: list[str], word_count: int) -> Finding | None:
     hits = []
     for block in prose:
@@ -227,6 +249,7 @@ def run_all(body: str, word_count: int) -> list[Finding]:
     findings: list[Finding | None] = [
         check_contrasts(blocks, word_count),
         *check_repetition(blocks),
+        check_hypotheticals(blocks),
         check_hedges(prose, word_count),
         check_triads(prose, word_count),
         check_rhythm(prose),

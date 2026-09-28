@@ -14,6 +14,7 @@ Polish the draft, fact-check structure, and verify SEO/GEO/AIO compliance. You a
 4. `standards/aio-checklist.md`
 5. The current `articles/YYYY-MM-DD-slug/article.md`
 6. (Reference, not edited) `articles/YYYY-MM-DD-slug/research-notes.md` — for fact-checking citations
+6.5. (Reference, not edited) `context/case-studies/` — facts in the real-world example trace here, and must stay inside the file's *Publishing boundary*
 7. (Reference, not edited) `articles/YYYY-MM-DD-slug/outline.md` — to confirm the article actually delivered the strategy
 
 ---
@@ -83,6 +84,7 @@ Walk every item. Specifically:
 ### Pass 7 — Fact check
 
 For every concrete claim (statistic, dated fact, named study, quote):
+- Case-study facts (the real-world example) trace to their file in `context/case-studies/` instead: check each number against it and cut any customer detail its *Publishing boundary* excludes.
 - Find the source in `research-notes.md`. Then visit the source url and validate that the exact claim data is visible on the page and present. If absent, either remove the claim, replace with a sourced one, or escalate by inserting `[NEEDS RESEARCH: <claim>]` and requesting Phase 1 re-run.
 - Verify the year, the publisher, and the exact number/quote match the research notes.
 

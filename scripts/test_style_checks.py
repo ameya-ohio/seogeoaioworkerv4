@@ -68,6 +68,24 @@ class RepetitionTests(unittest.TestCase):
         self.assertFalse([f for f in run(body) if "same claim" in f.message])
 
 
+class HypotheticalTests(unittest.TestCase):
+    def test_invented_scenarios_fail(self):
+        for text in [
+            "Picture a domain with roughly 400 service accounts.",
+            "Imagine you're the only admin on call.",
+            "Suppose an attacker already has a foothold.",
+            "Let's say the ticket uses RC4.",
+            "In this hypothetical, the SOC misses it.",
+        ]:
+            found = [f for f in run(text) if "invented scenario" in f.message]
+            self.assertEqual(len(found), 1, text)
+            self.assertEqual(found[0].level, "fail")
+
+    def test_ordinary_uses_pass(self):
+        body = "The picture changes once AES is enforced. Attackers imagined nothing; they requested tickets."
+        self.assertFalse([f for f in run(body) if "invented scenario" in f.message])
+
+
 class HedgeAndWarnTests(unittest.TestCase):
     def test_hedge_density_fails_with_context(self):
         body = " ".join(

@@ -14,6 +14,7 @@ You are not deciding *what* to write — that's done. You are deciding *how* it 
 2. `articles/YYYY-MM-DD-slug/research-notes.md`
 3. `context/author-style/` (skip silently if empty — fall back to defaults below)
 4. `context/brand/` (skip silently if empty)
+4.5. `context/case-studies/` — the case study the outline's **Real-World Anchor** names (if any)
 
 ---
 
@@ -109,9 +110,19 @@ reading_time_minutes: 0
 
 ---
 
+## The real-world example
+
+Build the worked example on exactly what the outline's **Real-World Anchor** names:
+
+- **A case study** — use its facts and numbers as written, describe the customer only as its *Publishing boundary* allows ("a 12-hospital US health system"), and never add a detail it doesn't contain. Case-study facts are sourced: they are the company's own engagements. Attribute them in the first person plural where natural ("In one engagement with a regional health system, we found…").
+- **A documented incident** — name it and attribute it to the source in the research notes.
+- **None** — make the argument with the research's sourced figures and no example.
+
+Never invent a scenario: no "picture a…", "imagine a…", "suppose…", "let's say…". The edit gate fails them.
+
 ## Citations
 
-Every cited claim in the body must trace back to a source in `research-notes.md`. Use natural attribution in prose. The structured `citation` array goes into the JSON-LD later — you don't write that block; the Schema Builder does.
+Every cited claim in the body must trace back to a source in `research-notes.md` — or, for the real-world example only, to the case study the outline names. Use natural attribution in prose. The structured `citation` array goes into the JSON-LD later — you don't write that block; the Schema Builder does.
 
 If you find yourself reaching for a stat that isn't in `research-notes.md`, **stop**. Do not invent. Either:
 1. Replace the claim with one that *is* sourced, or

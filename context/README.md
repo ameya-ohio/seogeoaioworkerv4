@@ -6,6 +6,14 @@ Until a folder has files, agents fall back to the defaults documented in `agents
 
 ---
 
+## `context/case-studies/`
+
+Real, anonymized engagements — the article's real-world example is built on one of these instead of an invented scenario. One file per engagement, from `_template.md` (Admin → Context → **New case study**). Each file states its publishing boundary; files marked `Permission: internal only` never reach a prompt. See `context/case-studies/README.md`.
+
+Used by: **Strategist** (picks the anchor), **Writer** (builds the example on it), **Editor** + technical reviewer (fact-check it).
+
+---
+
 ## `context/brand/`
 
 Brand voice, positioning, mission, taglines, do's and don'ts.

@@ -25,6 +25,7 @@ The Writer will follow your outline mechanically. If the outline is wrong, the a
    - `context/brand/` — voice, positioning
    - `context/marketing/` — keyword list, content cluster strategy
    - `context/sales/` — ICP, top objections (lets you choose an angle that lands with the buyer)
+   - `context/case-studies/` — real, anonymized engagements (skip `README.md`, `_template.md`, and any file marked `Permission: internal only`)
 
 If `context/` is empty, default to: audience = mid-market and enterprise leaders deploying AI workers; positioning = AI workforce / agentic operations; buyer = director-to-VP in IT, ops, sales ops, customer ops, finance ops.
 
@@ -115,6 +116,16 @@ For a **routing page**, the close is navigational, not commercial: send the read
 
 One or two sentences stating the argument the whole article makes — not the topic, the *claim*. The research notes' discourse analysis (who says what, what nobody combines) is where the thesis comes from; if research surfaced a genuine gap in the conversation, the thesis is your side of that gap. Every H2 section must advance this thesis; the closing must crystallize it into one clean distinction. An article without a thesis is an answer farm — the gate rejects an outline without one.
 
+### 13.5. Real-world anchor
+
+The "one concrete worked example" in the arc must be **real**. Choose, in order:
+
+1. **A case study** from `context/case-studies/` whose *Topics* genuinely match this article — at most one. Note which sections it anchors and which of its numbers carry the argument. Respect its *Publishing boundary* exactly.
+2. Otherwise, **a documented incident** from the research notes (named breach, published post-mortem, advisory) with its source.
+3. Otherwise, **no worked example** — make the argument with the research's sourced figures.
+
+Never plan a hypothetical ("picture a domain with 400 accounts…", "imagine a hospital…"). The edit gate fails invented scenarios, and a reader who does this work can tell.
+
 ### 14. H2/H3 outline
 
 Full outline. For each section:
@@ -182,6 +193,11 @@ Write to `articles/YYYY-MM-DD-slug/outline.md` using this structure:
 
 ## Hook Strategy
 [Type] — [1–2 sentence sketch of the opener]
+
+## Real-World Anchor
+[context/case-studies/<file>.md — which sections it anchors, which facts carry the argument, and the publishing boundary]
+or [documented incident: <name> — <source from research notes>]
+or [none — no case study or documented incident fits; the argument rests on sourced figures]
 
 ## Closing / CTA
 [What the reader does next, and why]

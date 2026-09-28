@@ -220,17 +220,34 @@ async function readRel(cfg: WorkerConfig, rel: string): Promise<InputFile | null
   return { path: rel, content: await readFile(abs, "utf-8") };
 }
 
-/** Text files in a repo-relative folder, sorted so the cached prefix is stable. */
+/**
+ * Text files in a repo-relative folder, sorted so the cached prefix is
+ * stable. README.md and `_`-prefixed files document the folder (e.g.
+ * context/case-studies/_template.md) and are not inputs.
+ */
 async function readDir(cfg: WorkerConfig, rel: string): Promise<InputFile[]> {
   const abs = join(cfg.repoRoot, rel);
   if (!existsSync(abs)) return [];
-  const names = (await readdir(abs)).filter((n) => TEXT_EXT.test(n)).sort();
+  const names = (await readdir(abs))
+    .filter((n) => TEXT_EXT.test(n) && n !== "README.md" && !n.startsWith("_"))
+    .sort();
   const files: InputFile[] = [];
   for (const n of names) {
     const f = await readRel(cfg, join(rel, n));
     if (f && f.content.trim()) files.push(f);
   }
   return files;
+}
+
+/**
+ * Case studies the agents may use: context/case-studies/*.md minus any
+ * marked "Permission: internal only" — those never reach a prompt, so they
+ * can't leak into a published article.
+ */
+export async function caseStudies(cfg: WorkerConfig): Promise<InputFile[]> {
+  return (await readDir(cfg, "context/case-studies")).filter(
+    (f) => !/^\s*-?\s*Permission:\s*internal only/im.test(f.content),
+  );
 }
 
 async function readAll(cfg: WorkerConfig, rels: string[]): Promise<InputFile[]> {
@@ -265,6 +282,7 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           ...(await readDir(cfg, "context/brand")),
           ...(await readDir(cfg, "context/marketing")),
           ...(await readDir(cfg, "context/sales")),
+          ...(await caseStudies(cfg)),
         ],
         inputs: await readAll(cfg, [
           inFolder("research-notes.md"),
@@ -272,6 +290,9 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
         ]),
         task: [
           `Write the strategy + outline as outline.md.`,
+          `Pick the real-world anchor per your spec: at most one case study from context/case-studies/`,
+          `(reference material) that genuinely fits this article, or a documented incident from the research`,
+          `notes, or none. Never plan a hypothetical scenario.`,
           ...(article.brief
             ? [
                 `${inFolder("brief.md")} is a SPOKE BRIEF — a first-class input (D31): use its H2 outline`,
@@ -289,6 +310,7 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           ...(await readDir(cfg, "context/author-style")),
           ...(await readDir(cfg, "context/brand")),
           ...(await readAll(cfg, ["config/company.yaml"])),
+          ...(await caseStudies(cfg)),
         ],
         inputs: await readAll(cfg, [
           inFolder("outline.md"),
@@ -315,6 +337,7 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
             "config/company.yaml",
           ])),
           ...(await readDir(cfg, "context/author-style")),
+          ...(await caseStudies(cfg)),
         ],
         inputs: await readAll(cfg, [inFolder("article.md"), inFolder("research-notes.md")]),
         task: [

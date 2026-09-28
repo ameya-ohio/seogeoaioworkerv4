@@ -60,7 +60,7 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   - `agents/strategist.md`
   - `articles/YYYY-MM-DD-slug/research-notes.md`
   - **All files in** `standards/` (`seo-checklist.md`, `geo-checklist.md`, `aio-checklist.md`, `schema-spec.md`, `quality-bar.md`)
-  - Relevant `context/` folders: `context/brand/`, `context/marketing/`, `context/sales/`. Skip empty folders silently and proceed with sensible defaults.
+  - Relevant `context/` folders: `context/brand/`, `context/marketing/`, `context/sales/`, `context/case-studies/` (skip `README.md`, `_template.md`, and files marked `Permission: internal only`). Skip empty folders silently and proceed with sensible defaults.
 - **Action:** Convert research into a winning angle and a detailed outline. Decide keywords, intent, word-count target, GEO/AIO angle, target entities, FAQ candidates, citations, internal-link opportunities, hook strategy, and CTA.
 - **Output:** `articles/YYYY-MM-DD-slug/outline.md`.
 - **Gate:** Outline exists; primary keyword chosen; FAQ section has 3–7 candidate questions; H2/H3 outline contains at least 4 H2 sections; all entities and citations to use are listed by name with sources.
@@ -74,6 +74,7 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   - `articles/YYYY-MM-DD-slug/research-notes.md`
   - `context/author-style/` (or default voice rules from `agents/writer.md` if empty)
   - `context/brand/` (or skip if empty)
+  - the `context/case-studies/` file the outline's Real-World Anchor names (if any)
 - **Action:** Write the full article in markdown, following the outline section-by-section in the brand/author voice. Embed inline citations naturally. Write FAQ section verbatim using strategist's questions. Fill YAML frontmatter completely.
 - **Output:** `articles/YYYY-MM-DD-slug/article.md` (full draft). Also update `meta.json` with title/slug/meta_description/keywords/canonical.
 - **Gate:** `article.md` exists with complete frontmatter; H1 present; "Key Takeaways" block present near the top; FAQ section present; no fabricated sources (every cited claim must trace to `research-notes.md`).
