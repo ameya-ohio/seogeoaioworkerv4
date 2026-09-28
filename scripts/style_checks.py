@@ -59,7 +59,10 @@ _HYPOTHETICAL = re.compile(
     r"\b(?:picture|imagine)\s+(?:a|an|your|this|that|the|you(?:'re|’re| are))\b"
     r"|\bsuppose\s+(?:that|a|an|your|you)\b"
     r"|\blet(?:'s|’s| us) say\b"
-    r"|\bhypothetical(?:ly)?\b",
+    # "hypothetical" only as a scenario being set up — "real, not hypothetical" denies one.
+    r"|\bhypothetically\b"
+    r"|\b(?:a|an|this|our|the following)\s+hypothetical\b"
+    r"|\bhypothetical\s+(?:scenario|example|case|organization|organisation|company|domain|hospital|enterprise|attacker|environment|network|team)\b",
     re.I,
 )
 

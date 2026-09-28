@@ -361,6 +361,11 @@ async function executePhase(
         data: { phase, attempt },
       });
       await persistPhaseOutputs(deps.db, cfg, deps.storage, article, phase);
+      if (phase === "outline" && files.outline) {
+        // Which case study (or incident, or none) the article is anchored on.
+        const anchor = /^##\s+Real-World Anchor\s*\n+([^\n]+)/im.exec(files.outline)?.[1]?.trim();
+        deps.log(`[${article.slug}/outline] real-world anchor: ${anchor ? anchor.slice(0, 200) : "(section missing)"}`);
+      }
       return { gate, attempts: attempt };
     }
 

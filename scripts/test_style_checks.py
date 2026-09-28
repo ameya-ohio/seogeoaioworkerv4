@@ -76,13 +76,18 @@ class HypotheticalTests(unittest.TestCase):
             "Suppose an attacker already has a foothold.",
             "Let's say the ticket uses RC4.",
             "In this hypothetical, the SOC misses it.",
+            "Take a hypothetical hospital with 400 service accounts.",
+            "Hypothetically, the SOC misses it.",
         ]:
             found = [f for f in run(text) if "invented scenario" in f.message]
             self.assertEqual(len(found), 1, text)
             self.assertEqual(found[0].level, "fail")
 
     def test_ordinary_uses_pass(self):
-        body = "The picture changes once AES is enforced. Attackers imagined nothing; they requested tickets."
+        body = (
+            "The picture changes once AES is enforced. Attackers imagined nothing; they requested tickets. "
+            "The audit phase shows the compatibility risk was real, not hypothetical."
+        )
         self.assertFalse([f for f in run(body) if "invented scenario" in f.message])
 
 
