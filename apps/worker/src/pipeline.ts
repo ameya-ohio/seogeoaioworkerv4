@@ -210,6 +210,9 @@ async function runTechnicalReview(deps: PipelineDeps, article: ArticleDoc): Prom
         : `${review.issues.length} issue(s)${review.droppedUnquoted ? `, ${review.droppedUnquoted} dropped (quote not in draft)` : ""}`) +
       ` — ${review.model}${review.costUsd !== undefined ? `, $${review.costUsd.toFixed(3)}` : ""}`,
   );
+  for (const i of review.issues) {
+    deps.log(`[${article.slug}/tech-review]   - ${i.kind}: "${i.quote.slice(0, 90)}" — ${i.problem.slice(0, 160)}`);
+  }
   return review.issues.map(formatIssue);
 }
 
@@ -254,6 +257,14 @@ async function executePhase(
     deps.log(
       `[${article.slug}/edit] pre-audit: ${pre.ok ? "draft passes the gate" : `${pre.problems.length} gate problem(s)`}` +
         `, ${technical.length} technical, ${advisory.length} advisory`,
+    );
+    // One line per non-technical item (technical ones were logged by the review).
+    for (const item of [...(pre.ok ? [] : pre.problems), ...advisory]) {
+      deps.log(`[${article.slug}/edit]   - ${item.slice(0, 220)}`);
+    }
+    await db.articles.updateOne(
+      { _id: articleId },
+      { $set: { editPreAudit: { ranAt: new Date(), items }, updatedAt: new Date() } },
     );
   }
 

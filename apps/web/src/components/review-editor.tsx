@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { approveArticle, rerunPhase, saveArticleMarkdown } from "@/lib/actions/content";
-import type { CheckLine } from "@blogagent/engine";
+import type { CheckLine, TechnicalIssue } from "@blogagent/engine";
 import type { UiRun } from "@/lib/ui-types";
 import { buttonCls, cls, inputCls } from "./ui";
 
@@ -25,6 +25,17 @@ export interface ReviewArticle {
   /** D34 citation verification + D35 link resolution, as pass/fail lines. */
   citations: CheckLine[] | null;
   links: CheckLine[] | null;
+  /** Pre-edit expert read of the Writer's draft (agents/technical-reviewer.md). */
+  technicalReview: {
+    ranAt: string;
+    model: string;
+    issues: TechnicalIssue[];
+    droppedUnquoted: number;
+    skipped: string | null;
+    costUsd: number | null;
+  } | null;
+  /** Everything handed to the Editor before its first attempt. */
+  editPreAudit: string[] | null;
   hasHeader: boolean;
   activeRun: UiRun | null;
   runs: UiRun[];
@@ -40,7 +51,7 @@ function previewBody(markdown: string): string {
     .replace(/<!--[\s\S]*?-->/g, "");
 }
 
-type SideTab = "preview" | "research" | "outline" | "draft" | "audit" | "header" | "runs";
+type SideTab = "preview" | "research" | "outline" | "draft" | "audit" | "review" | "header" | "runs";
 
 export function ReviewEditor({ article }: { article: ReviewArticle }) {
   const router = useRouter();
@@ -66,6 +77,7 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
     { key: "outline", label: "Outline", disabled: !article.outline },
     { key: "draft", label: "First draft", disabled: !article.draft },
     { key: "audit", label: "Audit", disabled: !article.audit && !article.citations },
+    { key: "review", label: "Tech review", disabled: !article.technicalReview && !article.editPreAudit },
     { key: "header", label: "Header", disabled: !article.hasHeader },
     { key: "runs", label: "Runs", disabled: article.runs.length === 0 },
   ];
@@ -181,6 +193,13 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
                 <CheckList title="Internal links (D35)" checks={article.links} />
               </div>
             )}
+            {tab === "review" && (
+              <TechReviewPanel
+                review={article.technicalReview}
+                preAudit={article.editPreAudit}
+                markdown={content}
+              />
+            )}
             {tab === "header" && article.hasHeader && (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -219,6 +238,99 @@ function CheckList({ title, checks }: { title: string; checks: CheckLine[] | nul
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/** Same normalization the worker uses to match a finding's quote to the draft. */
+function normalizeQuote(s: string): string {
+  return s
+    .replace(/[*_`]/g, "")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+const KIND_LABEL: Record<TechnicalIssue["kind"], string> = {
+  technical_error: "Technical error",
+  contradiction: "Contradiction",
+  outdated: "Outdated",
+  unsupported_number: "Unsupported number",
+};
+
+function TechReviewPanel({
+  review,
+  preAudit,
+  markdown,
+}: {
+  review: ReviewArticle["technicalReview"];
+  preAudit: string[] | null;
+  markdown: string;
+}) {
+  // A finding whose quoted text no longer appears was rewritten or cut —
+  // the cheap way to see what the Editor actually changed.
+  const current = normalizeQuote(markdown);
+  const stillPresent = (quote: string) => current.includes(normalizeQuote(quote));
+  const technical = new Set(review?.issues.map((i) => i.quote) ?? []);
+  const otherItems = (preAudit ?? []).filter((item) => ![...technical].some((q) => item.includes(`"${q}"`)));
+  return (
+    <div className="space-y-5">
+      <div>
+        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          Technical review of the draft
+        </p>
+        {!review ? (
+          <p className="text-xs text-slate-500">No technical review ran for this article.</p>
+        ) : (
+          <>
+            <p className="mb-3 text-xs text-slate-500">
+              {review.model} · {new Date(review.ranAt).toLocaleString()}
+              {review.costUsd != null && ` · $${review.costUsd.toFixed(3)}`}
+              {review.droppedUnquoted > 0 && ` · ${review.droppedUnquoted} dropped (quote not in draft)`}
+            </p>
+            {review.skipped && <p className="text-xs text-amber-700">Skipped: {review.skipped}</p>}
+            {!review.skipped && review.issues.length === 0 && (
+              <p className="text-xs text-emerald-700">No issues found.</p>
+            )}
+            <ul className="space-y-3">
+              {review.issues.map((issue, i) => {
+                const open = stillPresent(issue.quote);
+                return (
+                  <li key={i} className="rounded-md border border-slate-200 p-3 text-xs">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="font-semibold text-slate-700">{KIND_LABEL[issue.kind]}</span>
+                      <span className={cls("font-medium", open ? "text-amber-700" : "text-emerald-700")}>
+                        {open ? "still in article" : "changed"}
+                      </span>
+                    </div>
+                    <blockquote className="mb-1 border-l-2 border-slate-300 pl-2 italic text-slate-600">
+                      {issue.quote}
+                    </blockquote>
+                    <p className="text-slate-700">{issue.problem}</p>
+                    <p className="mt-1 text-slate-500">Fix: {issue.fix}</p>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+      </div>
+      {otherItems.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Also handed to the Editor (pre-audit)
+          </p>
+          <ul className="space-y-1">
+            {otherItems.map((item, i) => (
+              <li key={i} className="text-xs text-slate-700">
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

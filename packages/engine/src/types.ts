@@ -218,6 +218,8 @@ export interface ArticleDoc {
   linkChecks?: LinkReport;
   /** Expert read of the Writer's draft (agents/technical-reviewer.md), handed to the Editor. */
   technicalReview?: TechnicalReview;
+  /** Everything handed to the Editor before its first attempt (gate problems, technical findings, advisory). */
+  editPreAudit?: { ranAt: Date; items: string[] };
   /**
    * Planned cluster-sibling pages the article references as plain mentions;
    * Phase 5 turns them into links when the siblings publish (D35).

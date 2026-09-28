@@ -48,6 +48,17 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
           message: `${r.url}${r.note ? ` — ${r.note}` : ""}`,
         }))
       : null,
+    technicalReview: doc.technicalReview
+      ? {
+          ranAt: new Date(doc.technicalReview.ranAt).toISOString(),
+          model: doc.technicalReview.model,
+          issues: doc.technicalReview.issues,
+          droppedUnquoted: doc.technicalReview.droppedUnquoted,
+          skipped: doc.technicalReview.skipped ?? null,
+          costUsd: doc.technicalReview.costUsd ?? null,
+        }
+      : null,
+    editPreAudit: doc.editPreAudit?.items ?? null,
     hasHeader: Boolean(doc.header),
     activeRun,
     runs,
