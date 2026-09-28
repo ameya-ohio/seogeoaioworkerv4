@@ -64,8 +64,8 @@ Informational / commercial / transactional / navigational? The article structure
 ### 5. GEO/AIO angle
 
 What makes this article specifically engineered for generative engines and AI Overviews? Examples:
-- Direct-answer first sentence under every H2 (GEO)
-- Definition-style sentences for the entities AI engines need to ground their answers
+- Answer-first openings on the sections that answer a reader's query (mark them `[answer-first]` in the outline)
+- A formal definition for the one or two concepts the argument depends on (never more than two)
 - Question-shaped headers that match how users prompt LLMs
 - Quotable, standalone, factual sentences sprinkled throughout
 - Comparison tables AI engines can extract cleanly
@@ -80,7 +80,7 @@ Which named entities will the article mention by name? List them with their cano
 ### 7. FAQ candidates (3–7)
 
 Pick the 3–7 strongest "questions people are asking" from research. Each must:
-- Be phrased the way a real human would phrase it (not "What is X?" robot voice)
+- Be phrased the way a real human would phrase it (not "What is X?" robot voice) — plainly, with no filler intensifiers ("actually", "really", "exactly", "truly")
 - Have a clear, factual answer the article will deliver
 - Add net-new information beyond what the body already covers
 
@@ -94,7 +94,7 @@ From research's Authoritative Sources list, pick the **specific** citations the 
 
 ### 10. Quotable sound bites
 
-LLMs love clean, citable, standalone sentences. List 3–5 sentences the article should contain — exact wording optional, but write the *idea* and the *shape*.
+LLMs love clean, citable, standalone sentences. List 2–4 that fall out of the argument — exact wording optional, but write the *idea* and the *shape*. None of them is the thesis restated.
 
 ### 11. Hook strategy
 
@@ -135,7 +135,9 @@ Full outline. For each section:
 - Which brief required-passages (if a brief exists) this section satisfies
 - Word-count guidance (rough, e.g. "150–250 words")
 
-The arc follows the house shape (see `context/author-style/`): concede-then-pivot opening → problem → solution → one concrete worked example → action, closing on the crystallized thesis. Each section still opens with a direct answer-first sentence — that is what keeps the GEO/AIO value without the FAQ-stack shape.
+The arc follows the house shape (see `context/author-style/`): concede-then-pivot opening → problem → solution → one concrete worked example → action, closing on the crystallized thesis. Mark each H2 either `[answer-first]` — it answers a query a reader would search, so it opens with the answer — or `[argument]` — it carries the case forward and opens with the finding, the example, or the transition. Most articles need two or three `[answer-first]` sections, not all of them.
+
+The thesis appears in the intro and the closing. Key Takeaways and FAQ answers carry specifics that support it; plan them so none restates it.
 
 Aim for **at least 4 H2 sections** plus the FAQ. Order the sections by reader logic, not by what's easiest to write.
 

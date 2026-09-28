@@ -63,6 +63,16 @@ _HYPOTHETICAL = re.compile(
     re.I,
 )
 
+_FAQ_FILLER = re.compile(r"\b(?:actual(?:ly)?|really|exactly|truly|even|honestly|literally)\b", re.I)
+_DEFINITION = re.compile(
+    r"\*\*([^*\n]{2,60})\*\*\s*(?:\([^)\n]{1,40}\)\s*)?(?:is|are|refers to|means|describes)\s+(?:a|an|the|when|how)\b",
+    re.I,
+)
+MAX_DEFINITIONS = 2
+MAX_HEADING_ECHOES = 2  # WARN: sections whose first sentence restates their own heading
+TAKEAWAY_OVERLAP = 0.6
+TAKEAWAY_MIN_SHARED = 5
+
 _STOP = set(
     """
     about above after again against also although among another because been before being below between
@@ -192,6 +202,100 @@ def check_hypotheticals(blocks: list[str]) -> Finding | None:
     )
 
 
+def split_sections(body: str) -> tuple[str, list[tuple[str, str]]]:
+    """(text before the first H2, [(H2 heading, section text incl. H3s)])."""
+    body = re.sub(r"```[\s\S]*?```", "", body)
+    parts = re.split(r"^##\s+(?!#)(.+)$", body, flags=re.M)
+    intro = re.sub(r"^#\s+.+$", "", parts[0], flags=re.M)  # drop the H1
+    return intro, [(parts[i].strip(), parts[i + 1]) for i in range(1, len(parts) - 1, 2)]
+
+
+def _plain(text: str) -> str:
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    return re.sub(r"[*_`>#]", "", text)
+
+
+def check_faq_filler(sections: list[tuple[str, str]]) -> Finding | None:
+    hits = []
+    for heading, text in sections:
+        if not re.match(r"frequently asked questions|faq", heading, re.I):
+            continue
+        for q in re.findall(r"^###\s+(.+)$", text, flags=re.M):
+            if _FAQ_FILLER.search(q):
+                hits.append(q.strip())
+    if not hits:
+        return None
+    return Finding(
+        "fail",
+        "Style: FAQ questions with filler intensifiers ('actually', 'really', 'exactly'…) — ask them plainly",
+        hits,
+    )
+
+
+def check_definitions(body: str) -> Finding | None:
+    terms = []
+    for m in _DEFINITION.finditer(body):
+        term = m.group(1).strip()
+        if term.lower() not in (t.lower() for t in terms):
+            terms.append(term)
+    if len(terms) <= MAX_DEFINITIONS:
+        return None
+    return Finding(
+        "fail",
+        f"Style: {len(terms)} formal '**X** is a…' definitions (max {MAX_DEFINITIONS}) — keep the one or two the "
+        f"argument depends on, explain the rest in passing",
+        terms,
+    )
+
+
+def check_takeaway_restatement(intro: str, sections: list[tuple[str, str]]) -> Finding | None:
+    intro_sents = [s for s in sentences(" ".join(_plain(intro).split())) if len(_content_words(s)) >= TAKEAWAY_MIN_SHARED]
+    hits = []
+    for heading, text in sections:
+        if not re.match(r"key takeaways", heading, re.I):
+            continue
+        for line in re.findall(r"^\s*(?:[-*+]|\d+\.)\s+(.+)$", text, flags=re.M):
+            bullet = _content_words(_plain(line))
+            for sent in intro_sents:
+                intro_words = _content_words(sent)
+                shared = len(bullet & intro_words)
+                if shared >= TAKEAWAY_MIN_SHARED and shared / min(len(bullet), len(intro_words)) >= TAKEAWAY_OVERLAP:
+                    hits.append(" ".join(_plain(line).split())[:140])
+                    break
+    if not hits:
+        return None
+    return Finding(
+        "fail",
+        "Style: Key Takeaways repeat the intro — give each takeaway a specific (a number, a mechanism, a control) "
+        "instead of restating the thesis",
+        hits,
+    )
+
+
+def check_heading_echo(sections: list[tuple[str, str]]) -> Finding | None:
+    hits = []
+    for heading, text in sections:
+        if re.match(r"key takeaways|frequently asked questions|faq", heading, re.I):
+            continue
+        head = _content_words(_plain(heading))
+        if len(head) < 2:
+            continue
+        paras = [p for p in re.split(r"\n\s*\n", text) if p.strip() and not p.lstrip().startswith(("#", "|", "-", "*", ">"))]
+        if not paras:
+            continue
+        first = next(iter(sentences(" ".join(_plain(paras[0]).split()))), "")
+        if first and len(head & _content_words(first)) / len(head) >= 0.75:
+            hits.append(f"{heading} → {first[:110]}")
+    if len(hits) <= MAX_HEADING_ECHOES:
+        return None
+    return Finding(
+        "warn",
+        f"Style: {len(hits)} sections open by restating their own heading — argument sections should open with the "
+        f"finding, the example, or the turn",
+        hits,
+    )
+
+
 def check_hedges(prose: list[str], word_count: int) -> Finding | None:
     hits = []
     for block in prose:
@@ -246,7 +350,12 @@ def check_signposts(prose: list[str]) -> Finding | None:
 
 def run_all(body: str, word_count: int) -> list[Finding]:
     blocks, prose = prose_blocks(body)
+    intro, sections = split_sections(body)
     findings: list[Finding | None] = [
+        check_faq_filler(sections),
+        check_definitions(body),
+        check_takeaway_restatement(intro, sections),
+        check_heading_echo(sections),
         check_contrasts(blocks, word_count),
         *check_repetition(blocks),
         check_hypotheticals(blocks),

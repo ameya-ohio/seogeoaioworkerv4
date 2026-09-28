@@ -19,12 +19,12 @@ The Editor walks this list explicitly.
 
 ### Direct answers near the top
 - The intro previews the thesis in plain language by paragraph two or three.
-- The Key Takeaways block sits near the top and contains the article's most quotable, citable lines.
+- The Key Takeaways block sits near the top and contains the article's most quotable, citable lines — **specifics that support the thesis** (a number, a mechanism, a named control, an order of operations). None of them restates the intro's thesis sentence; a reader who reads both should learn something new from the takeaways. (The style gate fails a takeaway that repeats an intro sentence.)
 
-### Definition-style sentences for key terms
-- Bold the term, write a clean definition: `**Agentic procurement** is …`.
-- Keep the definition under 25 words.
-- Use the simplest accurate phrasing — AI engines extract these as authoritative definitions.
+### Definition-style sentences — at most two
+- Give a formal definition only to the terms a reader genuinely needs defined to follow the argument — usually the article's primary concept and at most one supporting term. **Two per article, maximum** (the style gate enforces it).
+- Format those as: `**Agentic procurement** is …`, under 25 words, simplest accurate phrasing — AI engines extract these as authoritative definitions.
+- Every other term is explained in passing, inside the sentence that uses it, not with a textbook "X is a Y that does Z" line. A page that defines Kerberos, SPN, RC4, AES and gMSA one after another reads like a glossary, and readers notice.
 
 ### Author authority signals
 - Author name in frontmatter and on-page.
@@ -44,7 +44,7 @@ The Editor walks this list explicitly.
 - Generative engines reward novelty when grounding their answers — they need to cite *somewhere*, and that somewhere is usually the source with a unique claim.
 
 ### Quotable sentences
-- 3–5 standalone, punchy, factual sentences scattered through the body. Each is one idea, complete out of context, citation-worthy.
+- 2–4 standalone, factual sentences that fall out of the argument. Each is one idea, complete out of context, citation-worthy. Don't manufacture aphorisms to hit a count — a sentence built to be quoted usually reads like one.
 - The Strategist sketches these in the outline; the Writer crafts them; the Editor preserves them.
 
 ### Topic comprehensiveness

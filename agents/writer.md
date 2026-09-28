@@ -24,14 +24,14 @@ You are not deciding *what* to write — that's done. You are deciding *how* it 
 2. Fill the YAML frontmatter (see structure below) using the Strategist's keyword and angle decisions.
 3. Write the H1 title. Match the Strategist's keyword strategy. 50–60 chars. Primary keyword near the front. Compelling — not clickbait.
 4. Write the **hook intro** (2–3 short paragraphs). Use the hook type the Strategist picked. End the intro with a clear thesis preview.
-5. Write the **Key Takeaways** block (3–6 bullets) right after the intro. These are extracted by AI engines and rendered into AI Overviews and Perplexity-style answers — make them clean, factual, citation-worthy, and standalone.
+5. Write the **Key Takeaways** block (3–6 bullets) right after the intro. These are extracted by AI engines and rendered into AI Overviews and Perplexity-style answers — make them clean, factual, citation-worthy, and standalone. Each carries a **specific** (a number, a mechanism, a control, an order); none restates the thesis sentence from the intro.
 6. Write each H2/H3 section in order. **You are writing an essay that argues the outline's thesis, not an answer farm** (D33): each section advances the running argument and connects to the one before it. Each section gets:
-   - A **direct answer** in the first sentence under the heading (GEO/AIO win) — in service of the argument, not instead of it.
+   - An opening that fits the section's mark in the outline: `[answer-first]` sections open with the direct answer (GEO/AIO win); `[argument]` sections open with the finding, the example, or the turn from the previous section — never a one-line restatement of their own heading.
    - Concrete examples, named entities, and citations from the outline.
    - Inline natural-language attribution for citations: *"According to a 2024 Stanford study…"*, *"OpenAI's developer documentation…"*, *"In a 2025 McKinsey survey of 800 enterprises…"*.
    - The closing section crystallizes the thesis into one clean distinction (see `context/author-style/`).
 7. Write the **FAQ section verbatim** using the Strategist's questions. Each Q is an H3. Each A is short, direct, and standalone — AI engines will lift entire Q/A pairs as citations.
-8. Bold defined terms inline with a one-sentence definition (`**Foo** is …`). The Schema Builder turns these into `DefinedTerm` entries.
+8. Give a formal bolded definition (`**Foo** is …`) to **at most two** terms — the ones the argument depends on. Explain every other term in passing, inside the sentence that uses it. The Schema Builder turns the bolded definitions into `DefinedTerm` entries.
 9. Write the **closing / CTA** the Strategist picked.
 10. Save to `articles/YYYY-MM-DD-slug/article.md`.
 11. Update `articles/YYYY-MM-DD-slug/meta.json` with `title`, `slug`, `meta_description`, `keywords` (primary + secondary as a list), and `canonical_url` (placeholder if site context unknown).

@@ -13,10 +13,11 @@ The Editor walks this list explicitly.
 - **Body H2s stay declarative** (house style — see `context/author-style/`). The likely-query match lives in the answer-first sentence under each declarative heading, not in the heading itself.
 - Never turn the body into a question→answer stack; that is the answer-farm anti-pattern the first live batch failed on.
 
-### Direct answers in the first sentence after each header
-- Don't open a section with throat-clearing ("There are several factors to consider…").
-- Open with the answer: "Agentic procurement is … . The shift matters because … ."
-- LLMs lift the first 1–2 sentences under a heading more often than mid-section text.
+### Answer-first where a section answers a query
+- A section that answers something a reader would search or prompt for — what it is, how it works, X vs Y, how to do it — opens with the answer: "Agentic procurement is … . The shift matters because … ." LLMs lift the first 1–2 sentences under a heading more often than mid-section text.
+- Sections that carry the argument — the evidence, the worked example, the turn, the consequence — open however the argument needs: with the finding, the case, or the transition from the section before. They do **not** restate their own heading as a one-line answer; that is the template tell readers spot first.
+- Either way, never open with throat-clearing ("There are several factors to consider…").
+- The Strategist marks which sections are query-answering in the outline.
 
 ### Lists and tables where appropriate
 - LLMs extract bullet lists and tables cleanly into their answers. Use them for:
@@ -52,7 +53,7 @@ The Editor walks this list explicitly.
 
 ### Structure
 - An H2 `## Frequently Asked Questions`.
-- Each H3 is a real question, phrased the way humans phrase it.
+- Each H3 is a real question, phrased the way humans phrase it — plainly. No filler intensifiers ("What's the **actual** difference…", "How long does it **really** take…", "exactly", "truly"); they are the People-Also-Ask template showing through, and the style gate fails them.
 - Each answer is 2–5 sentences, direct, standalone, factual.
 
 ### Verbatim mirror in schema
@@ -64,8 +65,9 @@ The Editor walks this list explicitly.
 
 ## Entity-first writing
 
-### Wikipedia-style entity definitions
-- When introducing a named entity, define it in a Wikipedia-like way: "**\<Entity\>** is a \<class\> that \<key property\>."
+### Entity introductions
+- Formal Wikipedia-style definitions ("**\<Entity\>** is a \<class\> that \<key property\>.") count toward the GEO checklist's **two-definition maximum** — spend them on the concepts the argument depends on.
+- Other entities are introduced in passing ("Rubeus, the open-source Kerberos toolkit, …") and named consistently; the schema `mentions` array does the disambiguation.
 - Link the first mention to the canonical source (Wikipedia, the official site, the standards body).
 
 ### Entity richness

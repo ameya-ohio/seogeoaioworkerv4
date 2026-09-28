@@ -90,6 +90,10 @@ the rules further down say *why* each pattern reads as generated.
 | Lists of three in prose ("A, B, and C") | 6 per 1,000 words | WARN |
 | Uniform sentence length (stdev ÷ mean of prose sentences) | ≥ 0.45 | WARN |
 | Invented scenarios ("Picture a…", "Imagine a…", "Suppose…", "Let's say…", "hypothetical") | 0 — use a case study or a cited incident | FAIL |
+| FAQ questions with filler intensifiers ("actually", "really", "exactly", "truly") | 0 | FAIL |
+| Formal `**X** is a…` definitions | 2 | FAIL |
+| A Key Takeaways bullet that repeats an intro sentence | 0 | FAIL |
+| Sections whose first sentence restates their own heading | 2 | WARN |
 | Paragraphs opening with a signpost ("That's why…", "This is also why…") | 3 | WARN |
 
 The thesis belongs in the intro and the conclusion. Key Takeaways and FAQ

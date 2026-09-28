@@ -86,6 +86,51 @@ class HypotheticalTests(unittest.TestCase):
         self.assertFalse([f for f in run(body) if "invented scenario" in f.message])
 
 
+class SnippetTemplateTests(unittest.TestCase):
+    def test_faq_filler_fails_and_plain_questions_pass(self):
+        body = (
+            "## Frequently Asked Questions\n\n### What's the actual difference between RC4 and AES?\n\nAnswer.\n\n"
+            "### How long does cracking really take?\n\nAnswer.\n\n### What is Kerberoasting?\n\nAnswer.\n"
+        )
+        found = [f for f in run(body) if "FAQ questions" in f.message]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(len(found[0].snippets), 2)
+        self.assertFalse(
+            [f for f in run("## FAQ\n\n### What is Kerberoasting?\n\nAnswer.\n") if "FAQ questions" in f.message]
+        )
+
+    def test_more_than_two_formal_definitions_fail(self):
+        defs = [
+            "**Kerberos** is a ticket-based authentication protocol.",
+            "**An SPN** is the name a service registers.",
+            "**RC4** is a stream cipher Kerberos still accepts.",
+        ]
+        self.assertTrue([f for f in run("\n\n".join(defs)) if "formal" in f.message])
+        self.assertFalse([f for f in run("\n\n".join(defs[:2])) if "formal" in f.message])
+
+    def test_takeaway_repeating_the_intro_fails(self):
+        thesis = "Kerberoasting success depends on fixing high-privilege service accounts with weak passwords first."
+        body = (
+            f"# Title\n\n{thesis}\n\n## Key Takeaways\n\n- {thesis}\n"
+            "- Rotating 41 service-account passwords took nine days in one engagement.\n"
+        )
+        found = [f for f in run(body) if "Takeaways repeat" in f.message]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(len(found[0].snippets), 1)
+
+    def test_heading_echo_only_warns_past_the_cap(self):
+        sections = [
+            ("Service accounts carry Kerberoasting risk", "Service accounts carry the Kerberoasting risk in most domains."),
+            ("Ticket requests reveal the attack", "Ticket requests reveal the attack when you baseline them."),
+            ("AES enforcement slows cracking", "AES enforcement slows cracking but does not stop it."),
+        ]
+        body = "\n\n".join(f"## {h}\n\n{p}" for h, p in sections)
+        found = [f for f in run(body) if "restating their own heading" in f.message]
+        self.assertEqual(found[0].level, "warn")
+        two = "\n\n".join(f"## {h}\n\n{p}" for h, p in sections[:2])
+        self.assertFalse([f for f in run(two) if "restating their own heading" in f.message])
+
+
 class HedgeAndWarnTests(unittest.TestCase):
     def test_hedge_density_fails_with_context(self):
         body = " ".join(

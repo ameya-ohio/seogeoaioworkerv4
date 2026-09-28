@@ -64,9 +64,10 @@ Walk every item. Specifically:
 
 ### Pass 5 — GEO checklist (`standards/geo-checklist.md`)
 
-- Direct factual answer in the first sentence under each H2.
-- **Quotable** standalone sentences in at least 3 sections.
-- Definition-style sentences for at least 2 key terms (`**X** is …`).
+- Direct factual answer in the first sentence under each `[answer-first]` H2 (per the outline); `[argument]` sections open with the finding, example or turn — cut any one-line restatement of the heading.
+- **Quotable** standalone sentences: 2–4, arising from the argument, none a restated thesis.
+- Formal definitions (`**X** is …`): **at most two**, for the terms the argument depends on; rewrite the rest as in-passing explanations.
+- Key Takeaways carry specifics; none repeats the intro's thesis sentence.
 - Author and publisher authority signals visible (frontmatter `author`, `author_bio_url`).
 - Original insight or perspective present (the article's wedge from the Strategist's angle).
 - Entity richness: ≥ 5 named entities (people / organizations / products / concepts), each named explicitly.
@@ -75,7 +76,8 @@ Walk every item. Specifically:
 
 ### Pass 6 — AIO checklist (`standards/aio-checklist.md`)
 
-- At least one **question-shaped** H2 or H3.
+- At least one **question-shaped** H3 (the FAQ satisfies this; body H2s stay declarative).
+- FAQ questions phrased plainly — strip filler intensifiers ("actually", "really", "exactly", "truly").
 - At least one **comparison** or **list** structure where natural (table or bullet block).
 - FAQ section is a clean Q/A array — no preamble inside answers.
 - Speakable target identified — the Key Takeaways block.

@@ -69,5 +69,6 @@
 - Hedging ("could potentially", "may sometimes") where the evidence supports assertion.
 - Alarmist framing or false urgency.
 - The answer-farm shape: a stack of Q→A sections with no thesis connecting them.
-  Answer-first sentences under each heading are required — but they serve a running
-  argument, they are not the structure itself.
+  Answer-first openings belong on the sections that answer a reader's query (the
+  outline marks them); the sections that carry the argument open with the finding,
+  the example, or the turn. Neither restates its own heading.
