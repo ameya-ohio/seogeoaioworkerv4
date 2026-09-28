@@ -93,11 +93,34 @@ the rules further down say *why* each pattern reads as generated.
 | FAQ questions with filler intensifiers ("actually", "really", "exactly", "truly") | 0 | FAIL |
 | Formal `**X** is a…` definitions | 2 | FAIL |
 | A Key Takeaways bullet that repeats an intro sentence | 0 | FAIL |
+| Key Takeaways bullet count | exactly 3 | FAIL |
+| Hook moves in the intro: an opening statistic, "…goes to die", "That number should…", "Confuse the two…", "aren't the same word", "walked in the front door" | 0 — see *Hook-Shaped Intros* | FAIL |
+| Prose sentences over 30 words (operator register rule 2) | 0 — split them | WARN |
 | Sections whose first sentence restates their own heading | 2 | WARN |
 | Paragraphs opening with a signpost ("That's why…", "This is also why…") | 3 | WARN |
 
 The thesis belongs in the intro and the conclusion. Key Takeaways and FAQ
 answers support it with specifics; they don't repeat it.
+
+## Operator register (every article)
+
+Write the way a senior practitioner explains something to a peer in a triage meeting. That means plain operational language, one claim per sentence, and no performance. The test for any sentence: would a security engineer say it out loud to a colleague? If it sounds like a keynote or a vendor page, rewrite it.
+
+1. **Say what the concept is for.** When you define a term, give its operational job as well as its nature. "Identity risk is the contextual layer built on top of it, used to prioritize issues" tells an operator what to do with it.
+2. **One claim per sentence.** A sentence that chains qualifiers ("…meaning what an attacker could reach… once its blast radius and business criticality are weighed against…") gets split into two plain sentences. Prose sentences over 30 words are machine-flagged.
+3. **Operational verbs, not dramatic ones.** Write "spend remediation cycles", "fix", "prioritize", "result in exploits". Don't write "burn cycles", "goes to die", "costs real work", "walks in the front door".
+4. **Calibrated claims, not absolutes.** Write "lower-priority findings", not "findings that don't matter". A finding almost always has some value; the operator's question is its priority.
+5. **Hold defined terms fixed.** Once the article defines its terms ("identity exposure", "identity risk"), use those exact words every time. Don't swap in synonyms ("dangerous", "threat", "weakness") for variety. Vary the surrounding vocabulary, never the terms of art.
+6. **No editorial tails.** Cut clauses that comment on a fact instead of adding one ("…, and the confusion costs security teams real work"). If the cost matters, the next sentence states it concretely.
+7. **Present tense and "can" for what systems do.** "What an attacker can reach", not "could reach". Keep "could" for a real conditional.
+
+**Before (rejected):**
+> Identity exposure and identity risk are two of the most conflated terms in identity security, and the confusion costs security teams real work. Identity exposure is the measurable, technical layer of the problem: leaked credentials, over-privileged service accounts, stale delegations, misconfigured MFA policies. Identity risk is the contextual layer built on top of it, meaning what an attacker could reach through one specific exposure once its blast radius and business criticality are weighed against active threat signals. Teams that treat every exposure as equally dangerous burn remediation cycles on findings that don't matter and miss the toxic combinations that get exploited.
+
+**After (operator register):**
+> Identity exposure and identity risk are two of the most conflated terms in identity security. Identity exposure is the measurable, technical layer of the problem: leaked credentials, over-privileged service accounts, stale delegations, misconfigured MFA policies. Identity risk is the contextual layer built on top of it used to prioritize issues. It defines what an attacker can reach through one specific exposure weighted against active threat signals. Teams that treat every identity exposure as equally risky spend remediation cycles on lower priority findings and miss the toxic combinations that result in exploits.
+
+What changed: the editorial tail was cut (rule 6); the 34-word definition became two sentences, one of them stating what risk is *for* (rules 1–2); "could" became "can" (7); "burn…findings that don't matter" became "spend…lower priority findings" (3–4); "equally dangerous" became "equally risky", and "exposure" became "identity exposure", holding the defined terms (5).
 
 ## Forbidden AI Slop Patterns (Editor enforces) 
 
@@ -260,6 +283,12 @@ This treats the reader like they need a study guide. The piece either landed or 
 Returning to the opening image at the close to "bring the piece full circle." Feels writerly. Reads as performative and predictable. The reader saw it coming three paragraphs ago.
 
 **Fix:** End on a new beat. A cool verdict, a quiet image, or the suggestion that the situation is ongoing. Never a callback to the opening.
+
+### Hook-Shaped Intros
+
+Opening with a performance instead of the subject. The pattern: a lone statistic, then a dramatic fragment ("The attacker used a valid identity and walked in the front door."), then a paragraph commenting on the opening ("That number should reframe how teams talk about X, but mostly it hasn't."), then a set-piece about terms ("They aren't the same word, and the gap between them is where remediation effort goes to die."), then a threat ("Confuse the two, and you'll spend a sprint fixing the wrong things."). Each move delays the substance and leaves the reader less informed than a plain statement would.
+
+**Fix:** Start from the research notes' Topic Summary, paragraphs 1–2. Paragraph 1 names the subject, states the distinction or problem, defines it, and says what getting it wrong costs. Paragraph 2 explains why now, with sourced specifics attributed inline. A statistic belongs inside a sentence that makes a claim ("…CrowdStrike's 2026 Global Threat Report found 82% of detections were malware-free, meaning…"). It shouldn't stand alone as the opener.
 
 
 ## AI Marketing Slop Vocabulary

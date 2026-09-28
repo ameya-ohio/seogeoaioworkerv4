@@ -18,14 +18,13 @@ reading_time_minutes: 0
 
 # [H1 Title]
 
-[Hook intro — 2–3 short paragraphs. Open with a specific scene, a counterintuitive claim, a sharp number, or a sharp direct question. End with a clear thesis preview. Do NOT open with `In today's fast-paced world…` or any banned phrase from `standards/quality-bar.md`.]
+[Intro: 2–3 paragraphs built from the research notes' Topic Summary, paragraphs 1–2. Paragraph 1 names the subject and states and defines the core distinction or problem, plus what getting it wrong costs. Paragraph 2 is why now, with sourced specifics attributed inline. End with the thesis preview. No hook moves (a lone-stat opener, a dramatic fragment, commentary on the opening) and no banned phrase from `standards/quality-bar.md`.]
 
 ## Key Takeaways
 
 - [Takeaway 1 — clean, citable, standalone factual statement.]
 - [Takeaway 2]
-- [Takeaway 3]
-- [Takeaway 4 (optional, up to 6 total)]
+- [Takeaway 3 — exactly three bullets; the audit fails any other count.]
 
 ## [H2: First section heading]
 

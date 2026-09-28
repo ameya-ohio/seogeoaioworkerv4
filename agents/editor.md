@@ -36,13 +36,19 @@ For each paragraph, ask:
 - Is the paragraph longer than 5 sentences? (If longer, tighten or split.)
 - Does the sentence length vary across the paragraph? (If every sentence is 14 words, vary it.)
 - Does the paragraph earn its place? (If you can delete it without losing meaning, delete it.)
+- **Operator register** (`standards/quality-bar.md` → *Operator register*), checked sentence by sentence:
+  - Would a practitioner say this to a peer?
+  - Does each defined term appear in exactly its defined wording, with no synonyms?
+  - Is there any dramatic verb, absolute ("don't matter"), editorial tail, "could" standing in for "can", or a sentence carrying two claims?
+
+  Fix every one. Split every sentence the audit flags as over 30 words.
 
 ### Pass 3 — Structure
 
 - Exactly one **H1**? (Demote any extras to H2.)
 - H2/H3 hierarchy logical (no H3 before any H2; no skipped levels)?
 - Headings scannable and keyword-aligned where natural?
-- **Key Takeaways block** present near the top, under H2 `## Key Takeaways`, 3–6 bullets, each clean and standalone?
+- **Key Takeaways block** present near the top, under H2 `## Key Takeaways`, exactly 3 bullets, each clean and standalone? (machine-checked)
 - **FAQ section** present under H2 `## Frequently Asked Questions`, with H3 per question and an answer of 2–5 sentences?
 - Closing/CTA present?
 
@@ -67,6 +73,7 @@ Walk every item. Specifically:
 - Direct factual answer in the first sentence under each `[answer-first]` H2 (per the outline); `[argument]` sections open with the finding, example or turn — cut any one-line restatement of the heading.
 - **Quotable** standalone sentences: 2–4, arising from the argument, none a restated thesis.
 - Formal definitions (`**X** is …`): **at most two**, for the terms the argument depends on; rewrite the rest as in-passing explanations.
+- Intro passes the hook-shaped-intro machine check (`scripts/style_checks.py`), and it reads at the register of the research notes' Topic Summary, paragraphs 1–2: the subject is named in the first sentence, the core distinction is stated and defined directly, and a why-now paragraph carries sourced specifics. Put the intro next to those two paragraphs. If it is less informative, or it leans on hook moves (a lone-stat opener with a dramatic fragment, "That number should…", "X and Y aren't the same", "…goes to die", "Confuse the two, and you'll…"), rewrite it from the Topic Summary.
 - Key Takeaways carry specifics; none repeats the intro's thesis sentence.
 - Author and publisher authority signals visible (frontmatter `author`, `author_bio_url`).
 - Original insight or perspective present (the article's wedge from the Strategist's angle).

@@ -25,10 +25,11 @@
 
 ## Sentence rhythm
 
-- Medium expository sentences carry the argument; **short declaratives land the punches**:
+- **Operator register first** (`standards/quality-bar.md` → *Operator register*): a practitioner talking to a peer, not a keynote. Plain operational verbs, one claim per sentence, no dramatic verbs or editorial tails.
+- Medium expository sentences carry the argument; **short declaratives state conclusions plainly**:
   *"This work is necessary."* / *"It is the reality we live in."*
 - Fragments appear sparingly, for emphasis only.
-- Longer analytical sentences are allowed when they resolve into a short conclusion.
+- Longer analytical sentences are allowed when they resolve into a short conclusion, up to about 30 words. Past that, split.
 - Never the AI cadence of every-sentence-the-same-length.
 
 ## Voice
@@ -59,7 +60,9 @@
   ("245,000 identities", "2 million attack paths") — better one deep example than
   five shallow ones.
 - Stats are attributed in prose to their actual source; sophistication over repetition —
-  terminology varies, keywords are never repeated for their own sake.
+  surrounding vocabulary varies and keywords are never repeated for their own sake, but
+  **defined terms of art never vary**: once "identity exposure" is defined, it stays "identity
+  exposure", never "weakness" or "danger".
 
 ## Anti-patterns (never do these)
 

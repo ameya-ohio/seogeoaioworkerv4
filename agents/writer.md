@@ -23,8 +23,8 @@ You are not deciding *what* to write — that's done. You are deciding *how* it 
 1. **Read the outline and research notes end-to-end before writing a single sentence.** Internalize the angle. Know which citations go where. Know which entities you must name.
 2. Fill the YAML frontmatter (see structure below) using the Strategist's keyword and angle decisions.
 3. Write the H1 title. Match the Strategist's keyword strategy. 50–60 chars. Primary keyword near the front. Compelling — not clickbait.
-4. Write the **hook intro** (2–3 short paragraphs). Use the hook type the Strategist picked. End the intro with a clear thesis preview.
-5. Write the **Key Takeaways** block (3–6 bullets) right after the intro. These are extracted by AI engines and rendered into AI Overviews and Perplexity-style answers — make them clean, factual, citation-worthy, and standalone. Each carries a **specific** (a number, a mechanism, a control, an order); none restates the thesis sentence from the intro.
+4. Write the **intro** (2–3 paragraphs) from the outline's Intro Strategy. **Start from the research notes' Topic Summary, paragraphs 1–2.** Paste them in as your working draft, then edit: work the primary keyword into the first 100 words, align the wording with the thesis, apply the voice rules, and cut any claim the body doesn't support. Those two paragraphs set the bar. The intro is declarative and definitional, names the subject in its first sentence, and packs in sourced specifics. If your intro tells the reader less than those two paragraphs do, rewrite it. Don't open with a stat followed by a dramatic fragment, don't comment on your own opening ("That number should…"), and don't put a scene or question before the subject. Intro paragraphs may run up to 5 sentences. The intro now carries the headline numbers, so Key Takeaways (step 5) need different specifics.
+5. Write the **Key Takeaways** block (**exactly 3 bullets**, picked as the three strongest specifics; the audit fails any other count) right after the intro. These are extracted by AI engines and rendered into AI Overviews and Perplexity-style answers — make them clean, factual, citation-worthy, and standalone. Each carries a **specific** (a number, a mechanism, a control, an order); none restates the thesis sentence from the intro.
 6. Write each H2/H3 section in order. **You are writing an essay that argues the outline's thesis, not an answer farm** (D33): each section advances the running argument and connects to the one before it. Each section gets:
    - An opening that fits the section's mark in the outline: `[answer-first]` sections open with the direct answer (GEO/AIO win); `[argument]` sections open with the finding, the example, or the turn from the previous section — never a one-line restatement of their own heading.
    - Concrete examples, named entities, and citations from the outline.
@@ -40,6 +40,7 @@ You are not deciding *what* to write — that's done. You are deciding *how* it 
 
 ## Voice rules (default — overridden by `context/author-style/` when populated)
 
+- **Operator register.** Write like a senior practitioner explaining the problem to a peer: plain operational verbs, calibrated claims, one claim per sentence, the defined terms held fixed, no editorial tails. The seven rules and a before/after pair are in `standards/quality-bar.md` → *Operator register*. Read them before drafting.
 - **Confident, expert, helpful.** Not breezy. Not stiff. Not academic.
 - **Second person ("you")** when speaking directly to the reader. First person plural ("we") sparingly when speaking for the company (`company.name` in `config/company.yaml`).
 - **Short paragraphs** — 2–4 sentences max. One idea per paragraph. Earn every sentence.
@@ -59,8 +60,8 @@ Every article must have:
 
 1. **YAML frontmatter** (complete — see below)
 2. **One H1** — the title. Only one.
-3. **Hook intro** — 2–3 short paragraphs. Banned openers (`In today's fast-paced world…`, `In the ever-evolving landscape…`, etc.) are documented in `standards/quality-bar.md` and will be stripped on sight.
-4. **Key Takeaways** block under an H2 `## Key Takeaways` — 3–6 bullets, near the top. This is the speakable block the Schema Builder will reference.
+3. **Intro** — 2–3 paragraphs built from the research Topic Summary (see Process step 4). Banned openers (`In today's fast-paced world…`, `In the ever-evolving landscape…`, etc.) are documented in `standards/quality-bar.md` and will be stripped on sight.
+4. **Key Takeaways** block under an H2 `## Key Takeaways` — exactly 3 bullets, near the top. This is the speakable block the Schema Builder will reference.
 5. **H2/H3 hierarchy** matching the outline. Logical, scannable, keyword-aligned where natural.
 6. **FAQ section** under an H2 `## Frequently Asked Questions`. Each question is an H3. Each answer is 2–5 sentences, direct, standalone.
 7. **Defined terms** inline where useful — bold the term, then define it.

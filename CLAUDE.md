@@ -61,7 +61,7 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   - `articles/YYYY-MM-DD-slug/research-notes.md`
   - **All files in** `standards/` (`seo-checklist.md`, `geo-checklist.md`, `aio-checklist.md`, `schema-spec.md`, `quality-bar.md`)
   - Relevant `context/` folders: `context/brand/`, `context/marketing/`, `context/sales/`, `context/case-studies/` (skip `README.md`, `_template.md`, and files marked `Permission: internal only`). Skip empty folders silently and proceed with sensible defaults.
-- **Action:** Convert research into a winning angle and a detailed outline. Decide keywords, intent, word-count target, GEO/AIO angle, target entities, FAQ candidates, citations, internal-link opportunities, hook strategy, and CTA.
+- **Action:** Convert research into a winning angle and a detailed outline. Decide keywords, intent, word-count target, GEO/AIO angle, target entities, FAQ candidates, citations, internal-link opportunities, intro strategy (built from the research Topic Summary), and CTA.
 - **Output:** `articles/YYYY-MM-DD-slug/outline.md`.
 - **Gate:** Outline exists; primary keyword chosen; FAQ section has 3–7 candidate questions; H2/H3 outline contains at least 4 H2 sections; all entities and citations to use are listed by name with sources.
 

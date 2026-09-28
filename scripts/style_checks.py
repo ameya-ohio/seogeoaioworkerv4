@@ -25,6 +25,7 @@ MIN_HEDGES_TO_FLAG = 6
 MAX_TRIADS_PER_1K = 6.0       # WARN only — lists of three are often legitimate in technical prose
 MIN_SENTENCE_CV = 0.45        # WARN only — stdev/mean of prose sentence lengths
 MAX_SIGNPOST_OPENERS = 3      # WARN only — "That's why…", "This is also why…"
+MAX_SENTENCE_WORDS = 30       # WARN only — operator register: one claim per sentence
 
 _CONTRAST = [
     # "not X, but Y" / "not X, rather Y" (but not "not only … but also")
@@ -75,6 +76,23 @@ MAX_DEFINITIONS = 2
 MAX_HEADING_ECHOES = 2  # WARN: sections whose first sentence restates their own heading
 TAKEAWAY_OVERLAP = 0.6
 TAKEAWAY_MIN_SHARED = 5
+KEY_TAKEAWAYS = 3       # exactly three bullets — more than that and readers skim past the block
+
+# Hook moves in the intro (quality-bar "Hook-Shaped Intros"). The intro is drafted
+# from the research Topic Summary; these are the performances that replace it.
+_INTRO_HOOKS = re.compile(
+    r"\bgo(?:es)? to die\b"
+    r"|\b(?:that|this|the|those|these) (?:number|stat(?:istic)?|figure|finding|data point)s? "
+    r"(?:should|ought to|deserves?|is worth|tells|says|matters)\b"
+    r"|\bshould (?:reframe|reshape|change) (?:how|the way)\b"
+    r"|\b(?:confuse|conflate|mix up) (?:the|those|these) two\b"
+    r"|\b(?:they|these|the two|the terms?)\s+(?:aren't|aren’t|are not|isn't|isn’t|is not) the same (?:word|thing|term)\b"
+    r"|\bwalk(?:s|ed)? (?:in(?:to)?|through) the front door\b",
+    re.I,
+)
+# A statistic in the opening words of the first sentence = a stat hook. Bare years don't count.
+_STAT_TOKEN = re.compile(r"(?:\$\d|\d+(?:[.,]\d+)?\s*(?:%|percent\b|x\b|:1\b)|\b(?!(?:19|20)\d\d\b)\d+(?:[.,]\d+)?\b)", re.I)
+STAT_OPENER_WORDS = 6
 
 _STOP = set(
     """
@@ -275,6 +293,39 @@ def check_takeaway_restatement(intro: str, sections: list[tuple[str, str]]) -> F
     )
 
 
+def check_intro_hooks(intro: str) -> Finding | None:
+    text = " ".join(_plain(intro).split())
+    if not text:
+        return None
+    hits = [_snip(text, m.start(), m.end(), 50) for m in _INTRO_HOOKS.finditer(text)]
+    first = next(iter(sentences(text)), "")
+    if _STAT_TOKEN.search(" ".join(first.split()[:STAT_OPENER_WORDS])):
+        hits.insert(0, f"opens on a statistic: {first[:120]}")
+    if not hits:
+        return None
+    return Finding(
+        "fail",
+        "Style: hook-shaped intro — rebuild it from the research Topic Summary paragraphs 1–2: name the subject "
+        "and state the distinction first, then why now with sourced specifics inside claims",
+        hits,
+    )
+
+
+def check_takeaway_count(sections: list[tuple[str, str]]) -> Finding | None:
+    for heading, text in sections:
+        if not re.match(r"key takeaways", heading, re.I):
+            continue
+        bullets = re.findall(r"^(?:[-*+]|\d+\.)\s+(.+)$", text, flags=re.M)
+        if len(bullets) == KEY_TAKEAWAYS:
+            return None
+        return Finding(
+            "fail",
+            f"Style: Key Takeaways has {len(bullets)} bullets (exactly {KEY_TAKEAWAYS}) — keep the three strongest specifics",
+            [" ".join(_plain(b).split())[:80] for b in bullets],
+        )
+    return None
+
+
 def check_heading_echo(sections: list[tuple[str, str]]) -> Finding | None:
     hits = []
     for heading, text in sections:
@@ -340,6 +391,17 @@ def check_rhythm(prose: list[str]) -> Finding | None:
     )
 
 
+def check_long_sentences(prose: list[str]) -> Finding | None:
+    hits = [f"{len(s.split())} words: {s[:110]}" for b in prose for s in sentences(b) if len(s.split()) > MAX_SENTENCE_WORDS]
+    if not hits:
+        return None
+    return Finding(
+        "warn",
+        f"Style: {len(hits)} sentences over {MAX_SENTENCE_WORDS} words — split each into one claim per sentence",
+        hits,
+    )
+
+
 def check_signposts(prose: list[str]) -> Finding | None:
     hits = [" ".join(b.split())[:80] for b in prose if _SIGNPOST.match(b)]
     if len(hits) <= MAX_SIGNPOST_OPENERS:
@@ -358,6 +420,8 @@ def run_all(body: str, word_count: int) -> list[Finding]:
         check_faq_filler(sections),
         check_definitions(body),
         check_takeaway_restatement(intro, sections),
+        check_takeaway_count(sections),
+        check_intro_hooks(intro),
         check_heading_echo(sections),
         check_contrasts(blocks, word_count),
         *check_repetition(blocks),
@@ -366,6 +430,7 @@ def run_all(body: str, word_count: int) -> list[Finding]:
         check_triads(prose, word_count),
         check_rhythm(prose),
         check_signposts(prose),
+        check_long_sentences(prose),
     ]
     return [f for f in findings if f]
 

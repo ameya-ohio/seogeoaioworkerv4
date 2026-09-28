@@ -206,7 +206,7 @@ This is the core flow. Every article runs all 6 phases in order, no skipping, wi
 8. **Internal link opportunities.** Real URLs or placeholders.
 9. **External citations to use.** Specific sources from Phase 1 to embed inline.
 10. **Quotable sound bites.** 3–5 sentences the article should contain.
-11. **Hook strategy.** Specific scene / counterintuitive claim / sharp number / direct question.
+11. **Intro strategy.** Built from the research Topic Summary paragraphs 1–2: substance paragraph (distinction, definitions, cost) + why-now paragraph (sourced drivers). No hook-shaped openers.
 12. **Closing/CTA.** One specific next step.
 13. **H2/H3 outline.** Full section-by-section outline with word-count budgets per section.
 
@@ -222,7 +222,7 @@ This is the core flow. Every article runs all 6 phases in order, no skipping, wi
 
 **Inputs:** `outline.md` + `research-notes.md` + `context/author-style/` (default voice rules if empty) + `context/brand/`.
 
-**Process:** mechanical execution of the outline. Frontmatter complete. H1 = title. Hook intro (2–3 short paragraphs). `## Key Takeaways` block (3–6 standalone-citable bullets). H2/H3 sections in order, each with direct-answer-first paragraph and inline citations. FAQ section with H3 per question. Bold + define key terms inline (`**Term** is X`). Closing/CTA.
+**Process:** mechanical execution of the outline. Frontmatter complete. H1 = title. Intro (2–3 paragraphs, drafted from the research Topic Summary paragraphs 1–2). `## Key Takeaways` block (exactly 3 standalone-citable bullets). H2/H3 sections in order, each with direct-answer-first paragraph and inline citations. FAQ section with H3 per question. Bold + define key terms inline (`**Term** is X`). Closing/CTA.
 
 **Voice rules (defaults until `context/author-style/` is populated):**
 - Confident, expert, helpful; not breezy, not stiff.
@@ -464,7 +464,7 @@ Each of the 5 header patterns (`blogheaderimagegen/lib/patterns.py`) is hardcode
 | **Standalone CLIs** (header + publisher + scraper) | One mega-CLI | Each tool has one job; each has its own venv; can be reused independently |
 | **Adapter between production system and blogsagent** | Modify production format to match blogsagent | Production keeps human-readable JSON-LD fence in article.md; adapter does the conversion once at publish time |
 | **`@id` for every node** | Implicit references | Cross-references resolve cleanly; nodes can reference each other via `{"@id": "..."}` |
-| **Speakable target = Key Takeaways block** | Speakable on full intro | Key Takeaways is 5 bullets, each citable-standalone; AI engines extract this cleanly |
+| **Speakable target = Key Takeaways block** | Speakable on full intro | Key Takeaways is 3 bullets, each citable-standalone; AI engines extract this cleanly |
 | **DefinedTerm for every bolded definition** | Skip DefinedTerm | Each defined term becomes a separate schema entity; helps with entity extraction and ranking |
 | **`mentions` with Wikipedia `sameAs`** | Just names | Disambiguates entities; helps search engines build the knowledge graph |
 | **Cache HubSpot IDs in `.config_cache.json`** | Re-resolve every run | Faster; avoids hitting the resolution endpoint on every publish; cache is gitignored so credentials stay local |

@@ -96,15 +96,17 @@ From research's Authoritative Sources list, pick the **specific** citations the 
 
 LLMs love clean, citable, standalone sentences. List 2–4 that fall out of the argument — exact wording optional, but write the *idea* and the *shape*. None of them is the thesis restated.
 
-### 11. Hook strategy
+### 11. Intro strategy
 
-How does the intro open? Pick one:
-- **Specific scene** — concrete moment, real-world detail
-- **Counterintuitive claim** — pattern interrupt
-- **Sharp number** — a single surprising stat
-- **Direct question** — only if the question is genuinely sharp
+The intro comes from the research notes' **Topic Summary, paragraphs 1–2**. Those paragraphs are synthesis: they say what the subject is and why it matters now, and that is the register the intro should have. Plan the intro in that shape, and don't turn it into a "hook":
 
-Banned: "in today's fast-paced world," generic problem-painting, AI-cliché openers (see `standards/quality-bar.md`).
+- **Paragraph 1: the substance.** Name the subject in the first sentence and state the problem or distinction directly. Define the core terms in a sentence each, and say what getting it wrong costs. Concede-then-pivot (see `context/author-style/`) happens inside this paragraph ("the terms get used interchangeably; they name different layers"), with no warm-up before it.
+- **Paragraph 2: why now.** Give the specific, sourced forces that make this urgent, each attributed inline (named report, number, year).
+- **Optional short paragraph 3:** the thesis preview, if paragraph 1 doesn't already carry it.
+
+In the Intro Strategy section, record which Topic Summary sentences carry over and what has to change: the primary keyword in the first 100 words, wording aligned with the thesis, and cuts for any claim the body won't support. Tighten the summary. Don't repackage it.
+
+Banned intro shapes: opening with a lone statistic followed by a dramatic fragment; a second paragraph that comments on the first ("That number should reframe…"); a scene, a rhetorical question, or other setup before the subject is named; generic problem-painting; the AI-cliché openers in `standards/quality-bar.md`. A statistic can appear in the intro as evidence inside a sentence that makes a claim. It can't be the hook.
 
 ### 12. Closing / CTA
 
@@ -193,8 +195,10 @@ Write to `articles/YYYY-MM-DD-slug/outline.md` using this structure:
 - [Idea / shape of sentence 1]
 - [...]
 
-## Hook Strategy
-[Type] — [1–2 sentence sketch of the opener]
+## Intro Strategy
+[Paragraph 1 — the substance: the distinction/problem, core definitions, the cost of confusing them]
+[Paragraph 2 — why now: the sourced forces, by name]
+[Topic Summary sentences carried over; what changes (keyword placement, thesis wording, cuts)]
 
 ## Real-World Anchor
 [context/case-studies/<file>.md — which sections it anchors, which facts carry the argument, and the publishing boundary]
@@ -207,10 +211,10 @@ or [none — no case study or documented incident fits; the argument rests on so
 ## Full Outline
 
 ### Intro (≈ 150 words)
-[1-line summary of the hook + thesis preview]
+[1-line summary: substance paragraph + why-now paragraph + thesis preview — built from the Topic Summary]
 
-### Key Takeaways (4–6 bullets)
-[List the bullets — these become the speakable block + GEO summary block]
+### Key Takeaways (exactly 3 bullets)
+[List the three bullets — these become the speakable block + GEO summary block]
 
 ### H2: [Heading 1] (≈ 250–350 words)
 - [What the section covers, in one sentence]

@@ -123,6 +123,53 @@ class SnippetTemplateTests(unittest.TestCase):
         self.assertEqual(len(found), 1)
         self.assertEqual(len(found[0].snippets), 1)
 
+    def test_hook_shaped_intro_fails_and_quotes_each_move(self):
+        # The intro a reviewer called slop (identity exposure vs identity risk).
+        slop = (
+            "# Title\n\n"
+            "In 2025, 82% of the intrusion detections CrowdStrike recorded were malware-free. "
+            "The attacker used a valid identity and walked in the front door.\n\n"
+            "That number should reframe how security teams talk about identity, but mostly it hasn't. "
+            "They aren't the same word, and the gap between them is exactly where remediation effort goes to die.\n\n"
+            "Confuse the two, and you'll spend a sprint fixing the wrong things.\n\n## Key Takeaways\n\n- a\n- b\n- c\n"
+        )
+        found = [f for f in run(slop) if "hook-shaped intro" in f.message]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].level, "fail")
+        self.assertGreaterEqual(len(found[0].snippets), 6)
+        self.assertTrue(found[0].snippets[0].startswith("opens on a statistic"))
+
+    def test_topic_summary_style_intro_passes(self):
+        good = (
+            "# Title\n\n"
+            "Identity exposure and identity risk are two of the most conflated terms in the identity security "
+            "market. Identity exposure is the measurable, technical layer.\n\n"
+            "This distinction has become urgent in 2026. CrowdStrike's 2026 Global Threat Report found 82% of "
+            "detections were malware-free.\n\n## Key Takeaways\n\n- a\n- b\n- c\n"
+        )
+        self.assertFalse([f for f in run(good) if "hook-shaped intro" in f.message])
+        # A year alone in the opening words is not a stat hook.
+        self.assertFalse([f for f in run("In 2026, identity exposure became a board topic.\n\n## X\n\nBody.\n")
+                          if "hook-shaped intro" in f.message])
+
+    def test_long_sentences_warn(self):
+        rejected = ("Identity risk is the contextual layer built on top of it, meaning what an attacker could reach "
+                    "through one specific exposure once its blast radius and business criticality are weighed against "
+                    "active threat signals, and the confusion costs security teams real work.")
+        found = [f for f in run(rejected) if "over 30 words" in f.message]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].level, "warn")
+        self.assertFalse([f for f in run("It defines what an attacker can reach through one specific exposure.")
+                          if "over 30 words" in f.message])
+
+    def test_key_takeaways_must_be_exactly_three(self):
+        four = "Intro.\n\n## Key Takeaways\n\n- one\n- two\n- three\n- four\n"
+        found = [f for f in run(four) if "Key Takeaways has" in f.message]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].level, "fail")
+        self.assertFalse([f for f in run("Intro.\n\n## Key Takeaways\n\n- one\n- two\n- three\n")
+                          if "Key Takeaways has" in f.message])
+
     def test_heading_echo_only_warns_past_the_cap(self):
         sections = [
             ("Service accounts carry Kerberoasting risk", "Service accounts carry the Kerberoasting risk in most domains."),

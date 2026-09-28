@@ -44,7 +44,7 @@ The Editor walks this list explicitly.
 ## Speakable content
 
 - Mark a speakable section in schema. The Key Takeaways block is the default target.
-- The block is short (3–6 bullets), each bullet is standalone-citable, none of them require context from the rest of the article.
+- The block is short (exactly 3 bullets), each bullet is standalone-citable, none of them require context from the rest of the article.
 - This makes the article voice-assistant-friendly and gives AI engines a clean summary surface.
 
 ---
