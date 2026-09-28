@@ -4,7 +4,14 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { approveArticle, rerunPhase, saveArticleMarkdown } from "@/lib/actions/content";
+import {
+  approveArticle,
+  publishArticleLive,
+  refreshArticleFromHubSpot,
+  rerunPhase,
+  saveArticleMarkdown,
+  sendArticleToHubSpot,
+} from "@/lib/actions/content";
 import type { CheckLine, TechnicalIssue } from "@blogagent/engine";
 import type { UiRun } from "@/lib/ui-types";
 import { buttonCls, cls, inputCls } from "./ui";
@@ -36,6 +43,9 @@ export interface ReviewArticle {
   } | null;
   /** Everything handed to the Editor before its first attempt. */
   editPreAudit: string[] | null;
+  /** HubSpot post for this article (roadmap Phase 5), once sent. */
+  hubspot: { postId: string; url: string | null; state: string; syncedAt: string | null } | null;
+  hubspotConfig: { configured: boolean; tokenEnv: string };
   hasHeader: boolean;
   activeRun: UiRun | null;
   runs: UiRun[];
@@ -64,12 +74,29 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
 
   const preview = useMemo(() => previewBody(content), [content]);
 
-  const act = (fn: () => Promise<{ error?: string; savedAt?: string }>, okMsg: string) =>
+  const act = (fn: () => Promise<{ error?: string; savedAt?: string; warnings?: string[] }>, okMsg: string) =>
     startTransition(async () => {
       const res = await fn();
-      setMessage(res.error ? res.error : okMsg);
+      setMessage(res.error ? res.error : [okMsg, ...(res.warnings ?? []).map((w) => `⚠ ${w}`)].join(" "));
       if (!res.error) router.refresh();
     });
+
+  const hs = article.hubspot;
+  const live = hs?.state === "PUBLISHED";
+  const canPublish = ["review", "approved", "published"].includes(article.stage);
+  const goLive = () => {
+    if (
+      !window.confirm(
+        `Publish "${article.title}" on HubSpot?\n\nIt becomes public${hs?.url ? ` at ${hs.url}` : ""}. Unpublishing afterwards has to be done in HubSpot.`,
+      )
+    )
+      return;
+    act(() => publishArticleLive(article.slug), "Published on HubSpot.");
+  };
+  const sendToHubSpot = () => {
+    if (live && !window.confirm(`This post is live on HubSpot. Update the LIVE post with your current article?`)) return;
+    act(() => sendArticleToHubSpot(article.slug), hs ? "HubSpot post updated." : "HubSpot draft created.");
+  };
 
   const sideTabs: { key: SideTab; label: string; disabled?: boolean }[] = [
     { key: "preview", label: "Preview" },
@@ -92,15 +119,61 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
         >
           {pending ? "Working…" : dirty ? "Save changes" : "Saved"}
         </button>
-        {article.stage === "review" && (
-          <button
-            onClick={() => act(() => approveArticle(article.slug), "Approved for publish.")}
-            disabled={pending || dirty}
-            title={dirty ? "Save your edits first" : "Marks the article approved — publishing lands with roadmap Phase 5"}
-            className={buttonCls("secondary")}
-          >
-            Approve for publish
-          </button>
+        {article.hubspotConfig.configured ? (
+          canPublish && (
+            <>
+              <button
+                onClick={sendToHubSpot}
+                disabled={pending || dirty || Boolean(article.activeRun)}
+                title={dirty ? "Save your edits first" : hs ? "Push the current article to the HubSpot post" : "Create the post in HubSpot as a draft"}
+                className={buttonCls("secondary")}
+              >
+                {hs ? "Update HubSpot post" : "Send to HubSpot as draft"}
+              </button>
+              {hs && !live && (
+                <button onClick={goLive} disabled={pending || dirty} className={buttonCls("primary")}>
+                  Go live
+                </button>
+              )}
+              {hs && (
+                <button
+                  onClick={() => act(() => refreshArticleFromHubSpot(article.slug), "Synced from HubSpot.")}
+                  disabled={pending}
+                  className={buttonCls("ghost")}
+                >
+                  Refresh
+                </button>
+              )}
+              {hs && (
+                <span className="text-xs text-slate-500">
+                  HubSpot: <span className={cls("font-medium", live ? "text-emerald-700" : "text-amber-700")}>{hs.state}</span>
+                  {hs.url && (
+                    <>
+                      {" · "}
+                      <a href={hs.url} target="_blank" rel="noopener" className="underline">
+                        {live ? "view live" : "post URL"}
+                      </a>
+                    </>
+                  )}
+                </span>
+              )}
+            </>
+          )
+        ) : (
+          article.stage === "review" && (
+            <button
+              onClick={() => act(() => approveArticle(article.slug), "Approved for publish.")}
+              disabled={pending || dirty}
+              title={
+                dirty
+                  ? "Save your edits first"
+                  : `HubSpot isn't configured — set ${article.hubspotConfig.tokenEnv} on the web service to publish from here`
+              }
+              className={buttonCls("secondary")}
+            >
+              Approve (HubSpot not configured)
+            </button>
+          )
         )}
         <span className="mx-1 h-5 w-px bg-slate-200" />
         <select

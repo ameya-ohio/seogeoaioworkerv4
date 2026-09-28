@@ -4,6 +4,7 @@ import { getCompany, getDb } from "@/lib/db";
 import { toUiRun, type UiRun } from "@/lib/ui-types";
 import { PageHeader, StageBadge } from "@/components/ui";
 import { ReviewEditor, type ReviewArticle } from "@/components/review-editor";
+import { hubspotStatus } from "@/lib/actions/content";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,15 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
         }
       : null,
     editPreAudit: doc.editPreAudit?.items ?? null,
+    hubspot: doc.hubspot?.postId
+      ? {
+          postId: doc.hubspot.postId,
+          url: doc.hubspot.url ?? null,
+          state: doc.hubspot.state ?? "UNKNOWN",
+          syncedAt: doc.hubspot.syncedAt ? new Date(doc.hubspot.syncedAt).toISOString() : null,
+        }
+      : null,
+    hubspotConfig: await hubspotStatus(),
     hasHeader: Boolean(doc.header),
     activeRun,
     runs,

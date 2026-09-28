@@ -40,3 +40,6 @@ export * from "./dal/companies.js";
 export * from "./dal/clusters.js";
 export * from "./dal/scrapes.js";
 export * from "./dal/repoFiles.js";
+export * from "./publish/render.js";
+export * from "./publish/hubspot.js";
+export * from "./publish/publish.js";

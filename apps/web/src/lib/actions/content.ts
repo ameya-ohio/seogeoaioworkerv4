@@ -2,17 +2,30 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  HubSpotError,
+  PublishInputError,
   enqueueRerun,
+  goLive,
+  hubspotClientFromEnv,
+  hubspotTokenEnv,
   parseArticle,
+  refreshFromHubSpot,
+  sendToHubSpot,
+  type ArticleDoc,
+  type PublishDeps,
+  type PublishResult,
   type WorkStage,
   WORK_STAGES,
 } from "@blogagent/engine";
 import { requireAuth } from "../auth";
-import { getCompany, getDb } from "../db";
+import { getCompany, getDb, getStorage } from "../db";
 
 export interface SaveState {
   error?: string;
   savedAt?: string;
+  /** Publish actions: things the operator should look at even though it worked. */
+  warnings?: string[];
+  url?: string;
 }
 
 /** Review tab: save the edited markdown (D7 — source-faithful, exact bytes). */
@@ -71,4 +84,54 @@ export async function rerunPhase(slug: string, phase: string): Promise<SaveState
   revalidatePath("/production");
   revalidatePath(`/production/review/${slug}`);
   return { savedAt: new Date().toISOString() };
+}
+
+/* ---------------- HubSpot publishing (roadmap Phase 5) ---------------- */
+
+export async function hubspotStatus(): Promise<{ configured: boolean; tokenEnv: string }> {
+  await requireAuth();
+  const company = getCompany();
+  return { configured: hubspotClientFromEnv(company) !== null, tokenEnv: hubspotTokenEnv(company) };
+}
+
+async function withPublishDeps(
+  slug: string,
+  fn: (deps: PublishDeps, article: ArticleDoc) => Promise<PublishResult>,
+): Promise<SaveState> {
+  await requireAuth();
+  const company = getCompany();
+  const client = hubspotClientFromEnv(company);
+  if (!client) {
+    return { error: `HubSpot isn't configured — set ${hubspotTokenEnv(company)} on the web service.` };
+  }
+  const db = await getDb();
+  const article = await db.articles.findOne({ companyId: company.companyId, slug });
+  if (!article) return { error: `No article with slug ${slug}` };
+  try {
+    const res = await fn({ db, storage: getStorage(), company, client }, article);
+    revalidatePath("/production");
+    revalidatePath("/articles");
+    revalidatePath(`/production/review/${slug}`);
+    return {
+      savedAt: new Date().toISOString(),
+      warnings: res.warnings,
+      ...(res.url ? { url: res.url } : {}),
+    };
+  } catch (err) {
+    if (err instanceof PublishInputError || err instanceof HubSpotError) return { error: err.message };
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/** Create the HubSpot draft, or update the existing post (live posts update live). */
+export async function sendArticleToHubSpot(slug: string): Promise<SaveState> {
+  return withPublishDeps(slug, sendToHubSpot);
+}
+
+export async function publishArticleLive(slug: string): Promise<SaveState> {
+  return withPublishDeps(slug, goLive);
+}
+
+export async function refreshArticleFromHubSpot(slug: string): Promise<SaveState> {
+  return withPublishDeps(slug, refreshFromHubSpot);
 }

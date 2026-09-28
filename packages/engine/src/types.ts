@@ -202,7 +202,16 @@ export interface ArticleDoc {
   audit?: ScriptReport;
   schemaValidation?: ScriptReport;
   gates?: Partial<Record<WorkStage, GateResult>>;
-  hubspot?: { postId?: string; url?: string; state?: string };
+  /** HubSpot post status (roadmap Phase 5), synced by the publish actions. */
+  hubspot?: {
+    postId?: string;
+    url?: string;
+    /** HubSpot's state: DRAFT, PUBLISHED, SCHEDULED, … */
+    state?: string;
+    featuredImageUrl?: string;
+    publishedAt?: Date;
+    syncedAt?: Date;
+  };
   /**
    * Brief from the Topic & Cluster Generator or from an imported content
    * plan. When set, the Strategist receives it as a first-class input and its

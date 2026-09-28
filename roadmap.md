@@ -298,10 +298,12 @@ Goal: hand the system a spreadsheet of planned articles and have it produce them
 ### Phase 5 — Publish integration (HubSpot in the UI)
 Goal: Approve → published draft → go-live, all from the Review tab.
 
-- [ ] 5.1 Port `blogsagent` publish flow into worker (including the /tmp adapter logic: strip json-ld fence + edit summary, inject schemas into frontmatter)
-- [ ] 5.2 Hero image upload to HubSpot Files API → set `featuredImage` (closes the known manual-upload gap)
-- [ ] 5.3 Approve action → HubSpot draft; Go-live action → `state: PUBLISHED`; scheduled publishing (per-week drip) optional
-- [ ] 5.4 Status sync back (post id, url, state) into `articles` + keyword library
+**Built 2026-09-28** — `packages/engine/src/publish/` (TypeScript port, called from Review-screen server actions; blogsagent stays as the terminal-mode CLI). Verified against a local fake HubSpot end to end in the browser; not yet run against the live Saporo portal (needs `SAPORO_HUBSPOT_TOKEN` on the web service).
+- [x] 5.1 Publish flow ported: article.md → styled HTML via `marked` (H1 dropped, json-ld fence + edit summary stripped, external links new-tab, own-domain links same-tab), `@graph` → `headHtml`; blog + author IDs from company.yaml → Mongo `settings` cache → API (refuses to guess between several). D43 obligation met: go-live refuses while any `deferredLinks` URL isn't a live page.
+- [x] 5.2 Hero PNG → Files v3 (`/blog-headers`, PUBLIC_INDEXABLE) → `featuredImage` + `featuredImageAltText`
+- [x] 5.3 **Send to HubSpot as draft** (review → approved) / **Update HubSpot post** / **Go live** (confirm → `PATCH state: PUBLISHED` → published). Per-week scheduled publishing not built.
+- [x] 5.4 **Refresh** pulls state + URL back; post id/url/state on `articles.hubspot`; linked keyword → `in_review` / `published`. A canonical_url ≠ HubSpot URL mismatch is surfaced as a warning.
+- [ ] 5.5 D35 `pendingLinks` backfill when a sibling publishes (not built)
 
 ### Phase 6 — Competitive module — ✅ DONE (Session 17; 6.3's keyword-agent half rides with 4B)
 Goal: blogscraper becomes a UI feature feeding strategy.
