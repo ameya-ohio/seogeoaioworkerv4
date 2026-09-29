@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { NormalizedPlanRow } from "./normalize.js";
-import { childSegment, computePaths, mergedHubs, normalizePath } from "./paths.js";
+import { childSegment, computePaths, hubSegment, mergedHubs, normalizePath } from "./paths.js";
 
 /** The P01 rows of the Saporo pillar map, as the operator pasted them (2026-09-29). */
 const P01: [string, string | null, string, NormalizedPlanRow["pageRole"]][] = [
@@ -95,6 +95,34 @@ describe("/learn/ paths (D46)", () => {
     expect(p.get("P01-S01-A99")).toBe("/learn/identity-exposure-management/identity-exposure/vs-identity-risk-2/");
     expect(collisions).toHaveLength(1);
     expect(new Set(p.values()).size).toBe(p.size);
+  });
+
+  it("handles the real map's harder titles (2026-09-29 import preview)", () => {
+    expect(hubSegment("Preemptive Identity Exposure Management (PIEM)", "Identity Exposure Management")).toBe("piem");
+    expect(hubSegment("Identity Security Posture Management (ISPM)", "Identity Exposure Management")).toBe("ispm");
+    expect(hubSegment("Identity Attack Surface", "Identity Exposure Management")).toBe("attack-surface");
+    expect(hubSegment("Identity Exposure Assessment", "Identity Exposure Management")).toBe("assessment");
+    expect(hubSegment("Attack Path Analysis", "Attack Paths")).toBe("analysis");
+    expect(hubSegment("Identity Exposure", "Identity Exposure Management")).toBe("identity-exposure");
+    expect(childSegment("PIEM vs CTEM", ["Preemptive Identity Exposure Management", "piem"])).toBe("vs-ctem");
+    expect(childSegment("What is Continuous Threat Exposure Management (CTEM)", "Exposure Management & CTEM")).toBe("ctem");
+    expect(childSegment("How to Map Your Identity Attack Surface", "Identity Attack Surface")).toBe("how-to-map");
+    expect(childSegment("What an Identity Exposure Assessment Reveals in the First Hour", "Identity Exposure Assessment")).toBe(
+      "what-it-reveals-in-the-first-hour",
+    );
+    expect(childSegment("How Attack Graphs Work", "Attack Graphs")).toBe("how-they-work");
+    expect(childSegment("How to Find Chokepoints in Active Directory", "Chokepoints")).toBe("how-to-find-them-in-active-directory");
+    expect(childSegment("Why Attackers Log In Instead of Breaking In", "Identity Attack Surface")).toBe(
+      "why-attackers-log-in-instead-of-breaking-in",
+    );
+  });
+
+  it("puts an offer / landing hub outside /learn/ and its articles under it", () => {
+    const hub = { ...rows()[1]!, externalId: "P01-S07-A01", subtopicId: "S07", subtopicName: "Identity Exposure Assessment", title: "Free Identity Exposure Assessment", articleType: "offer-landing-page" };
+    const child = { ...rows()[2]!, externalId: "P01-S07-A03", subtopicId: "S07", subtopicName: "Identity Exposure Assessment", title: "Identity Security Assessment Checklist" };
+    const { paths: p } = computePaths([rows()[0]!, hub, child]);
+    expect(p.get("P01-S07-A01")).toBe("/identity-exposure-assessment/");
+    expect(p.get("P01-S07-A03")).toBe("/learn/identity-exposure-management/assessment/identity-security-assessment-checklist/");
   });
 
   it("normalizes hand-typed paths", () => {

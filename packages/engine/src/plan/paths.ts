@@ -43,32 +43,111 @@ function capSegment(seg: string): string {
   return seg.slice(0, MAX_SEGMENT).replace(/-[^-]*$/, "").replace(/-+$/, "");
 }
 
-/**
- * The child's own segment: the title before any colon, leading "the"
- * dropped, with the parent's head term removed.
- */
-export function childSegment(title: string, parentTerm: string): string {
-  const base = pathSegment(title.split(":")[0] ?? title).replace(/^the-/, "");
-  const term = pathSegment(parentTerm);
-  if (!term || !base.includes(term)) return capSegment(base);
-  const tokens = base.split("-");
-  const termTokens = term.split("-");
-  let at = -1;
+/** "Preemptive Identity Exposure Management (PIEM)" → "piem" (a trailing acronym only). */
+export function trailingAcronym(name: string): string | undefined {
+  const m = /\(\s*([A-Z][A-Za-z0-9]{1,7})\s*\)\s*$/.exec(name.trim());
+  return m?.[1] ? pathSegment(m[1]) : undefined;
+}
+
+/** A name without its parenthetical asides: "Group Policy (GPO) Security" → "Group Policy Security". */
+function withoutParens(name: string): string {
+  return name.replace(/\s*\([^)]*\)\s*/g, " ").trim();
+}
+
+// Only words that dangle once a term is cut away — never "in"/"on" ("breaking in").
+const STOP_TAIL = new Set(["a", "an", "the", "your", "our", "their", "its", "of", "for", "and", "with", "by"]);
+const ARTICLES = new Set(["a", "an", "the"]);
+// A term after these is the subject: "How <term> works" → "how-it-works".
+const SUBJECT_AFTER = new Set(["how", "why", "when", "where", "what", "does", "do", "is", "are"]);
+// A term after these is just dropped: "Best <term> Tools" → "best-tools".
+const DROP_AFTER = new Set(["best", "top", "leading", "free"]);
+
+/** Tokens equal up to a plural "s": "paths" matches "path". */
+function sameWord(a: string | undefined, b: string | undefined): boolean {
+  if (!a || !b) return false;
+  const s = (w: string) => (w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w);
+  return s(a) === s(b);
+}
+
+function isPlural(termTokens: string[]): boolean {
+  const last = termTokens[termTokens.length - 1] ?? "";
+  return last.length > 3 && last.endsWith("s") && !last.endsWith("ss");
+}
+
+function stripTerm(tokens: string[], term: string): string[] | undefined {
+  const termTokens = pathSegment(term).split("-").filter(Boolean);
+  if (termTokens.length === 0) return undefined;
   for (let i = 0; i + termTokens.length <= tokens.length; i++) {
-    if (termTokens.every((t, k) => tokens[i + k] === t)) {
-      at = i;
+    if (!termTokens.every((t, k) => sameWord(tokens[i + k], t))) continue;
+    let before = tokens.slice(0, i);
+    const after = tokens.slice(i + termTokens.length);
+    // "What an <term> reveals" → drop the article, then the pronoun rule applies.
+    if (ARTICLES.has(before[before.length - 1] ?? "")) before = before.slice(0, -1);
+    if (before.length === 0 || after.length === 0) return [...before, ...after];
+    const prev = before[before.length - 1] ?? "";
+    if (DROP_AFTER.has(prev)) return [...before, ...after];
+    // A term in the middle becomes a pronoun, so the segment still reads:
+    // "how-it-works", "how-they-work", "how-to-find-them-in-active-directory".
+    const plural = isPlural(termTokens);
+    const pronoun = SUBJECT_AFTER.has(prev) ? (plural ? "they" : "it") : plural ? "them" : "it";
+    return [...before, pronoun, ...after];
+  }
+  return undefined;
+}
+
+/**
+ * The child's own segment: the title before any colon, parentheticals and a
+ * leading "the" or "what is" dropped, with the parent's head term (or its
+ * acronym) removed, and no dangling articles or prepositions at the end.
+ * "What is Continuous Threat Exposure Management (CTEM)" → "ctem".
+ */
+export function childSegment(title: string, parentTerm: string | string[]): string {
+  const head = (title.split(":")[0] ?? title).trim();
+  const acronym = trailingAcronym(head);
+  if (acronym && /^what\s+(is|are)\b/i.test(head)) return acronym;
+  const base = pathSegment(withoutParens(head))
+    .replace(/^the-/, "")
+    .replace(/^what-(?:is|are)-(?:the-|a-|an-)?(?=.)/, "");
+  const terms = (Array.isArray(parentTerm) ? parentTerm : [parentTerm]).filter(Boolean);
+  let tokens = base.split("-").filter(Boolean);
+  let cut = false;
+  for (const term of terms) {
+    const stripped = stripTerm(tokens, withoutParens(term));
+    if (stripped && stripped.length > 0) {
+      tokens = stripped;
+      cut = true;
       break;
     }
   }
-  if (at === -1) return capSegment(base);
-  const before = tokens.slice(0, at);
-  const after = tokens.slice(at + termTokens.length);
-  // "How <term> works" → "how-it-works"; "Best <term> Tools" → "best-tools".
-  const pronounAfter = new Set(["how", "why", "when", "where", "what", "does", "do", "is", "causes", "makes", "secures"]);
-  const useIt = before.length > 0 && after.length > 0 && pronounAfter.has(before[before.length - 1] ?? "");
-  const joined = useIt ? [...before, "it", ...after] : [...before, ...after];
-  const seg = joined.join("-").replace(/^the-/, "");
+  if (cut) {
+    while (tokens.length > 1 && STOP_TAIL.has(tokens[tokens.length - 1] ?? "")) tokens = tokens.slice(0, -1);
+    while (tokens.length > 1 && ARTICLES.has(tokens[0] ?? "")) tokens = tokens.slice(1);
+  }
+  const seg = tokens.join("-");
   return capSegment(seg || base);
+}
+
+/**
+ * A hub's segment: its trailing acronym when it has one ("… (ISPM)" → "ispm"),
+ * otherwise its name minus the leading words it shares with the pillar
+ * ("Identity Attack Surface" under Identity Exposure Management →
+ * "attack-surface"), or the whole name when that would leave nothing.
+ */
+export function hubSegment(subtopicName: string, pillarName: string): string {
+  const acronym = trailingAcronym(subtopicName);
+  if (acronym) return acronym;
+  const tokens = pathSegment(withoutParens(subtopicName)).split("-").filter(Boolean);
+  const pillar = pathSegment(withoutParens(pillarName)).split("-");
+  let shared = 0;
+  while (shared < tokens.length && sameWord(tokens[shared], pillar[shared])) shared++;
+  const rest = tokens.slice(shared);
+  return capSegment((rest.length > 0 ? rest : tokens).join("-"));
+}
+
+/** Terms a child may drop: the hub's name and its acronym. */
+function parentTerms(name: string): string[] {
+  const acronym = trailingAcronym(name);
+  return [withoutParens(name), ...(acronym ? [acronym] : [])];
 }
 
 function sameTopic(a: string | null | undefined, b: string | null | undefined): boolean {
@@ -103,16 +182,23 @@ export function computePaths(
   for (const r of rows) {
     if (r.pageRole === "hub" && r.subtopicId) hubRow.set(`${r.pillarId}::${r.subtopicId}`, r);
   }
-  const hubSeg = (r: NormalizedPlanRow) => childSegment(r.subtopicName ?? r.title, r.pillarName);
+  const hubSeg = (r: NormalizedPlanRow) => hubSegment(r.subtopicName ?? r.title, r.pillarName);
 
   const wanted = (r: NormalizedPlanRow): string => {
     const pillar = pillarSeg.get(r.pillarId) ?? pathSegment(r.pillarName);
     if (r.pageRole === "pillar") return `${prefix}${pillar}/`;
-    if (r.pageRole === "hub") return `${prefix}${pillar}/${hubSeg(r)}/`;
+    if (r.pageRole === "hub") {
+      // An offer / landing hub is a conversion page outside /learn/ (D46);
+      // its articles still sit under /learn/<pillar>/<hub>/.
+      if (r.articleType === "offer-landing-page") return `/${pathSegment(withoutParens(r.subtopicName ?? r.title))}/`;
+      return `${prefix}${pillar}/${hubSeg(r)}/`;
+    }
     const hub = r.subtopicId ? hubRow.get(`${r.pillarId}::${r.subtopicId}`) : undefined;
-    if (hub) return `${prefix}${pillar}/${hubSeg(hub)}/${childSegment(r.title, hub.subtopicName ?? hub.title)}/`;
+    if (hub) {
+      return `${prefix}${pillar}/${hubSeg(hub)}/${childSegment(r.title, [...parentTerms(hub.subtopicName ?? hub.title), r.pillarName])}/`;
+    }
     // No hub row (merged into the pillar, or never planned): under the pillar.
-    return `${prefix}${pillar}/${childSegment(r.title, r.pillarName)}/`;
+    return `${prefix}${pillar}/${childSegment(r.title, parentTerms(r.pillarName))}/`;
   };
 
   const paths = new Map<string, string>();
