@@ -79,8 +79,10 @@ def run_all(body: str, company_names: list[str], points: list[ProofPoint] | None
         for m in _NUM.finditer(s):
             k = _key(m)
             value, unit = k.split("|")
-            # Years and bare single digits ("3 steps") aren't proof points.
-            if _YEAR.match(value) or (len(value.replace(".", "")) < 2 and not unit and not m.group(0).strip().endswith("+")):
+            # Years and bare single digits ("3 steps") aren't proof points. A
+            # year is written without a comma, unit or "+": "1,900" is a count.
+            is_year = _YEAR.match(value) and m.group(1) == value and not unit and not m.group(0).endswith("+")
+            if is_year or (len(value.replace(".", "")) < 2 and not unit and not m.group(0).strip().endswith("+")):
                 continue
             entries = by_key.get(k)
             if entries is None:

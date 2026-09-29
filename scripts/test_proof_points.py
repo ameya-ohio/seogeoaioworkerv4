@@ -43,6 +43,12 @@ class ProofPointTests(unittest.TestCase):
         self.assertEqual(pp.run_all("CrowdStrike found 82% of detections were malware-free in 2026.", ["Saporo"], points()), [])
         self.assertEqual(pp.run_all("In 2026 Saporo shipped a release in 3 steps.", ["Saporo"], points()), [])
 
+    def test_a_comma_count_is_not_a_year(self):
+        # "1,900" normalises to 1900, which once read as a year and escaped the check.
+        f = pp.run_all("Saporo connects over 1,900 applications.", ["Saporo"], points())
+        self.assertEqual([x.level for x in f], ["warn"])
+        self.assertEqual(pp.run_all("In 2026 Saporo shipped it.", ["Saporo"], points()), [])
+
     def test_no_file_means_no_check(self):
         self.assertEqual(pp.run_all("Saporo deploys in 1 hour.", ["Saporo"], None), [])
 
