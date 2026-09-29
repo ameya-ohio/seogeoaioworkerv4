@@ -226,6 +226,7 @@ Context engineering decides what an AI sales agent knows before it writes a word
 
 - Layers beat lumps.
 - Markdown beats PDFs.
+- Versioned context beats ad hoc prompts.
 
 ## The Four Layers
 
