@@ -8,6 +8,7 @@ import { connect, type EngineDb } from "./db.js";
 import { readWorkbook } from "./plan/xlsx.js";
 import { suggestMapping } from "./plan/mapping.js";
 import { analyzePlan, type PlanAnalysis } from "./plan/import.js";
+import { testFormats } from "./__testutil__/formats.js";
 import {
   commitPlan,
   createPlan,
@@ -37,7 +38,7 @@ beforeAll(async () => {
     "sample-plan.xlsx",
   );
   const { mapping } = suggestMapping(wb);
-  analysis = analyzePlan({ workbook: wb, mapping, companyName: "Acme" });
+  analysis = analyzePlan({ workbook: wb, mapping, companyName: "Acme", formats: testFormats() });
 }, 120_000);
 
 afterAll(async () => {

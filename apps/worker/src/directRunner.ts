@@ -294,11 +294,16 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           ...(await caseStudies(cfg)),
         ],
         inputs: await readAll(cfg, [
+          inFolder("page.md"),
           inFolder("research-notes.md"),
           ...(article.brief ? [inFolder("brief.md")] : []),
         ]),
         task: [
           `Write the strategy + outline as outline.md.`,
+          `${inFolder("page.md")} is this page's spec (D45–D50): its facets, the rules they resolve to`,
+          `(length band, Key Takeaways count, FAQ range, CTA) and the format guide. Build the outline on`,
+          `the format guide's structure. Always include a \`## Page Facets\` section with the page's`,
+          `page role, article type, search intent and funnel${article.facets ? " (copy them from page.md)" : " — this page has none yet, so choose them from standards/formats.json"}.`,
           `Pick the real-world anchor per your spec: at most one case study from context/case-studies/`,
           `(reference material) that genuinely fits this article, or a documented incident from the research`,
           `notes, or none. Never plan a hypothetical scenario.`,
@@ -322,6 +327,7 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           ...(await caseStudies(cfg)),
         ],
         inputs: await readAll(cfg, [
+          inFolder("page.md"),
           inFolder("outline.md"),
           inFolder("research-notes.md"),
           inFolder("article.md"),
@@ -331,6 +337,9 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           `Write the full article as article.md (the current article.md is the scaffold whose`,
           `frontmatter you fill in completely), and update meta.json (title, slug, meta_description,`,
           `keywords, canonical). If context/author-style/ is absent, use your spec's default voice rules.`,
+          `Follow ${inFolder("page.md")}: its format guide, Key Takeaways count, FAQ range and closing CTA.`,
+          `The worker stamps page_role, search_intent, article_type, funnel and canonical_url into the`,
+          `frontmatter after you — leave those keys as they are.`,
         ].join("\n"),
         outputs: ["article.md", "meta.json"],
       };
@@ -349,8 +358,9 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           ...(await competitiveLandscape(cfg)),
           ...(await caseStudies(cfg)),
         ],
-        inputs: await readAll(cfg, [inFolder("article.md"), inFolder("research-notes.md")]),
+        inputs: await readAll(cfg, [inFolder("page.md"), inFolder("article.md"), inFolder("research-notes.md")]),
         task: [
+          `${inFolder("page.md")} sets this page's format guide, Key Takeaways count, FAQ range and closing CTA.`,
           `Walk every checklist item, fix every failure, and return the complete edited article.md`,
           `with the HTML-comment edit summary appended at the bottom.`,
         ].join("\n"),
@@ -363,9 +373,11 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           "templates/schema-template.json",
           "config/company.yaml",
         ]),
-        inputs: await readAll(cfg, [inFolder("article.md")]),
+        inputs: await readAll(cfg, [inFolder("page.md"), inFolder("article.md")]),
         task: [
           `Return the complete @graph as schema.json (valid JSON, no comments).`,
+          `Use the schema types listed in ${inFolder("page.md")} for this page's format; include FAQPage only if`,
+          `the article has an FAQ section.`,
           `Return ONLY schema.json: the worker validates it with scripts/validate_schema.py and embeds`,
           `the identical JSON into article.md itself, so skip your spec's validate and embed steps.`,
         ].join("\n"),
@@ -377,6 +389,9 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
         reference: [],
         inputs: [{ path: `${inFolder("article.md")} (frontmatter)`, content: frontmatterOf(md) }],
         task: [
+          ...(ctx.headerPattern && ctx.headerPattern !== "auto"
+            ? [`This page's format defaults to the "${ctx.headerPattern}" pattern (formats.json); use it unless the title clearly fits another.`]
+            : []),
           `Choose the header for this article and return header.json:`,
           `{"pattern": "auto" | ${HEADER_PATTERNS.map((p) => `"${p}"`).join(" | ")},`,
           ` "subtitle": null | "<6–14-word dek, only when meta_description is too long for a header>",`,

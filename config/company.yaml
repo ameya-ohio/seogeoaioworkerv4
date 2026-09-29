@@ -92,7 +92,8 @@ competitors:
   # positioning in context/sales/competitive-landscape.md). seo_audit.py
   # FAILs any of these as a link or citation, or named in the intro, Key
   # Takeaways or FAQ; WARNs on more than one mention per vendor unless the
-  # article's frontmatter sets article_type: comparison | tool-list.
+  # article's frontmatter article_type is a vendor format (formats.json
+  # competitorMode: vendor — Tools Listicle, Alternatives, Comparison (Vendor)).
   #   domains      — whole host and its subdomains (www. ignored)
   #   url_prefixes — host + path prefix, for vendors banned at product level
   #   names        — matched case-insensitively as whole words

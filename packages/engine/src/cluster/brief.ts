@@ -29,6 +29,7 @@ export function renderBriefMarkdown(brief: Omit<SpokeBrief, "markdown">): string
     }`,
     `- **Schema:** ${brief.schemaTypes.join(", ")}`,
     ``,
+    ...renderPageFacets(brief),
     `## Representative sub-queries (shape passages, never titles or keywords)`,
     ``,
     ...brief.representativeSubQueries.map((q) => `- ${q}`),
@@ -77,8 +78,32 @@ export function renderBriefMarkdown(brief: Omit<SpokeBrief, "markdown">): string
   lines.push(...brief.internalLinks.siblings.map((s) => `- Sibling spoke: ${s}`));
   lines.push(``);
 
+  if (brief.siblingQueries && brief.siblingQueries.length > 0) {
+    lines.push(
+      `## Sibling pages' own queries (D49)`,
+      ``,
+      `Each of these is another page's target query. An FAQ answer may touch one`,
+      `in a sentence or two and point to that page — never answer it in full.`,
+      ``,
+      ...brief.siblingQueries.map((s) => `- "${s.query}" — ${s.title}`),
+      ``,
+    );
+  }
+
   const children = brief.internalLinks.children ?? [];
-  if (children.length > 0) {
+  if (children.length > 0 && brief.page?.pageRole === "pillar") {
+    lines.push(
+      `## Pages this pillar must link down to`,
+      ``,
+      `This is a PILLAR GUIDE (D47): a complete guide in its own right. Group the`,
+      `pages below into sub-themes; each sub-theme section answers its question`,
+      `completely, then points down to the child page. Mention a child in plain`,
+      `text until it exists; a link to an unpublished page fails the edit gate (D35).`,
+      ``,
+      ...children.map((c) => `- ${c}`),
+      ``,
+    );
+  } else if (children.length > 0) {
     lines.push(
       `## Pages this routing page must link down to`,
       ``,
@@ -92,4 +117,33 @@ export function renderBriefMarkdown(brief: Omit<SpokeBrief, "markdown">): string
     );
   }
   return lines.join("\n");
+}
+
+/** The facet block (D45–D49); empty for briefs built before the registry. */
+function renderPageFacets(brief: Omit<SpokeBrief, "markdown">): string[] {
+  const p = brief.page;
+  if (!p) return [];
+  const faq =
+    p.faq.max === 0
+      ? "none — this format carries no FAQ block"
+      : `${p.faq.min}–${p.faq.max} questions${p.faq.optional ? " (or none, if nothing is left to answer)" : ""}, 40–60 words each, direct answer first`;
+  const takeaways =
+    p.takeaways.min === p.takeaways.max
+      ? `exactly ${p.takeaways.min}`
+      : `${p.takeaways.min}–${p.takeaways.max}`;
+  return [
+    `## Page facets (D45–D49)`,
+    ``,
+    `- **Page role:** ${p.pageRole}${p.routing ? " (routing page — links down to every child; its format sets only the framing and intro)" : ""}`,
+    `- **Article type:** ${p.articleTypeLabel} (\`${p.articleType}\` — follow format.md)`,
+    `- **Search intent:** ${p.searchIntent}`,
+    `- **Funnel:** ${p.funnel.toUpperCase()}`,
+    ...(p.path ? [`- **Path:** ${p.path}`] : []),
+    `- **Key Takeaways:** ${takeaways} bullets`,
+    `- **FAQ:** ${faq}`,
+    ...(p.competitorMode === "vendor"
+      ? [`- **Competitors:** vendor format — the scoped exception in standards/quality-bar.md applies${p.signoff ? "; human sign-off required before export" : ""}`]
+      : []),
+    ``,
+  ];
 }

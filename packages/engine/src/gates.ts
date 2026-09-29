@@ -14,6 +14,8 @@ import {
   type LinkReport,
 } from "./citations.js";
 import type { GateResult, ScriptReport, WorkStage } from "./types.js";
+import type { FormatRegistry } from "./formats.js";
+import { parseOutlineFacets, type PageRules } from "./pageRules.js";
 
 /**
  * Per-phase gate conditions from CLAUDE.md, enforced in code (roadmap 2.3).
@@ -34,6 +36,10 @@ export interface GateFiles {
   citationReport?: CitationReport;
   /** Internal-link resolution report (D35 — edit gate). */
   linkReport?: LinkReport;
+  /** D45–D50: what this page's facets resolve to. Absent = pre-registry defaults. */
+  page?: PageRules;
+  /** Set when the article has no facets: the outline must supply them (validated here). */
+  facetRegistry?: FormatRegistry;
 }
 
 function result(problems: string[]): GateResult {
@@ -133,8 +139,21 @@ export function outlineGate(files: GateFiles): GateResult {
   }
   const faqBody = sectionBody(outline, "FAQ Candidates");
   const faqCount = (faqBody.match(/^\s*\d+[.)]\s+\S/gm) ?? []).length;
-  if (faqCount < 3 || faqCount > 7) {
-    problems.push(`FAQ Candidates has ${faqCount} question(s); need 3-7`);
+  // D49: the range is per role/format; pre-registry articles keep 3–7.
+  const faq = files.page?.faq ?? { min: 3, max: 7 };
+  const faqOk =
+    (faq.max === 0 && faqCount === 0) ||
+    (faq.optional === true && faqCount === 0) ||
+    (faqCount >= faq.min && faqCount <= faq.max);
+  if (!faqOk) {
+    problems.push(
+      faq.max === 0
+        ? `FAQ Candidates has ${faqCount} question(s); this format carries no FAQ — list none`
+        : `FAQ Candidates has ${faqCount} question(s); need ${faq.min}-${faq.max}${faq.optional ? " (or none)" : ""} for this page`,
+    );
+  }
+  if (files.facetRegistry) {
+    problems.push(...parseOutlineFacets(outline, files.facetRegistry).problems);
   }
   const h2Count = (outline.match(/^###\s+H2:/gim) ?? []).length;
   if (h2Count < 4) {
@@ -185,10 +204,42 @@ export function writeGate(files: GateFiles): GateResult {
   if (!hasSection(clean, "Key Takeaways")) {
     problems.push("Key Takeaways block missing (expected `## Key Takeaways`)");
   }
-  if (!hasSection(clean, "Frequently Asked Questions")) {
+  const faq = files.page?.faq;
+  const faqRequired = !faq || (faq.max > 0 && !faq.optional);
+  if (faqRequired && !hasSection(clean, "Frequently Asked Questions")) {
     problems.push("FAQ section missing (expected `## Frequently Asked Questions`)");
   }
+  if (faq?.max === 0 && hasSection(clean, "Frequently Asked Questions")) {
+    problems.push("This format carries no FAQ — remove `## Frequently Asked Questions`");
+  }
   return result(problems);
+}
+
+/**
+ * D50: the closing section links this page's funnel CTA, and never another
+ * funnel's. "Closing" is the last H2 section before the FAQ (or the last one).
+ */
+export function ctaProblems(articleMd: string, page: PageRules | undefined): string[] {
+  if (!page?.cta) return [];
+  const body = cleanBody(parseArticle(articleMd).body);
+  const sections = body.split(/^(?=##\s+(?!#))/m);
+  const named = sections.map((s) => ({ heading: (/^##\s+(.+)$/m.exec(s)?.[1] ?? "").trim(), text: s }));
+  const content = named.filter(
+    (s) => s.heading && !/^(frequently asked questions|faq|key takeaways)$/i.test(s.heading),
+  );
+  const closing = content[content.length - 1]?.text ?? "";
+  const problems: string[] = [];
+  if (!closing.includes(page.cta.url)) {
+    problems.push(
+      `closing section does not link this page's ${page.facets?.funnel.toUpperCase() ?? ""} CTA (${page.cta.label}: ${page.cta.url})`,
+    );
+  }
+  for (const other of page.otherCtaUrls) {
+    if (closing.includes(other)) {
+      problems.push(`closing section uses another funnel's CTA (${other}) — this page's close is ${page.cta.url}`);
+    }
+  }
+  return problems;
 }
 
 /**
@@ -230,6 +281,8 @@ export function editGate(files: GateFiles): GateResult {
       }
     }
   }
+  // D50: the funnel's CTA closes the page.
+  if (files.article) problems.push(...ctaProblems(files.article, files.page));
   // D35: internal links must resolve; planned siblings are mentions, not links.
   const lr = files.linkReport;
   if (!lr) {

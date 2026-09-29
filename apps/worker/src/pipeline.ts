@@ -30,7 +30,11 @@ import {
   type ScriptReport,
   type Storage,
   type WorkStage,
+  parseOutlineFacets,
+  type FormatRegistry,
+  type PageRules,
 } from "@blogagent/engine";
+import { materializePageSpec, pageRulesFor, stampArticleFrontmatter } from "./pageSpec.js";
 import type { AgentInvoker, AgentRunOutcome } from "./agentRunner.js";
 import type { WorkerConfig } from "./config.js";
 import type { DirectPhaseRunner } from "./directRunner.js";
@@ -72,6 +76,7 @@ async function loadGateFiles(
   article: ArticleDoc,
   phase: WorkStage,
   outputs: CodeStepOutputs,
+  page?: { rules: PageRules; formats: FormatRegistry },
 ): Promise<GateFiles> {
   const dir = articleDir(cfg, article);
   const read = async (name: string) =>
@@ -89,6 +94,11 @@ async function loadGateFiles(
   if (outputs.report) files.report = outputs.report;
   if (outputs.citationReport) files.citationReport = outputs.citationReport;
   if (outputs.linkReport) files.linkReport = outputs.linkReport;
+  if (page) {
+    files.page = page.rules;
+    // A page with no facets gets them from the Strategist, validated here.
+    if (phase === "outline" && !article.facets) files.facetRegistry = page.formats;
+  }
   return files;
 }
 
@@ -100,8 +110,16 @@ async function runCodeStep(
   deps: PipelineDeps,
   article: ArticleDoc,
   phase: WorkStage,
+  rules?: PageRules,
 ): Promise<CodeStepOutputs> {
   const { cfg, db } = deps;
+  // The worker owns the facet and canonical_url frontmatter keys (D45–D46):
+  // stamp them before anything reads the article.
+  if (rules && (phase === "write" || phase === "edit" || phase === "schema")) {
+    if (await stampArticleFrontmatter(cfg, article, rules)) {
+      deps.log(`[${article.slug}/${phase}] stamped facet/canonical frontmatter`);
+    }
+  }
   const opts = {
     repoRoot: cfg.repoRoot,
     pythonBin: cfg.pythonBin,
@@ -241,12 +259,17 @@ async function executePhase(
 
   const route = phase === "research" ? "agent" : cfg.direct.routes[phase];
 
+  // page.md (D45–D50) is rebuilt for every phase, so facets the Strategist
+  // chose for a page that had none reach the Writer.
+  const page = await pageRulesFor(db, cfg, article);
+  await materializePageSpec(cfg, article, page.rules);
+
   // Edit pre-audit: run the edit gate's own checks on the incoming draft so
   // attempt 1 starts with the exact problems a retry would have been given.
   let preAudit: string[] | undefined;
   if (phase === "edit") {
-    const preOutputs = await runCodeStep(deps, article, phase);
-    const pre = GATES.edit(await loadGateFiles(cfg, article, phase, preOutputs));
+    const preOutputs = await runCodeStep(deps, article, phase, page.rules);
+    const pre = GATES.edit(await loadGateFiles(cfg, article, phase, preOutputs, page));
     // Style WARNs (rhythm, lists of three, signposts) don't fail the gate,
     // but they're the same class of problem — hand them over as advisory.
     const advisory = (preOutputs.report?.checks ?? [])
@@ -292,6 +315,7 @@ async function executePhase(
       hasCompetitorGaps: existsSync(join(articleDir(cfg, article), "competitor-gaps.md")),
       ...(gateFeedback ? { gateFeedback } : {}),
       ...(preAudit ? { preAudit } : {}),
+      headerPattern: page.rules.format.headerPattern,
     };
     const onProgress = (text: string) => deps.log(`[${article.slug}/${phase}] ${text.slice(0, 160)}`);
     const outcome: AgentRunOutcome =
@@ -327,8 +351,8 @@ async function executePhase(
       throw new Error(`${phase}: ${err}`);
     }
 
-    const outputs = await runCodeStep(deps, article, phase);
-    const files = await loadGateFiles(cfg, article, phase, outputs);
+    const outputs = await runCodeStep(deps, article, phase, page.rules);
+    const files = await loadGateFiles(cfg, article, phase, outputs, page);
     gate = GATES[phase](files);
     await saveGateResult(db, articleId, phase, gate);
 
@@ -365,6 +389,16 @@ async function executePhase(
         // Which case study (or incident, or none) the article is anchored on.
         const anchor = /^##\s+Real-World Anchor\s*\n+([^\n]+)/im.exec(files.outline)?.[1]?.trim();
         deps.log(`[${article.slug}/outline] real-world anchor: ${anchor ? anchor.slice(0, 200) : "(section missing)"}`);
+        // No plan or brief set this page's facets: adopt the Strategist's.
+        if (!article.facets) {
+          const chosen = parseOutlineFacets(files.outline, page.formats).facets;
+          if (chosen) {
+            await db.articles.updateOne({ _id: articleId }, { $set: { facets: chosen, updatedAt: new Date() } });
+            deps.log(
+              `[${article.slug}/outline] facets set by the Strategist: ${chosen.pageRole} · ${chosen.articleType} · ${chosen.searchIntent} · ${chosen.funnel}`,
+            );
+          }
+        }
       }
       return { gate, attempts: attempt };
     }

@@ -11,7 +11,8 @@ import {
   normalizeRows,
 } from "./normalize.js";
 import { assignSlugs, type SlugPlanInput } from "./slug.js";
-import { buildSynthesisContext, parentOf, synthesizeBrief } from "./synthesize.js";
+import { buildSynthesisContext, facetWarningsFor, parentOf, synthesizeBrief } from "./synthesize.js";
+import { formatBySlug, type FormatRegistry } from "../formats.js";
 import type {
   FunnelStage,
   PageRole,
@@ -46,6 +47,11 @@ export interface DraftPlanItem {
   parentExternalId: string | null;
   title: string;
   format: string;
+  articleType: string;
+  /** D46: reserved site path. */
+  path?: string;
+  /** D51: why this item can't be produced yet. */
+  heldReason?: string;
   funnel: FunnelStage;
   searchIntent: SearchIntent;
   priority: PriorityTier;
@@ -63,6 +69,8 @@ export interface PlanAnalysisInput {
   workbook: ParsedWorkbook;
   mapping: PlanMapping;
   companyName: string;
+  /** D45: standards/formats.json, parsed. */
+  formats: FormatRegistry;
   /** slug -> stage of an existing article, for collision reporting. */
   takenSlugs?: Map<string, string>;
   /** keyword text -> status, for duplicate reporting. */
@@ -114,7 +122,7 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
   const subtopics = extractSubtopics(workbook, mapping.sheet);
   const concepts = extractConcepts(workbook, mapping.sheet, pillars);
   const taxonomyIndex = indexTaxonomy(pillars, subtopics);
-  const { rows, skipped, unrecognized, defaulted } = normalizeRows(sheet, mapping, taxonomyIndex);
+  const { rows, skipped, unrecognized, defaulted } = normalizeRows(sheet, mapping, taxonomyIndex, input.formats);
   if (rows.length === 0) {
     blocking.push("No rows could be read with this mapping — check the sheet and columns.");
   }
@@ -204,6 +212,7 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
     concepts,
     rows,
     companyName: input.companyName,
+    formats: input.formats,
     ...(input.defaultPersona ? { defaultPersona: input.defaultPersona } : {}),
   });
   const synthOpts =
@@ -264,6 +273,7 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
       parentExternalId: parentByExternalId.get(r.externalId) ?? null,
       title: r.title,
       format: r.format,
+      articleType: r.articleType,
       funnel: r.funnel,
       searchIntent: r.searchIntent,
       priority: r.priority,
@@ -287,8 +297,11 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
     byFunnel: countBy(rows.map((r) => r.funnel)),
     byPriority: countBy(rows.map((r) => `P${r.priority}`)),
     byIntent: countBy(rows.map((r) => r.searchIntent)),
-    byFormat: countBy(rows.map((r) => r.format || "(none)")),
+    byFormat: countBy(rows.map((r) => (r.format ? formatBySlug(input.formats, r.articleType).label : "(none)"))),
     unrecognized,
+    facetWarnings: rows.flatMap((r) =>
+      facetWarningsFor(r, input.formats).map((warning) => ({ externalId: r.externalId, warning })),
+    ),
     duplicateSlugs,
     duplicateTitles,
     articleCollisions,
@@ -335,6 +348,7 @@ function emptyReport(sheet: string, blocking: string[]): PlanImportReport {
     byIntent: {},
     byFormat: {},
     unrecognized: [],
+    facetWarnings: [],
     duplicateSlugs: [],
     duplicateTitles: [],
     articleCollisions: [],

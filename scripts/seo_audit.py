@@ -16,8 +16,10 @@ Reports per-check PASS / WARN / FAIL on:
   - H2 count (>=3)
   - word count vs reading_time_minutes sanity
   - primary keyword present in first 100 words of body
-  - Key Takeaways block present
-  - FAQ section present with at least 2 Q/A pairs
+  - Key Takeaways block present (bullet count per format: standards/formats.json)
+  - FAQ section: count within the page's range from its facets (page_role,
+    article_type, funnel frontmatter — D49); absent when the format has none.
+    Pages without facets keep the old rule (present, >= 2 Q/A pairs)
   - json-ld fenced block present
   - banned phrases found (count per phrase)
   - style limits (scripts/style_checks.py): 'not X, but Y' contrasts, a claim
@@ -26,8 +28,8 @@ Reports per-check PASS / WARN / FAIL on:
   - head-to-head competitors (scripts/competitor_checks.py, list in
     config/company.yaml competitors.head_to_head): linked, in the JSON-LD
     citation array, named in the intro / Key Takeaways / FAQ, or used as a
-    source (FAIL); named next to a link, or more than once outside
-    article_type: comparison | tool-list (WARN)
+    source (FAIL); named next to a link, or more than once outside a vendor
+    format — Tools Listicle, Alternatives, Comparison (Vendor) (WARN)
   - schema.json file present
 """
 from __future__ import annotations
@@ -39,6 +41,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from company_config import load_banned_phrases, load_config  # noqa: E402
 from competitor_checks import load_competitors, parse_jsonld, run_all as run_competitor_checks  # noqa: E402
+from formats import article_type_slug, load_registry  # noqa: E402
 from style_checks import format_finding, run_all as run_style_checks  # noqa: E402
 
 # Single source: standards/banned-phrases.txt + config/company.yaml
@@ -305,23 +308,49 @@ def audit(folder: Path) -> int:
     else:
         a.fail("Key Takeaways block missing (expected `## Key Takeaways`).")
 
+    # D45–D49: the page's facets (stamped by the worker) set the FAQ range
+    # and the Key Takeaways count. No facets = the pre-registry rules.
+    registry = load_registry()
+    page_role = str(fm.get("page_role", "")).strip()
+    fmt_slug = article_type_slug(registry, str(fm.get("article_type", "")))
+    funnel = str(fm.get("funnel", "")).strip().lower()
+    has_facets = bool(registry and page_role and fmt_slug)
+    faq_range = registry.faq(fmt_slug, page_role, funnel) if has_facets else None
+    takeaways = registry.takeaways(fmt_slug) if has_facets else None
+
     faq_match = re.search(
         r"^##\s+frequently asked questions\s*$",
         body_clean,
         flags=re.IGNORECASE | re.MULTILINE,
     )
-    if not faq_match:
-        a.fail("FAQ section missing (expected `## Frequently Asked Questions`).")
-    else:
+    q_count = 0
+    if faq_match:
         faq_block = body_clean[faq_match.end() :]
         next_h2 = re.search(r"^##\s+\S", faq_block, flags=re.MULTILINE)
         if next_h2:
             faq_block = faq_block[: next_h2.start()]
         q_count = len(re.findall(r"^###\s+\S", faq_block, flags=re.MULTILINE))
-        if q_count >= 2:
+    if faq_range is None:
+        if not faq_match:
+            a.fail("FAQ section missing (expected `## Frequently Asked Questions`).")
+        elif q_count >= 2:
             a.ok(f"FAQ section has {q_count} Q/A pairs.")
         else:
             a.fail(f"FAQ section has only {q_count} Q/A pair(s); need ≥ 2.")
+    elif faq_range.max == 0:
+        if faq_match:
+            a.fail(f"FAQ section present, but a {fmt_slug} page carries no FAQ — remove it.")
+        else:
+            a.ok(f"No FAQ section ({fmt_slug} carries none).")
+    elif not faq_match or q_count == 0:
+        if faq_range.optional:
+            a.ok("No FAQ section (optional for this page).")
+        else:
+            a.fail(f"FAQ section missing; this page needs {faq_range.min}–{faq_range.max} questions.")
+    elif faq_range.min <= q_count <= faq_range.max:
+        a.ok(f"FAQ section has {q_count} Q/A pairs ({faq_range.min}–{faq_range.max} for this page).")
+    else:
+        a.fail(f"FAQ section has {q_count} Q/A pairs; this page needs {faq_range.min}–{faq_range.max}.")
 
     if re.search(r"```json-ld[\s\S]*?```", body, flags=re.IGNORECASE):
         a.ok("json-ld fenced block present in article.md")
@@ -340,7 +369,11 @@ def audit(folder: Path) -> int:
         a.ok("No banned phrases found.")
 
     # AI-cadence limits from standards/quality-bar.md, machine-checked
-    style = run_style_checks(body_clean, count_words(body_clean))
+    style = run_style_checks(
+        body_clean,
+        count_words(body_clean),
+        **({"takeaways": (takeaways.min, takeaways.max)} if takeaways else {}),
+    )
     for f in style:
         (a.fail if f.level == "fail" else a.warn)(format_finding(f))
     if not any(f.level == "fail" for f in style):

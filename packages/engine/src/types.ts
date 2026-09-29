@@ -1,7 +1,7 @@
 import type { ObjectId } from "mongodb";
 import type { CitationReport, LinkReport } from "./citations.js";
 import type { SpokeBrief } from "./cluster/types.js";
-import type { PageRole } from "./plan/types.js";
+import type { FunnelStage, PageRole, SearchIntent } from "./plan/types.js";
 
 /**
  * Article lifecycle stages (roadmap §4). The six work stages map 1:1 to the
@@ -145,6 +145,21 @@ export interface ArticleArtifacts {
  * the pipeline actually reads: materializeWorkspace writes `markdown` to
  * brief.md, and the Strategist prompt quotes `lengthBand`.
  */
+/**
+ * The four page facets (D45–D49). Page role sets the skeleton, article type
+ * (a formats.json slug) sets the body, search intent is what the SERP
+ * expects, and funnel sets the CTA and how much the company appears.
+ */
+export interface ArticleFacets {
+  pageRole: PageRole;
+  searchIntent: SearchIntent;
+  /** Slug in standards/formats.json ("generic" when none applies). */
+  articleType: string;
+  funnel: FunnelStage;
+  /** Who set them: the plan import, a cluster brief, the Strategist, or an operator edit. */
+  source: "plan" | "cluster" | "strategist" | "operator";
+}
+
 export interface ArticleBriefBase {
   /** Rendered brief the Strategist receives (materialized as brief.md). */
   markdown: string;
@@ -157,6 +172,8 @@ export interface ArticleBriefBase {
   spec?: SpokeBrief;
   /** Routing pages (pillar, hub) are briefed differently from spokes. */
   pageRole?: PageRole;
+  /** The page's facets as the brief was built with them. */
+  facets?: ArticleFacets;
 }
 
 /**
@@ -198,6 +215,16 @@ export interface ArticleDoc {
   stageHistory: { stage: Stage; at: Date; runId?: ObjectId }[];
   artifacts: ArticleArtifacts;
   frontmatter?: Record<string, unknown>;
+  /** D45–D49: set from the plan item or brief, or proposed by the Strategist. */
+  facets?: ArticleFacets;
+  /** D46: site path, e.g. "/learn/identity-exposure-management/identity-exposure/vs-identity-risk/". */
+  path?: string;
+  /** Absolute canonical URL built from the path; stamped into frontmatter by the worker. */
+  canonicalUrl?: string;
+  /** D52: the page confirmed live on the site (Framer export target). */
+  live?: { url: string; verifiedAt: Date; status: number };
+  /** D51: human sign-off for formats that require it, before export. */
+  signoff?: { by: string; at: Date; note?: string };
   header?: { storageKey: string; url?: string; contentType: string };
   audit?: ScriptReport;
   schemaValidation?: ScriptReport;
@@ -324,6 +351,8 @@ export interface KeywordDoc {
   clusterId?: ObjectId;
   themeId?: ObjectId;
   rationale?: string;
+  /** Page facets carried into the pipeline when this keyword is sent. */
+  facets?: ArticleFacets;
   createdAt: Date;
   updatedAt: Date;
 }

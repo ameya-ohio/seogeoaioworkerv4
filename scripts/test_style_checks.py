@@ -170,6 +170,38 @@ class SnippetTemplateTests(unittest.TestCase):
         self.assertFalse([f for f in run("Intro.\n\n## Key Takeaways\n\n- one\n- two\n- three\n")
                           if "Key Takeaways has" in f.message])
 
+    def test_takeaway_count_follows_the_format(self):
+        ten = "Intro.\n\n## Key Takeaways\n\n" + "".join(f"- stat {i}\n" for i in range(10))
+        self.assertTrue([f for f in run(ten) if "Key Takeaways has" in f.message])
+        self.assertFalse([f for f in sc.run_all(ten, 20, takeaways=(8, 12)) if "Key Takeaways has" in f.message])
+
+    def test_faq_question_repeating_an_h2_fails(self):
+        body = (
+            "Intro.\n\n## How identity exposure is measured\n\nBody.\n\n"
+            "## Frequently Asked Questions\n\n### How is identity exposure measured?\n\nAnswer.\n\n"
+            "### Who owns ISPM in a security team?\n\nAnswer.\n"
+        )
+        found = [f for f in run(body) if "FAQ repeats a section heading" in f.message]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].level, "fail")
+        self.assertEqual(len(found[0].snippets), 1)
+
+    def test_faq_answers_outside_40_to_60_words_warn(self):
+        ok = " ".join(["word"] * 50)
+        short = "Too short."
+        body = f"Intro.\n\n## Frequently Asked Questions\n\n### Q one?\n\n{ok}\n\n### Q two?\n\n{short}\n"
+        found = [f for f in run(body) if "FAQ answers outside" in f.message]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].level, "warn")
+        self.assertEqual(len(found[0].snippets), 1)
+
+    def test_long_paragraphs_warn_but_the_intro_is_exempt(self):
+        long_para = " ".join(["claim"] * 70) + "."
+        body = f"# T\n\n{long_para}\n\n## Section\n\n{long_para.replace('claim', 'point')}\n"
+        found = [f for f in run(body) if "paragraphs over 60 words" in f.message]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(len(found[0].snippets), 1)
+
     def test_heading_echo_only_warns_past_the_cap(self):
         sections = [
             ("Service accounts carry Kerberoasting risk", "Service accounts carry the Kerberoasting risk in most domains."),

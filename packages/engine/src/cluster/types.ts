@@ -171,6 +171,30 @@ export interface SpokeBrief {
   /** Rendered markdown brief — what the Strategist receives (4.12). */
   markdown: string;
   priorityScore: number;
+  /**
+   * D45–D49: the page's facets and the rules they resolve to. Absent on
+   * briefs built before the format registry; the renderer then prints no
+   * facet block and the pipeline falls back to its defaults.
+   */
+  page?: BriefPageFacets;
+  /** Sibling pages' own query targets: an FAQ may touch them only briefly, then point there (D49). */
+  siblingQueries?: { title: string; query: string }[];
+}
+
+export interface BriefPageFacets {
+  pageRole: "pillar" | "hub" | "cluster";
+  articleType: string;
+  articleTypeLabel: string;
+  searchIntent: string;
+  funnel: string;
+  /** D46 site path, when the plan reserved one. */
+  path?: string;
+  faq: { min: number; max: number; optional?: boolean };
+  takeaways: { min: number; max: number };
+  /** True for hubs: the page routes to its children (D47). */
+  routing: boolean;
+  competitorMode: "strict" | "vendor";
+  signoff: boolean;
 }
 
 /** Stages of a cluster run, in execution order. */

@@ -26,6 +26,7 @@ import {
   type SynthesisContext,
 } from "./synthesize.js";
 import { normalizeLengthBand } from "../cluster/scoring.js";
+import { testFormats } from "../__testutil__/formats.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -43,8 +44,8 @@ beforeAll(async () => {
   const concepts = extractConcepts(wb, mapping.sheet, pillars);
   const sheet = wb.sheets.find((s) => s.name === mapping.sheet);
   if (!sheet) throw new Error("no payload sheet");
-  rows = normalizeRows(sheet, mapping, indexTaxonomy(pillars, subtopics)).rows;
-  ctx = buildSynthesisContext({ pillars, subtopics, concepts, rows, companyName: "Acme" });
+  rows = normalizeRows(sheet, mapping, indexTaxonomy(pillars, subtopics), testFormats()).rows;
+  ctx = buildSynthesisContext({ pillars, subtopics, concepts, rows, companyName: "Acme", formats: testFormats() });
 });
 
 const byId = (id: string) => {
@@ -53,64 +54,76 @@ const byId = (id: string) => {
   return r;
 };
 
-describe("length bands (D31)", () => {
-  it("gives routing pages a routing band, not an encyclopedic pillar", () => {
-    expect(lengthBandFor("Pillar Guide", "pillar")).toMatchObject({ min: 1400, max: 2000 });
-    expect(lengthBandFor("Definition / Explainer", "hub")).toMatchObject({ min: 1000, max: 1600 });
+const F = () => testFormats();
+const fmt = (label: string) => F().formats.find((f) => f.label === label)?.slug ?? "generic";
+const r = (label: string, pageRole: "pillar" | "hub" | "cluster", funnel: "tofu" | "mofu" | "bofu" = "mofu") => ({
+  format: label,
+  articleType: fmt(label),
+  pageRole,
+  funnel,
+});
+
+describe("length bands (D45/D47: from formats.json)", () => {
+  it("makes a pillar a full Pillar Guide and keeps hubs on the routing band", () => {
+    expect(lengthBandFor(r("Pillar Guide", "pillar"), F())).toMatchObject({ min: 3000, max: 5000 });
+    expect(lengthBandFor(r("Definition / Explainer", "hub"), F())).toMatchObject({ min: 1000, max: 1600 });
+    expect(lengthBandFor(r("Deep-dive", "hub"), F())).toMatchObject({ min: 1000, max: 1600 });
   });
 
-  it("derives a spoke band from the format", () => {
-    expect(lengthBandFor("Definition / Explainer", "cluster")).toMatchObject({ min: 800, max: 1200 });
-    expect(lengthBandFor("Comparison (Concept)", "cluster")).toMatchObject({ min: 1200, max: 1800 });
-    expect(lengthBandFor("Deep-dive", "cluster")).toMatchObject({ min: 1400, max: 2000 });
+  it("takes a spoke band from the format", () => {
+    expect(lengthBandFor(r("Definition / Explainer", "cluster"), F())).toMatchObject({ min: 900, max: 1800 });
+    expect(lengthBandFor(r("Comparison (Concept)", "cluster"), F())).toMatchObject({ min: 1200, max: 1800 });
+    expect(lengthBandFor(r("Deep-dive", "cluster"), F())).toMatchObject({ min: 1800, max: 2800 });
   });
 
-  it("falls back to the D31 default for an unknown format", () => {
-    expect(lengthBandFor("Interpretive Dance", "cluster")).toMatchObject({ min: 800, max: 2000 });
+  it("falls back to the generic band for an unknown format", () => {
+    expect(lengthBandFor(r("Interpretive Dance", "cluster"), F())).toMatchObject({ min: 800, max: 2000 });
   });
 
-  it("always carries a justification, and survives normalizeLengthBand unchanged", () => {
+  it("always carries a justification", () => {
     for (const role of ["pillar", "hub", "cluster"] as const) {
-      for (const fmt of ["Deep-dive", "Definition / Explainer", "Pillar Guide", ""]) {
-        const band = lengthBandFor(fmt, role);
-        expect(band.justification).toBeTruthy();
-        // The cluster path snaps unjustified out-of-band values back to
-        // 800-2000; these must pass through untouched.
-        expect(normalizeLengthBand(band)).toMatchObject({ min: band.min, max: band.max });
+      for (const label of ["Deep-dive", "Definition / Explainer", "Pillar Guide", ""]) {
+        expect(lengthBandFor(r(label, role), F()).justification).toBeTruthy();
       }
     }
+  });
+
+  it("keeps routing and generic bands inside what normalizeLengthBand accepts", () => {
+    const band = lengthBandFor(r("Definition / Explainer", "hub"), F());
+    expect(normalizeLengthBand(band)).toMatchObject({ min: band.min, max: band.max });
   });
 });
 
 describe("schema types", () => {
-  it("never stamps FAQPage — the Strategist decides whether an FAQ exists", () => {
-    for (const role of ["pillar", "hub", "cluster"] as const) {
-      expect(schemaTypesFor("Deep-dive", role)).not.toContain("FAQPage");
-    }
+  it("stamps FAQPage only when the page's format carries an FAQ", () => {
+    expect(schemaTypesFor(r("Deep-dive", "cluster"), F())).toContain("FAQPage");
+    expect(schemaTypesFor(r("Thought Leadership", "cluster"), F())).not.toContain("FAQPage");
+    expect(schemaTypesFor(r("Stats / Data", "cluster"), F())).not.toContain("FAQPage");
+    // A hub's role rule gives it an FAQ even when its format has none.
+    expect(schemaTypesFor(r("Stats / Data", "hub"), F())).toContain("FAQPage");
   });
 
-  it("gives routing pages CollectionPage + ItemList, which the schema spec documents", () => {
-    expect(schemaTypesFor("Pillar Guide", "pillar")).toEqual([
-      "BlogPosting",
+  it("gives hubs CollectionPage + ItemList; a pillar guide is an Article", () => {
+    expect(schemaTypesFor(r("Definition / Explainer", "hub"), F())).toContain("CollectionPage");
+    expect(schemaTypesFor(r("Pillar Guide", "pillar"), F())).toEqual([
+      "Article",
       "BreadcrumbList",
-      "CollectionPage",
-      "ItemList",
+      "DefinedTerm",
+      "FAQPage",
     ]);
-    expect(schemaTypesFor("Definition / Explainer", "hub")).toContain("CollectionPage");
-    // A normal article is never a CollectionPage.
-    expect(schemaTypesFor("Deep-dive", "cluster")).toEqual(["BlogPosting", "BreadcrumbList"]);
+    expect(schemaTypesFor(r("Deep-dive", "cluster"), F())).toEqual(["TechArticle", "BreadcrumbList", "FAQPage"]);
   });
 
   it("can be told the company's schema spec lacks the routing types", () => {
-    expect(schemaTypesFor("Pillar Guide", "pillar", { routingTypesDocumented: false })).toEqual([
-      "BlogPosting",
-      "BreadcrumbList",
-    ]);
+    expect(schemaTypesFor(r("Definition / Explainer", "hub"), F(), { routingTypesDocumented: false })).not.toContain(
+      "CollectionPage",
+    );
   });
 
-  it("adds DefinedTerm only for definition formats", () => {
-    expect(schemaTypesFor("Definition / Explainer", "cluster")).toContain("DefinedTerm");
-    expect(schemaTypesFor("How-to Guide", "cluster")).not.toContain("DefinedTerm");
+  it("uses the format's own types", () => {
+    expect(schemaTypesFor(r("Definition / Explainer", "cluster"), F())).toContain("DefinedTerm");
+    expect(schemaTypesFor(r("How-to Guide", "cluster"), F())).toContain("HowTo");
+    expect(schemaTypesFor(r("How-to Guide", "cluster"), F())).not.toContain("DefinedTerm");
   });
 });
 
@@ -186,16 +199,18 @@ describe("internal links", () => {
 
 describe("required passages (D33 coverage contract)", () => {
   it("gives a routing page one passage per child, in order", () => {
-    const passages = requiredPassagesFor(byId("P01-S01-A01"), rows);
+    const passages = requiredPassagesFor(byId("P01-S01-A01"), rows, F());
     expect(passages[0]).toContain("Widget Exposure");
     expect(passages.some((p) => p.includes("Widget Exposure vs Widget Risk"))).toBe(true);
     expect(passages.some((p) => p.includes("2–3 sentence"))).toBe(true);
   });
 
   it("gives a spoke format-shaped passages", () => {
-    const passages = requiredPassagesFor(byId("P01-S01-A02"), rows);
+    const passages = requiredPassagesFor(byId("P01-S01-A02"), rows, F());
     expect(passages.length).toBeGreaterThanOrEqual(3);
-    expect(passages.join(" ")).toMatch(/differ/i);
+    // Comparison (Concept) passages come from formats.json: distinction, table, overlap.
+    expect(passages.join(" ")).toMatch(/distinction/i);
+    expect(passages.join(" ")).toMatch(/comparison table/i);
   });
 });
 

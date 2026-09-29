@@ -33,7 +33,8 @@ Before any phase runs, do these in order:
    python scripts/new_article.py "<slug>"
    ```
    …which scaffolds `article.md`, `meta.json`, `research-notes.md`, and `outline.md` from the template, **or** create the folder + empty stub files manually if the script is unavailable.
-4. Tell the user the folder path before starting Phase 1.
+4. Decide the page's **facets** (D45): page role (`pillar`/`hub`/`cluster`), article type (a format in **`standards/formats.json`**), search intent, funnel. Take them from the user's request or a plan row; otherwise choose them from the topic and confirm them in the Strategist's `## Page Facets`. Write `articles/YYYY-MM-DD-slug/page.md` with the facets, the rules they resolve to in formats.json (length band, Key Takeaways count, FAQ range, schema types, the funnel's CTA from `config/company.yaml` → `ctas`), and the format guide from `templates/formats/<slug>.md` (`generic.md` if none). The worker does this step itself; in terminal mode you do it. Every phase reads page.md.
+5. Tell the user the folder path before starting Phase 1.
 
 The article folder is the single source of truth for the run. **Every phase reads from and writes to that folder.** Do not let phase outputs live in your head — persist them.
 

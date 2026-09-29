@@ -1,11 +1,15 @@
 import "server-only";
 import {
   connect,
+  getRepoFile,
   loadCompanyConfig,
+  loadFormatRegistry,
+  parseFormatRegistry,
   storageFromEnv,
   syncCompany,
   type CompanyConfig,
   type EngineDb,
+  type FormatRegistry,
   type Storage,
 } from "@blogagent/engine";
 import { repoRoot } from "./repo";
@@ -57,4 +61,16 @@ export async function getDb(): Promise<EngineDb> {
 export function getStorage(): Storage {
   cache.storage ??= storageFromEnv(repoRoot());
   return cache.storage;
+}
+
+/**
+ * The format registry (D45). An Admin-saved copy in repo_files wins over the
+ * shipped file, exactly as the worker applies it before each run — so the
+ * plan import and the pipeline always agree on what a format means.
+ */
+export async function getFormats(): Promise<FormatRegistry> {
+  const db = await getDb();
+  const saved = await getRepoFile(db, getCompany().companyId, "standards/formats.json");
+  if (saved && !saved.deleted) return parseFormatRegistry(JSON.parse(saved.content));
+  return loadFormatRegistry(repoRoot());
 }

@@ -3,8 +3,8 @@
 standards/quality-bar.md → *Competitor handling*: a head-to-head vendor is
 never the opening hook, never a Key Takeaways stat, never the subject of an
 FAQ answer, and never a cited source. It is named only factually, at most
-once per vendor outside a comparison or tool-list article. The vendor list
-is config/company.yaml → competitors.head_to_head:
+once per vendor. The vendor list is config/company.yaml →
+competitors.head_to_head:
 
     competitors:
       head_to_head:
@@ -12,6 +12,13 @@ is config/company.yaml → competitors.head_to_head:
           domains: [specterops.io]            # whole host (+ subdomains)
           url_prefixes: [github.com/SpecterOps]  # host + path prefix
           names: [SpecterOps, BloodHound]     # matched as whole words
+
+Vendor formats (D51) — Tools Listicle, Alternatives, Comparison (Vendor),
+`competitorMode: vendor` in standards/formats.json — get a scoped exception:
+vendors may be named anywhere (intro, answer block, entries, FAQ) and as
+often as the format needs, and a competitor's own public docs may source
+claims ABOUT THAT COMPETITOR. What never changes: a competitor is never the
+source of a statistic, and never cited in a sentence about someone else.
 
 Standard library only (like the rest of scripts/).
 """
@@ -22,10 +29,17 @@ import re
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
+from formats import article_type_slug, load_registry
 from style_checks import Finding, sentences
 
-# article_type values under which vendors may be named per-entry.
-COMPARISON_TYPES = {"comparison", "tool-list"}
+
+def vendor_mode(article_type: str) -> bool:
+    """True when the frontmatter article_type is a vendor format (D51)."""
+    reg = load_registry()
+    slug = article_type_slug(reg, article_type)
+    if reg is None:
+        return slug in {"comparison-vendor", "tools-listicle", "alternatives"}
+    return reg.competitor_mode(slug) == "vendor"
 
 # Sentence reads as the vendor being the source of a claim.
 _ATTRIBUTION = re.compile(
@@ -205,7 +219,7 @@ def run_all(
 ) -> list[Finding]:
     """Findings for a cleaned article body (no json-ld fence, no comments)."""
     findings: list[Finding] = []
-    comparison = article_type.strip().lower() in COMPARISON_TYPES
+    vendor = vendor_mode(article_type)
     sections = {
         "intro": intro(body),
         "Key Takeaways": _h2_section(body, r"key takeaways"),
@@ -219,9 +233,20 @@ def run_all(
         label = f"head-to-head competitor {c.name}"
 
         # 1. Their URLs, anywhere in the body or the JSON-LD citation array.
+        #    Vendor mode: their own docs may back a sentence ABOUT them.
         linked = sorted({u for u in _links(body) if c.owns_url(u)})
+        if vendor and pat:
+            about_them = {u for s in _body_sentences(body) if pat.search(_plain(s)) for u in _links(s) if c.owns_url(u)}
+            linked = [u for u in linked if u not in about_them]
         if linked:
-            findings.append(Finding("fail", f"Competitor: {label} linked in the body (never a source)", linked))
+            findings.append(
+                Finding(
+                    "fail",
+                    f"Competitor: {label} linked in the body"
+                    + (" outside a sentence about them" if vendor else " (never a source)"),
+                    linked,
+                )
+            )
         cited = []
         for entry in cites:
             texts = _strings(entry)
@@ -230,14 +255,14 @@ def run_all(
             ):
                 shown = [entry.get(k) for k in ("name", "url")] if isinstance(entry, dict) else []
                 cited.append(" — ".join(str(t) for t in shown if t) or " / ".join(texts[:3])[:140])
-        if cited:
+        if cited and not vendor:
             findings.append(Finding("fail", f"Competitor: {label} in the JSON-LD citation array", cited))
 
         if not pat:
             continue
 
-        # 2. Named in the hook, the Key Takeaways, or the FAQ.
-        for where, text in sections.items():
+        # 2. Named in the hook, the Key Takeaways, or the FAQ (strict formats only).
+        for where, text in ({} if vendor else sections).items():
             hits = _hits(pat, text)
             if hits:
                 findings.append(Finding("fail", f"Competitor: {label} named in the {where}", hits))
@@ -245,16 +270,20 @@ def run_all(
         # 3. Used as a source in the body: an attribution sentence, or a
         #    sentence pairing the vendor with a link and a number.
         named = [s for s in body_sents if pat.search(_plain(s))]
-        sourced = [
-            s for s in named
-            if _ATTRIBUTION.search(_plain(s)) or (_MD_LINK.search(s) and _QUANT.search(_plain(s)))
-        ]
+        if vendor:
+            # A claim about the vendor may cite the vendor; a statistic may not.
+            sourced = [s for s in named if _ATTRIBUTION.search(_plain(s)) and _QUANT.search(_plain(s))]
+        else:
+            sourced = [
+                s for s in named
+                if _ATTRIBUTION.search(_plain(s)) or (_MD_LINK.search(s) and _QUANT.search(_plain(s)))
+            ]
         if sourced:
             findings.append(
                 Finding("fail", f"Competitor: {label} used as a source", [" ".join(_plain(s).split())[:200] for s in sourced])
             )
         linked_named = [s for s in named if s not in sourced and _MD_LINK.search(s)]
-        if linked_named and not comparison:
+        if linked_named and not vendor:
             findings.append(
                 Finding(
                     "warn",
@@ -263,12 +292,12 @@ def run_all(
                 )
             )
 
-        # 4. More than one mention outside a comparison/tool-list article.
-        if not comparison and len(named) > 1:
+        # 4. More than one mention outside a vendor format.
+        if not vendor and len(named) > 1:
             findings.append(
                 Finding(
                     "warn",
-                    f"Competitor: {label} named in {len(named)} sentences (max 1 outside article_type: comparison/tool-list)",
+                    f"Competitor: {label} named in {len(named)} sentences (max 1 outside a vendor format: Tools Listicle, Alternatives, Comparison (Vendor))",
                     [" ".join(_plain(s).split())[:120] for s in named],
                 )
             )

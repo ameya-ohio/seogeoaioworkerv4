@@ -13,6 +13,7 @@ import {
   type SearchIntent,
 } from "./types.js";
 import { PLAN_FIELD_SPECS, normalizeHeader } from "./mapping.js";
+import { GENERIC_FORMAT_SLUG, resolveFormat, type FormatRegistry } from "../formats.js";
 
 /**
  * Turn mapped spreadsheet rows into typed rows, joined to the taxonomy
@@ -34,7 +35,10 @@ export interface NormalizedPlanRow {
   subtopicId: string | null;
   subtopicName: string | null;
   title: string;
+  /** Raw sheet value, e.g. "Comparison (Concept)". */
   format: string;
+  /** D45: the formats.json slug the raw value resolved to ("generic" if none). */
+  articleType: string;
   funnel: FunnelStage;
   searchIntent: SearchIntent;
   priority: PriorityTier;
@@ -106,6 +110,7 @@ export function normalizeRows(
   sheet: PlanSheet,
   mapping: PlanMapping,
   taxonomy: TaxonomyIndex,
+  formats?: FormatRegistry,
 ): NormalizeResult {
   const cols = mapping.columns;
   const skipped: NormalizeResult["skipped"] = [];
@@ -178,6 +183,18 @@ export function normalizeRows(
       searchIntent = DEFAULT_INTENT;
     }
 
+    // D45: an operator mapping wins, then the registry's labels and aliases.
+    // An unknown label is reported for mapping, never guessed; the row still
+    // imports on the generic format.
+    const formatRaw = cell(raw, cols.format);
+    let articleType = GENERIC_FORMAT_SLUG;
+    if (formatRaw) {
+      const mapped = mapping.values.articleType?.[formatRaw.toLowerCase()];
+      const resolved = mapped ?? (formats ? resolveFormat(formats, formatRaw)?.slug : undefined);
+      if (resolved) articleType = resolved;
+      else if (formats) noteUnrecognized("format", formatRaw, sheetRow);
+    }
+
     const pillar = taxonomy.pillarByName.get(normalizeHeader(pillarName));
     const idChain = parseHierarchicalId(externalId);
     const pillarId = pillar?.pillarId ?? idChain[0] ?? derivedId(pillarName);
@@ -206,7 +223,8 @@ export function normalizeRows(
       subtopicId,
       subtopicName,
       title,
-      format: cell(raw, cols.format),
+      format: formatRaw,
+      articleType,
       funnel,
       searchIntent,
       priority,

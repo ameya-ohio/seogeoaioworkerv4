@@ -1,0 +1,348 @@
+{
+  "_comment": "Format registry (D45) — the single source of truth for Article Type. Read by packages/engine/src/formats.ts, scripts/formats.py and the web app. Each format's writing guidance lives in templates/formats/<slug>.md (templates/formats/generic.md until one is written). Precedence for FAQ counts (D49): page role (pillar/hub) > the format's own faq > the funnel rule > defaults. Page role also wins the length band for hubs (routing pages, D47). Passages are coverage requirements, not an outline (D33); {subject} and {title} are filled per row.",
+  "version": 1,
+  "defaults": {
+    "takeaways": { "min": 3, "max": 3 },
+    "faq": { "min": 3, "max": 5, "optional": true }
+  },
+  "roleRules": {
+    "pillar": { "faq": { "min": 5, "max": 8 } },
+    "hub": { "faq": { "min": 4, "max": 6 }, "lengthBand": { "min": 1000, "max": 1600 }, "routing": true }
+  },
+  "funnelRules": {
+    "bofu": { "faq": { "min": 4, "max": 6 } }
+  },
+  "formats": [
+    {
+      "slug": "pillar-guide", "label": "Pillar Guide", "aliases": ["pillar", "pillar page", "complete guide", "ultimate guide"],
+      "defaultIntent": "informational", "defaultFunnel": "tofu",
+      "allowedRoles": ["pillar"],
+      "lengthBand": { "min": 3000, "max": 5000 },
+      "schema": ["Article", "BreadcrumbList", "DefinedTerm"],
+      "headerPattern": "report-cover",
+      "passages": [
+        "A 50–80 word answer defining {subject} that can be lifted verbatim",
+        "A full definition of {subject}, self-sufficient even though a child definition page exists",
+        "One section per sub-theme that answers its own question completely, then links down to the child page",
+        "How {subject} works, as a numbered sequence",
+        "A cluster map linking every child page with its head term as the anchor"
+      ]
+    },
+    {
+      "slug": "definition-explainer", "label": "Definition / Explainer", "aliases": ["definition", "explainer", "definition explainer", "what is", "glossary", "mechanism explainer"],
+      "defaultIntent": "informational", "defaultFunnel": "tofu",
+      "allowedRoles": ["hub", "cluster"], "allowedFunnels": ["tofu", "mofu"],
+      "lengthBand": { "min": 900, "max": 1800 },
+      "schema": ["Article", "BreadcrumbList", "DefinedTerm"],
+      "headerPattern": "clean-light",
+      "passages": [
+        "A 40–60 word definition of {subject} that is extractable with zero surrounding context",
+        "How {subject} differs from the nearest neighbouring term",
+        "The components or types of {subject}, as a list or table",
+        "Common misconceptions about {subject}"
+      ]
+    },
+    {
+      "slug": "deep-dive", "label": "Deep-dive", "aliases": ["deep dive", "deepdive", "technical deep dive"],
+      "defaultIntent": "informational", "defaultFunnel": "mofu",
+      "allowedRoles": ["cluster", "hub"],
+      "lengthBand": { "min": 1800, "max": 2800 },
+      "schema": ["TechArticle", "BreadcrumbList"],
+      "headerPattern": "auto",
+      "passages": [
+        "A 60–80 word answer to \"{title}\" that answers the precise long-tail question",
+        "Technical specifics a generalist could not produce: commands, attribute names, permission strings, MITRE technique IDs, event IDs",
+        "Edge cases and exceptions",
+        "How to detect or verify it in your own environment"
+      ]
+    },
+    {
+      "slug": "how-to-guide", "label": "How-to Guide", "aliases": ["how to", "how-to", "howto", "tutorial", "guide"],
+      "defaultIntent": "informational", "defaultFunnel": "mofu",
+      "allowedRoles": ["cluster", "hub"],
+      "lengthBand": { "min": 1200, "max": 2000 },
+      "schema": ["Article", "BreadcrumbList", "HowTo"],
+      "headerPattern": "auto",
+      "passages": [
+        "The whole procedure for {title} compressed to 60 words, or the step count plus the outcome",
+        "Prerequisites: permissions, tools and access level",
+        "Numbered steps in order, each with the action, why it matters and the expected result",
+        "How to verify it worked, and a symptom → cause → fix troubleshooting table"
+      ]
+    },
+    {
+      "slug": "framework", "label": "Framework", "aliases": ["model", "methodology"],
+      "defaultIntent": "informational", "defaultFunnel": "mofu",
+      "allowedRoles": ["cluster", "hub"],
+      "lengthBand": { "min": 2000, "max": 3000 },
+      "schema": ["Article", "BreadcrumbList", "DefinedTerm"],
+      "headerPattern": "auto",
+      "passages": [
+        "The framework in 60 words: its stable name, its stages, and what it is for",
+        "A table of stages, then one section per stage: what it is, what you do, what you produce, how you know you're done",
+        "How the framework maps to established standards (MITRE ATT&CK, CIS, NIST, ANSSI)",
+        "An adoption path: where to start"
+      ]
+    },
+    {
+      "slug": "template", "label": "Template", "aliases": ["templates", "policy template", "spreadsheet"],
+      "defaultIntent": "informational", "defaultFunnel": "mofu",
+      "allowedRoles": ["cluster"],
+      "lengthBand": { "min": 800, "max": 1200 },
+      "schema": ["Article", "BreadcrumbList", "DigitalDocument"],
+      "headerPattern": "auto",
+      "passages": [
+        "What the template contains, as a list",
+        "The template rendered in full on the page as a table or structured list, not only a download",
+        "Field-by-field guidance with a worked example for each field",
+        "A filled-in example"
+      ]
+    },
+    {
+      "slug": "checklist", "label": "Checklist", "aliases": ["checklists", "audit checklist", "hardening checklist", "rfp checklist"],
+      "defaultIntent": "informational", "defaultFunnel": "mofu",
+      "allowedRoles": ["cluster"],
+      "lengthBand": { "min": 1000, "max": 1600 },
+      "schema": ["Article", "BreadcrumbList", "ItemList"],
+      "headerPattern": "auto",
+      "passages": [
+        "The item count, what the checklist covers and who it is for",
+        "The checklist grouped into 4–8 named sections; every item a yes/no imperative with one line of why",
+        "Priority tiering: critical, important, recommended",
+        "Scoring and what your result means"
+      ]
+    },
+    {
+      "slug": "comparison-concept", "label": "Comparison (Concept)", "aliases": ["comparison", "concept comparison", "vs", "versus", "difference between"],
+      "defaultIntent": "informational", "defaultFunnel": "mofu",
+      "allowedRoles": ["cluster"],
+      "lengthBand": { "min": 1200, "max": 1800 },
+      "schema": ["Article", "BreadcrumbList"],
+      "headerPattern": "question-hook",
+      "passages": [
+        "The distinction in one or two sentences, stated outright",
+        "A comparison table high on the page: 6–10 rows of real dimensions, substantive cells, never checkmarks",
+        "Where the two genuinely overlap",
+        "When to use which, and whether you need both"
+      ]
+    },
+    {
+      "slug": "comparison-vendor", "label": "Comparison (Vendor)", "aliases": ["vendor comparison", "competitor comparison", "head to head"],
+      "defaultIntent": "commercial", "defaultFunnel": "bofu",
+      "allowedRoles": ["cluster"], "allowedFunnels": ["bofu", "mofu"],
+      "lengthBand": { "min": 1800, "max": 2500 },
+      "schema": ["Article", "BreadcrumbList"],
+      "headerPattern": "question-hook",
+      "competitorMode": "vendor", "signoff": true,
+      "passages": [
+        "Who each vendor is genuinely best for, with a real concession",
+        "An at-a-glance comparison table: architecture, deployment, coverage, remediation, time to value, pricing model, best fit",
+        "What the competitor does well, placed before the company's case",
+        "Choose [competitor] if… / choose the company if…"
+      ]
+    },
+    {
+      "slug": "alternatives", "label": "Alternatives", "aliases": ["competitor alternatives", "alternatives to"],
+      "defaultIntent": "commercial", "defaultFunnel": "bofu",
+      "allowedRoles": ["cluster", "hub"],
+      "lengthBand": { "min": 2000, "max": 3000 },
+      "schema": ["Article", "BreadcrumbList", "ItemList"],
+      "headerPattern": "auto",
+      "competitorMode": "vendor", "signoff": true,
+      "passages": [
+        "The shortlist named, with a one-line reason for each",
+        "A summary table: vendor, best for, deployment model, differentiator, pricing model",
+        "Why teams look for alternatives, with sourced reasons",
+        "One entry per alternative with identical sub-structure, the company in a consistent slot"
+      ]
+    },
+    {
+      "slug": "best-practices", "label": "Best Practices", "aliases": ["best practice", "recommendations", "hardening guide"],
+      "defaultIntent": "informational", "defaultFunnel": "mofu",
+      "allowedRoles": ["cluster", "hub"],
+      "lengthBand": { "min": 1500, "max": 2200 },
+      "schema": ["Article", "BreadcrumbList", "ItemList"],
+      "headerPattern": "auto",
+      "passages": [
+        "The practices named and numbered in 60–80 words",
+        "One section per practice: the imperative, why it works, how to implement and verify it, what it costs",
+        "Priority order: which three to do first",
+        "Anti-patterns: what to stop doing"
+      ]
+    },
+    {
+      "slug": "assessment-guide", "label": "Assessment Guide", "aliases": ["assessment", "maturity model", "audit guide"],
+      "defaultIntent": "commercial", "defaultFunnel": "mofu",
+      "allowedRoles": ["cluster", "hub"],
+      "lengthBand": { "min": 1500, "max": 2200 },
+      "schema": ["Article", "BreadcrumbList", "HowTo"],
+      "headerPattern": "auto",
+      "passages": [
+        "What an assessment of {subject} covers and produces, in 60 words",
+        "The assessment as numbered phases: scope, collect, analyse, score, prioritise, report",
+        "A what-to-look-for table: area, what to check, what good and bad look like",
+        "A scoring model or maturity levels with observable criteria at each level"
+      ]
+    },
+    {
+      "slug": "buyers-guide", "label": "Buyer's Guide", "aliases": ["buyers guide", "buyer guide", "rfp", "evaluation guide", "how to choose"],
+      "defaultIntent": "commercial", "defaultFunnel": "bofu",
+      "allowedRoles": ["cluster"],
+      "lengthBand": { "min": 2500, "max": 3500 },
+      "schema": ["Article", "BreadcrumbList", "ItemList"],
+      "headerPattern": "report-cover",
+      "passages": [
+        "The evaluation criteria named, in 60–80 words",
+        "Who needs this category and who does not, placed early",
+        "One section per evaluation criterion: why it matters, how to test it, a good answer, a red flag",
+        "Questions to ask every vendor, as a numbered list copy-pasteable into an RFP"
+      ]
+    },
+    {
+      "slug": "metrics-guide", "label": "Metrics Guide", "aliases": ["metrics", "kpis", "how to measure"],
+      "defaultIntent": "informational", "defaultFunnel": "mofu",
+      "allowedRoles": ["cluster", "hub"],
+      "lengthBand": { "min": 1500, "max": 2200 },
+      "schema": ["Article", "BreadcrumbList", "DefinedTerm"],
+      "headerPattern": "auto",
+      "passages": [
+        "The metrics named, in 60–80 words",
+        "Why the obvious metrics mislead",
+        "One section per metric: definition, the formula, data required, interpretation, benchmark range, how it gets gamed",
+        "The 3–5 numbers an executive should see"
+      ]
+    },
+    {
+      "slug": "stats-data", "label": "Stats / Data", "aliases": ["stats", "statistics", "data", "stats data"],
+      "defaultIntent": "informational", "defaultFunnel": "tofu",
+      "allowedRoles": ["cluster", "hub"],
+      "lengthBand": { "min": 1200, "max": 2000 },
+      "takeaways": { "min": 8, "max": 12 },
+      "faq": { "min": 0, "max": 0 },
+      "schema": ["Article", "BreadcrumbList", "Dataset"],
+      "headerPattern": "stat-highlight",
+      "passages": [
+        "The 3–5 headline figures on {subject}, stated outright with sources named inline",
+        "Key statistics as standalone sentences, each with the number, subject, source and year",
+        "A data table: statistic, figure, source, year, sample or methodology",
+        "What the data means, and a methodology and sources section"
+      ]
+    },
+    {
+      "slug": "original-research", "label": "Original Research", "aliases": ["research", "report", "study", "survey"],
+      "defaultIntent": "informational", "defaultFunnel": "tofu",
+      "allowedRoles": ["cluster"],
+      "lengthBand": { "min": 2500, "max": 4000 },
+      "takeaways": { "min": 5, "max": 8 },
+      "schema": ["Article", "BreadcrumbList", "Dataset"],
+      "headerPattern": "report-cover",
+      "requires": { "dataset": "context/research/{slug}.md" },
+      "passages": [
+        "The headline finding with its number and sample size",
+        "Methodology, early and detailed: sample, population, period, collection method, limitations",
+        "One section per finding: the finding, the data, interpretation, why it matters",
+        "Limitations and what could not be measured"
+      ]
+    },
+    {
+      "slug": "examples", "label": "Examples", "aliases": ["example", "real world examples", "scenarios"],
+      "defaultIntent": "informational", "defaultFunnel": "tofu",
+      "allowedRoles": ["cluster", "hub"],
+      "lengthBand": { "min": 1200, "max": 1800 },
+      "schema": ["Article", "BreadcrumbList", "ItemList"],
+      "headerPattern": "auto",
+      "passages": [
+        "The example categories named, in 60 words",
+        "A quick-reference table: example, environment, mechanism, impact, fix",
+        "One section per example with identical sub-structure, naming specific attributes, permissions or commands",
+        "Patterns across the examples"
+      ]
+    },
+    {
+      "slug": "thought-leadership", "label": "Thought Leadership", "aliases": ["opinion", "point of view", "pov", "perspective"],
+      "defaultIntent": "informational", "defaultFunnel": "tofu",
+      "allowedRoles": ["cluster"],
+      "lengthBand": { "min": 1200, "max": 1800 },
+      "faq": { "min": 0, "max": 0 },
+      "schema": ["Article", "BreadcrumbList"],
+      "headerPattern": "contrarian",
+      "passages": [
+        "The thesis asserted plainly in 50–60 words",
+        "Why the conventional view persists, steelmanned properly",
+        "The counter-argument taken seriously, then answered",
+        "What would change the author's mind"
+      ]
+    },
+    {
+      "slug": "tools-listicle", "label": "Tools Listicle", "aliases": ["tools", "best tools", "top tools", "listicle", "tool list"],
+      "defaultIntent": "commercial", "defaultFunnel": "bofu",
+      "allowedRoles": ["cluster"],
+      "lengthBand": { "min": 2000, "max": 3000 },
+      "schema": ["Article", "BreadcrumbList", "ItemList"],
+      "headerPattern": "auto",
+      "competitorMode": "vendor", "signoff": true,
+      "passages": [
+        "The tools named, with a one-line reason for each",
+        "How the tools were evaluated, stated before the list",
+        "One entry per tool with identical structure including a real limitations line, the company included",
+        "What no tool solves"
+      ]
+    },
+    {
+      "slug": "solution-page", "label": "Solution Page", "aliases": ["solution", "solutions"],
+      "defaultIntent": "commercial", "defaultFunnel": "bofu",
+      "allowedRoles": ["cluster"],
+      "lengthBand": { "min": 800, "max": 1200 },
+      "schema": ["Service", "BreadcrumbList"],
+      "headerPattern": "clean-light",
+      "requires": { "factSheet": "context/product/solution-page/{slug}.md" },
+      "passages": [
+        "What the solution does, for whom, with what outcome, in 50 words",
+        "3–5 capability blocks, each an outcome",
+        "Proof: named customers where permitted and quantified outcomes",
+        "Deployment and integrations"
+      ]
+    },
+    {
+      "slug": "use-case", "label": "Use Case", "aliases": ["use cases", "industry", "for industry"],
+      "defaultIntent": "commercial", "defaultFunnel": "bofu",
+      "allowedRoles": ["cluster", "hub"],
+      "lengthBand": { "min": 900, "max": 1400 },
+      "schema": ["Article", "BreadcrumbList"],
+      "headerPattern": "clean-light",
+      "requires": { "factSheet": "context/product/use-case/{slug}.md" },
+      "passages": [
+        "The specific problem this segment has and the outcome, in 50–60 words",
+        "Why this segment is different: constraints that are only true for it",
+        "Relevant compliance mapping for this segment",
+        "Proof from a customer in this segment"
+      ]
+    },
+    {
+      "slug": "integration-page", "label": "Integration Page", "aliases": ["integration", "integrations"],
+      "defaultIntent": "commercial", "defaultFunnel": "bofu",
+      "allowedRoles": ["cluster"],
+      "lengthBand": { "min": 700, "max": 1100 },
+      "schema": ["SoftwareApplication", "BreadcrumbList", "HowTo"],
+      "headerPattern": "clean-light",
+      "requires": { "factSheet": "context/product/integration-page/{slug}.md" },
+      "passages": [
+        "What the integration does and what it requires, in 50 words",
+        "What data is collected, and the exact permission or role names required",
+        "Setup as numbered steps with the real console path",
+        "Limitations: what is not covered"
+      ]
+    },
+    {
+      "slug": "offer-landing-page", "label": "Offer / Landing Page", "aliases": ["offer", "landing page", "offer page"],
+      "defaultIntent": "transactional", "defaultFunnel": "bofu",
+      "allowedRoles": ["hub", "cluster"], "allowedIntents": ["transactional", "commercial"],
+      "lengthBand": { "min": 500, "max": 900 },
+      "faq": { "min": 0, "max": 0 },
+      "schema": ["WebPage"],
+      "headerPattern": "clean-light",
+      "producible": false,
+      "passages": []
+    }
+  ]
+}

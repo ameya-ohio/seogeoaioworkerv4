@@ -20,6 +20,8 @@ import {
   storageFromEnv,
   syncCompany,
   analyzePlan,
+  applyRepoFiles,
+  loadFormatRegistry,
   commitPlan,
   createPlan,
   createSchedule,
@@ -625,11 +627,15 @@ async function cmdPlanImport(argv: string[]): Promise<void> {
     );
     process.exit(2);
   }
-  const { db, companyId, companyName } = await setup();
+  const { cfg, db, companyId, companyName } = await setup();
   try {
     const path = isAbsolute(file) ? file : resolve(process.cwd(), file);
     const buf = await readFile(path);
     const wb = await readWorkbook(buf, basename(path));
+    // Admin edits to standards/formats.json must shape the import exactly as
+    // they will shape the run.
+    await applyRepoFiles(db, companyId, cfg.repoRoot);
+    const formats = loadFormatRegistry(cfg.repoRoot);
 
     const suggestion = suggestMapping(wb);
     const mapping = suggestion.mapping;
@@ -651,6 +657,7 @@ async function cmdPlanImport(argv: string[]): Promise<void> {
       workbook: wb,
       mapping,
       companyName,
+      formats,
       takenSlugs,
       existingKeywords,
     });

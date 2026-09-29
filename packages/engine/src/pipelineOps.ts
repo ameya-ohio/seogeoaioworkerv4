@@ -3,7 +3,8 @@ import type { EngineDb } from "./db.js";
 import { createArticle, getArticleBySlug } from "./dal/articles.js";
 import { enqueueRun } from "./dal/runs.js";
 import { emitEvent } from "./dal/events.js";
-import type { ArticleBrief, ArticleDoc, RunDoc, WorkStage } from "./types.js";
+import type { ArticleBrief, ArticleDoc, ArticleFacets, RunDoc, WorkStage } from "./types.js";
+import { GENERIC_FORMAT_SLUG } from "./formats.js";
 
 /** Mirrors scripts/new_article.py slug rules (lowercase, hyphenated, ≤ 60). */
 export function slugify(raw: string): string {
@@ -35,6 +36,8 @@ export interface EnqueueArticleInput {
    * Plan item whose brief should ride along the same way. Mutually exclusive
    * with themeId in practice; themeId wins if both are given.
    */
+  /** Operator- or keyword-supplied facets; a brief's own facets win over these. */
+  facets?: ArticleFacets;
   planItemId?: ObjectId;
   /** Extra provenance for the run.queued event (plan id, sequence, fire). */
   eventData?: Record<string, unknown>;
@@ -65,6 +68,8 @@ export async function enqueueArticlePipeline(
   let brief: ArticleBrief | undefined;
   let pendingLinks: string[] | undefined;
   let planId: ObjectId | undefined;
+  let facets: ArticleFacets | undefined = input.facets;
+  let path: string | undefined;
   if (input.themeId) {
     const theme = await db.themes.findOne({ _id: input.themeId });
     const cluster = theme ? await db.clusters.findOne({ _id: theme.clusterId }) : null;
@@ -81,6 +86,16 @@ export async function enqueueArticlePipeline(
         // are queryable per article, not just embedded in the markdown.
         spec: spokeBrief,
       };
+      if (spokeBrief.page) {
+        facets = {
+          pageRole: spokeBrief.page.pageRole,
+          searchIntent: spokeBrief.page.searchIntent as ArticleFacets["searchIntent"],
+          articleType: spokeBrief.page.articleType,
+          funnel: spokeBrief.page.funnel as ArticleFacets["funnel"],
+          source: "cluster",
+        };
+        brief.facets = facets;
+      }
       // D35: hub + sibling spokes are PLANNED pages — plain mentions until
       // they publish; Phase 5 backfills the links.
       pendingLinks = [spokeBrief.internalLinks.hub, ...spokeBrief.internalLinks.siblings].filter(
@@ -100,6 +115,15 @@ export async function enqueueArticlePipeline(
         spec: item.brief,
         pageRole: item.pageRole,
       };
+      facets = {
+        pageRole: item.pageRole,
+        searchIntent: item.searchIntent,
+        articleType: item.articleType ?? item.brief.page?.articleType ?? GENERIC_FORMAT_SLUG,
+        funnel: item.funnel,
+        source: "plan",
+      };
+      brief.facets = facets;
+      path = item.path ?? item.brief.page?.path;
       // A routing page also links DOWN to its children; all of them are
       // planned pages, so they are plain mentions until they exist (D35).
       pendingLinks = [
@@ -124,6 +148,8 @@ export async function enqueueArticlePipeline(
     ...(input.keyword ? { targetKeyword: input.keyword } : {}),
     ...(brief ? { brief } : {}),
     ...(pendingLinks?.length ? { pendingLinks } : {}),
+    ...(facets ? { facets } : {}),
+    ...(path ? { path } : {}),
     ...(planId ? { planId } : {}),
     ...(input.planItemId ? { planItemId: input.planItemId } : {}),
   });

@@ -23,7 +23,7 @@ Before generating anything, extract and hold these from company knowledge:
 - **Product capabilities.** Only documented ones; never infer features.
 - **Proprietary assets.** Customer data, benchmarks, case results, and frameworks the company owns. These are right-to-win and quotable-stat candidates.
 - **Existing content inventory.** URLs, titles, the theme each covers.
-- **Competitors and category terms** the company uses and avoids. `context/sales/competitive-landscape.md` gives the head-to-head vs. complementary split. Never propose a spoke whose premise is a head-to-head vendor's research, and never list such a vendor as evidence in a brief. Comparison or tool-list spokes are fine, and complementary-category pairings are good spoke material (e.g. "attack paths vs. PAM").
+- **Competitors and category terms** the company uses and avoids. `context/sales/competitive-landscape.md` gives the head-to-head vs. complementary split. Never propose a spoke whose premise is a head-to-head vendor's research, and never list such a vendor as evidence in a brief. Vendor-format spokes (Tools Listicle, Alternatives, Comparison (Vendor)) are fine and carry the D51 exception, and complementary-category pairings are good spoke material (e.g. "attack paths vs. PAM").
 
 ---
 

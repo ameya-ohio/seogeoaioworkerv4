@@ -11,9 +11,10 @@ The Writer will follow your outline mechanically. If the outline is wrong, the a
 ## Inputs to load
 
 1. `articles/YYYY-MM-DD-slug/research-notes.md`
+1.1. `articles/YYYY-MM-DD-slug/page.md` — **this page's spec** (D45–D50), written by the worker: the page's four facets (page role, article type, search intent, funnel), the rules they resolve to (length band, Key Takeaways count, FAQ range, schema types, closing CTA, how much the company appears), and the **format guide** for its article type. The outline is built on the format guide's structure, adapted to the house voice (declarative H2s, the operator register, the Topic Summary intro). When page.md says the page has no facets yet, choose them yourself from `standards/formats.json` (see 0 below).
 1.5. `articles/YYYY-MM-DD-slug/brief.md` — **if present**, a spoke brief from the Topic & Cluster Generator. It is a first-class input, but it is a **coverage contract, not an outline** (D33): its required passages must each exist somewhere in the article (answer-first, able to survive extraction), its evidence requirements bind, and its length band replaces the SERP-median rule. **The narrative structure is yours** — you decide the arc and the headings; the brief decides what must be covered.
 
-   A brief may describe a **routing page**. Its header prints a page role, and a brief carrying a *"Pages this routing page must link down to"* block is one. That block is a coverage requirement like any other: each child page gets a 2–3 sentence answer in the body, **in the listed order**, and a pointer onward. Mention a child by title in plain text — never as a hyperlink until that page exists (D35). A routing page is not a shorter version of every child; it is the page that tells a reader which child they actually want.
+   A brief may describe a **routing page** (a subtopic hub). Its *Page facets* block names the role, and a brief carrying a *"Pages this routing page must link down to"* block is one. A hub's article type sets only its framing and intro (D47). A **pillar** is not a routing page: it is a complete Pillar Guide whose *"Pages this pillar must link down to"* block lists the children each sub-theme section points to. That block is a coverage requirement like any other: each child page gets a 2–3 sentence answer in the body, **in the listed order**, and a pointer onward. Mention a child by title in plain text — never as a hyperlink until that page exists (D35). A routing page is not a shorter version of every child; it is the page that tells a reader which child they actually want.
 1.6. `context/author-style/` — the voice and structure spec (arc, heading style, rhythm). The outline you produce must be writable in that voice.
 2. **All** files in `standards/`:
    - `standards/seo-checklist.md`
@@ -34,6 +35,10 @@ If `context/` is empty, default to: audience = mid-market and enterprise leaders
 ## Decisions you must make
 
 For each, write the decision **and the reason**. The Writer will read your reasoning when prose drifts.
+
+### 0. Page facets
+
+Record the page's four facets in `## Page Facets`. When page.md already lists them (a plan item or a brief set them), copy them. When it doesn't, choose them: the page role (`pillar`, `hub` or `cluster`), the article type (a label or slug from `standards/formats.json` — pick the format whose query patterns match the primary keyword), the search intent, and the funnel stage. The outline gate rejects a value the registry doesn't know. Every rule downstream (FAQ range, takeaways, length, schema, CTA) follows from these four.
 
 ### 1. Final angle
 
@@ -77,12 +82,13 @@ Pick at least three concrete tactics for this article.
 
 Which named entities will the article mention by name? List them with their canonical Wikipedia/Wikidata URL where available. Schema Builder will turn these into the `mentions` array.
 
-### 7. FAQ candidates (3–7)
+### 7. FAQ candidates (the range in page.md)
 
-Pick the 3–7 strongest "questions people are asking" from research. Each must:
+Pick the strongest "questions people are asking" from research, as many as page.md's FAQ range allows (D49: pillar 5–8, hub 4–6, cluster 3–5 or none, BOFU 4–6, none at all for Thought Leadership and Stats / Data). Each must:
 - Be phrased the way a real human would phrase it (not "What is X?" robot voice) — plainly, with no filler intensifiers ("actually", "really", "exactly", "truly")
 - Have a clear, factual answer the article will deliver
-- Add net-new information beyond what the body already covers
+- Add net-new information beyond what the body already covers — never a question one of your H2 sections already answers
+- Not be another page's target query (brief.md lists the siblings' queries). If readers ask it here anyway, plan a one- or two-sentence answer that points to that page
 
 ### 8. Internal-link opportunities
 
@@ -133,7 +139,7 @@ Never plan a hypothetical ("picture a domain with 400 accounts…", "imagine a h
 Apply `standards/quality-bar.md` → *Competitor handling*, using the vendor list in `context/sales/competitive-landscape.md`:
 
 - **Head-to-head vendors** stay out of the Intro Strategy, the Key Takeaways, the FAQ candidates, and External Citations to Use. If a research-notes citation comes from one (including their executives quoted in third-party outlets), drop it from the plan. It's a research error, so don't route around it.
-- Decide whether this is a **comparison or tool-list article**. If it is, each head-to-head vendor gets one factual description. If it isn't, plan at most one factual mention per vendor, inside a comparison of approaches or categories, and name the section it goes in. Plan no mention at all when the argument doesn't need one.
+- The page's **article type** decides the mode. In a **vendor format** (Tools Listicle, Alternatives, Comparison (Vendor) — `competitorMode: vendor` in formats.json) the scoped exception applies (D51): vendors are named wherever the format needs them, a competitor's own public docs may source claims about that competitor only, and you record a re-verify-by date for every competitor claim. In every other format, plan at most one factual mention per vendor, inside a comparison of approaches or categories, and name the section it goes in. Plan no mention at all when the argument doesn't need one.
 - For **complementary vendors**, plan the framing from their category in that file: they work alongside the company, and the company doesn't replace them.
 - List a head-to-head vendor under Target Entities only when the plan names it.
 
@@ -169,6 +175,12 @@ Write to `articles/YYYY-MM-DD-slug/outline.md` using this structure:
 ## Thesis
 [1–2 sentences: the claim the article argues, drawn from the research's discourse analysis. Every section advances it; the close crystallizes it.]
 
+## Page Facets
+- Page role: [pillar | hub | cluster]
+- Article type: [label from standards/formats.json, e.g. Comparison (Concept)]
+- Search intent: [informational | commercial | transactional | navigational]
+- Funnel: [TOFU | MOFU | BOFU]
+
 ## Keywords
 - Primary: [keyword]
 - Secondary: [list]
@@ -191,7 +203,7 @@ Write to `articles/YYYY-MM-DD-slug/outline.md` using this structure:
 ## FAQ Candidates
 1. [Question 1]
 2. [Question 2]
-[3–7 total]
+[within page.md's FAQ range — leave the section empty when the format carries none]
 
 ## Internal Link Opportunities
 - [URL or placeholder description] — [where in the article]
@@ -215,7 +227,7 @@ or [documented incident: <name> — <source from research notes>]
 or [none — no case study or documented incident fits; the argument rests on sourced figures]
 
 ## Competitor Handling
-[Article type: comparison | tool-list | other — the Writer copies comparison/tool-list into the `article_type` frontmatter]
+[Mode: vendor format (D51 exception, re-verify-by date: <YYYY-MM-DD>) | strict]
 [Head-to-head vendors named: <vendor> — the one factual mention and the section it's in | none]
 [Complementary vendors named: <vendor> (<category>) — framed as working alongside the company]
 [Research-notes citations dropped as head-to-head sources: <#N — why> | none]
@@ -228,8 +240,8 @@ or [none — no case study or documented incident fits; the argument rests on so
 ### Intro (≈ 150 words)
 [1-line summary: substance paragraph + why-now paragraph + thesis preview — built from the Topic Summary]
 
-### Key Takeaways (exactly 3 bullets)
-[List the three bullets — these become the speakable block + GEO summary block]
+### Key Takeaways (the count in page.md — exactly 3 unless the format says otherwise)
+[List the bullets — these become the speakable block + GEO summary block]
 
 ### H2: [Heading 1] (≈ 250–350 words)
 - [What the section covers, in one sentence]

@@ -67,6 +67,8 @@ export interface PlanMapping {
     funnel: Record<string, FunnelStage>;
     priority: Record<string, PriorityTier>;
     searchIntent: Record<string, SearchIntent>;
+    /** Raw format label -> formats.json slug; operator-set only (the registry resolves the rest). */
+    articleType?: Record<string, string>;
   };
 }
 
@@ -125,6 +127,8 @@ export interface PlanImportReport {
   byFormat: Record<string, number>;
   /** Facet values no value-map entry covers, with the rows carrying them. */
   unrecognized: { field: PlanColumn; value: string; rows: number[] }[];
+  /** Role/funnel/intent combinations the build spec calls mis-tagged (never blocking). */
+  facetWarnings?: { externalId: string; warning: string }[];
   /** Two rows in THIS import resolving to the same slug after disambiguation. */
   duplicateSlugs: { slug: string; externalIds: string[] }[];
   duplicateTitles: { title: string; externalIds: string[] }[];
@@ -246,8 +250,14 @@ export interface PlanItemDoc {
   parentItemId?: ObjectId;
 
   title: string;
-  /** Raw sheet value, e.g. "Comparison (Concept)" — drives the length band. */
+  /** Raw sheet value, e.g. "Comparison (Concept)". */
   format: string;
+  /** D45: formats.json slug resolved from `format` (absent on items imported before the registry). */
+  articleType?: string;
+  /** D46: reserved site path, e.g. "/learn/<pillar>/<hub>/<page>/". Editable until articleId is set. */
+  path?: string;
+  /** D51: why this item can't be produced yet (missing fact sheet, non-producible format). */
+  heldReason?: string;
   funnel: FunnelStage;
   searchIntent: SearchIntent;
   priority: PriorityTier;

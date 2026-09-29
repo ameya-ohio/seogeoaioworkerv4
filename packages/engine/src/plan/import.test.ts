@@ -7,6 +7,7 @@ import { suggestMapping } from "./mapping.js";
 import { analyzePlan } from "./import.js";
 import { findOrderViolations } from "../schedule/sequencing.js";
 import type { PlanMapping } from "./types.js";
+import { testFormats } from "../__testutil__/formats.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 let wb: ParsedWorkbook;
@@ -18,7 +19,7 @@ beforeAll(async () => {
 });
 
 const analyze = (over: Parameters<typeof analyzePlan>[0] extends infer T ? Partial<T> : never = {}) =>
-  analyzePlan({ workbook: wb, mapping, companyName: "Acme", ...over });
+  analyzePlan({ workbook: wb, mapping, companyName: "Acme", formats: testFormats(), ...over });
 
 describe("analyzePlan", () => {
   it("produces one item per payload row with nothing blocking", () => {
@@ -128,6 +129,7 @@ describe("analyzePlan", () => {
       workbook: small,
       mapping: suggestMapping(small).mapping,
       companyName: "Acme",
+      formats: testFormats(),
     });
     expect(report.blocking.join(" ")).toContain("truncated");
   });
@@ -164,7 +166,7 @@ describe("analyzePlan", () => {
           : s,
       ),
     };
-    const { report } = analyzePlan({ workbook: withoutHub, mapping, companyName: "Acme" });
+    const { report } = analyzePlan({ workbook: withoutHub, mapping, companyName: "Acme", formats: testFormats() });
     expect(report.missingHubs.length).toBeGreaterThan(0);
   });
 

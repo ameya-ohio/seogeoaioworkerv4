@@ -12,7 +12,10 @@ canonical_url: ""
 hero_image: ""
 hero_image_alt: ""
 category: ""
-article_type: ""      # "comparison" | "tool-list" | "" — from the outline's Competitor Handling
+page_role: ""         # stamped by the worker (D45): pillar | hub | cluster
+search_intent: ""     # stamped by the worker
+article_type: ""      # stamped by the worker: a standards/formats.json slug
+funnel: ""            # stamped by the worker: tofu | mofu | bofu
 tags: []
 reading_time_minutes: 0
 ---

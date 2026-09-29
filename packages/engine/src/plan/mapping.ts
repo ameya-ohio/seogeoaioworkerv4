@@ -301,6 +301,7 @@ export function remapValues(wb: ParsedWorkbook, mapping: PlanMapping): PlanMappi
       funnel: { ...fresh.funnel, ...mapping.values.funnel },
       priority: { ...fresh.priority, ...mapping.values.priority },
       searchIntent: { ...fresh.searchIntent, ...mapping.values.searchIntent },
+      ...(mapping.values.articleType ? { articleType: mapping.values.articleType } : {}),
     },
   };
 }

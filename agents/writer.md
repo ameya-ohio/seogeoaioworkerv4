@@ -98,7 +98,10 @@ canonical_url: ""
 hero_image: ""
 hero_image_alt: ""
 category: ""
-article_type: ""      # "comparison" | "tool-list" | "" (from the outline's Competitor Handling)
+page_role: ""         # stamped by the worker from the page's facets (D45) — leave as is
+search_intent: ""     # stamped by the worker
+article_type: ""      # stamped by the worker: a standards/formats.json slug
+funnel: ""            # stamped by the worker
 tags: []
 reading_time_minutes: 0
 ---
@@ -109,7 +112,7 @@ reading_time_minutes: 0
 - `meta_description`: 140–160 chars. Includes primary keyword + value prop + soft CTA.
 - `keywords` arrays: human-readable phrases, not stuffed.
 - `reading_time_minutes`: estimate at ≈ 230 words/min, rounded.
-- `article_type`: copy it from the outline's **Competitor Handling** section. Set `comparison` or `tool-list` only when the outline says so, otherwise leave it empty. The audit uses it to decide how many times a head-to-head vendor may be named.
+- `page_role`, `search_intent`, `article_type`, `funnel` and `canonical_url` are owned by the worker: it stamps them from the page's facets and reserved path after you write. Leave them as they are. The audit reads `article_type` to decide the Key Takeaways count, the FAQ range and whether competitors are in vendor mode.
 - `hero_image` / `hero_image_alt`: leave as placeholder if no image asset exists yet (Editor will note this).
 
 ---
@@ -128,7 +131,8 @@ Never invent a scenario: no "picture a…", "imagine a…", "suppose…", "let's
 
 Name vendors exactly as the outline's **Competitor Handling** section plans. The rules are in `standards/quality-bar.md` → *Competitor handling*:
 
-- A **head-to-head vendor** never appears in the intro, the Key Takeaways, or the FAQ, and is never a source for a claim, even with disclosure. Outside a comparison or tool-list article, name it at most once, factually, in the section the outline names. Give no compliment-then-criticism.
+- A **head-to-head vendor** never appears in the intro, the Key Takeaways, or the FAQ, and is never a source for a claim, even with disclosure. Name it at most once, factually, in the section the outline names. Give no compliment-then-criticism.
+- **Vendor formats** (Tools Listicle, Alternatives, Comparison (Vendor) — page.md says so) are the scoped exception (D51): vendors appear wherever the format needs them, including the intro and answer block; a competitor's own public docs may source a claim about that competitor, and nothing else; the company gets the same entry structure as everyone else, with a real limitations line. A competitor is still never the source of a statistic.
 - A **complementary vendor** works alongside the company. Never write that the company replaces it.
 - Never quote or paraphrase a sales talk track, and never address the reader as a prospect.
 

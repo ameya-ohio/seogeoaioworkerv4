@@ -173,6 +173,12 @@ informational — evaluating architectures
 ## Quotable Sound Bites
 - Context beats cleverness.
 
+## Page Facets
+- Page role: cluster
+- Article type: Deep-dive
+- Search intent: informational
+- Funnel: MOFU
+
 ## Hook Strategy
 Contrarian stat.
 
@@ -249,6 +255,10 @@ The practice of deciding what a model sees.
 ### How many layers do I need?
 
 Four layers cover most teams.
+
+### Should I use Markdown or PDFs?
+
+Markdown, because models parse its structure directly.
 `;
 
 const SCHEMA = {
@@ -448,6 +458,20 @@ describe("runPipeline end-to-end (fake agents, real gates + python checks)", () 
     // Final audit (stored at design) has zero failures.
     expect(doc?.audit?.failures).toBe(0);
     expect(doc?.schemaValidation?.exitCode).toBe(0);
+    // D45: a page without a plan item takes its facets from the Strategist,
+    // page.md carries them to later phases, and the worker stamps them.
+    expect(doc?.facets).toEqual({
+      pageRole: "cluster",
+      articleType: "deep-dive",
+      searchIntent: "informational",
+      funnel: "mofu",
+      source: "strategist",
+    });
+    expect(doc?.frontmatter?.["article_type"]).toBe("deep-dive");
+    expect(doc?.frontmatter?.["funnel"]).toBe("mofu");
+    const pageMd = readFileSync(join(repoRoot, "articles", "2026-09-14-pipeline-e2e", "page.md"), "utf-8");
+    expect(pageMd).toContain("Deep-dive (`deep-dive`)");
+    expect(pageMd).toContain("Key Takeaways:** exactly 3");
 
     const runDoc = await db.runs.findOne({ _id: run._id });
     expect(runDoc?.status).toBe("succeeded");

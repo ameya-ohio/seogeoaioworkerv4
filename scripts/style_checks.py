@@ -76,7 +76,10 @@ MAX_DEFINITIONS = 2
 MAX_HEADING_ECHOES = 2  # WARN: sections whose first sentence restates their own heading
 TAKEAWAY_OVERLAP = 0.6
 TAKEAWAY_MIN_SHARED = 5
-KEY_TAKEAWAYS = 3       # exactly three bullets — more than that and readers skim past the block
+KEY_TAKEAWAYS = 3       # default: exactly three bullets; a format can override it (standards/formats.json, D49)
+FAQ_ANSWER_WORDS = (40, 60)   # WARN outside — People Also Ask / AI-citation length (D49)
+FAQ_ECHO_OVERLAP = 0.75       # FAIL: an FAQ question that restates a body H2 (D49)
+MAX_PARAGRAPH_WORDS = 60      # WARN only — one claim per paragraph (D48); the intro is exempt (D44)
 
 # Hook moves in the intro (quality-bar "Hook-Shaped Intros"). The intro is drafted
 # from the research Topic Summary; these are the performances that replace it.
@@ -311,19 +314,90 @@ def check_intro_hooks(intro: str) -> Finding | None:
     )
 
 
-def check_takeaway_count(sections: list[tuple[str, str]]) -> Finding | None:
+def check_takeaway_count(
+    sections: list[tuple[str, str]], rng: tuple[int, int] = (KEY_TAKEAWAYS, KEY_TAKEAWAYS)
+) -> Finding | None:
+    lo, hi = rng
     for heading, text in sections:
         if not re.match(r"key takeaways", heading, re.I):
             continue
         bullets = re.findall(r"^(?:[-*+]|\d+\.)\s+(.+)$", text, flags=re.M)
-        if len(bullets) == KEY_TAKEAWAYS:
+        if lo <= len(bullets) <= hi:
             return None
+        want = f"exactly {lo}" if lo == hi else f"{lo}–{hi}"
         return Finding(
             "fail",
-            f"Style: Key Takeaways has {len(bullets)} bullets (exactly {KEY_TAKEAWAYS}) — keep the three strongest specifics",
+            f"Style: Key Takeaways has {len(bullets)} bullets ({want} for this format) — keep the strongest specifics",
             [" ".join(_plain(b).split())[:80] for b in bullets],
         )
     return None
+
+
+def _faq_pairs(sections: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    for heading, text in sections:
+        if re.match(r"frequently asked questions|faq", heading, re.I):
+            parts = re.split(r"^###\s+(.+)$", text, flags=re.M)
+            return [(parts[i].strip(), parts[i + 1]) for i in range(1, len(parts) - 1, 2)]
+    return []
+
+
+def check_faq_answer_length(sections: list[tuple[str, str]]) -> Finding | None:
+    lo, hi = FAQ_ANSWER_WORDS
+    hits = []
+    for q, a in _faq_pairs(sections):
+        n = len(" ".join(_plain(a).split()).split())
+        if n and not lo <= n <= hi:
+            hits.append(f"{n} words: {q[:90]}")
+    if not hits:
+        return None
+    return Finding(
+        "warn",
+        f"Style: {len(hits)} FAQ answers outside {lo}–{hi} words — answer first, briefly; link out for depth",
+        hits,
+    )
+
+
+def check_faq_repeats_h2(sections: list[tuple[str, str]]) -> Finding | None:
+    """D49: a question already answered by a section doesn't belong in the FAQ."""
+    headings = [
+        h for h, _ in sections if not re.match(r"key takeaways|frequently asked questions|faq", h, re.I)
+    ]
+    hits = []
+    for q, _ in _faq_pairs(sections):
+        qw = _content_words(_plain(q))
+        if len(qw) < 2:
+            continue
+        for h in headings:
+            shared = qw & _content_words(_plain(h))
+            if len(shared) >= 2 and len(shared) / len(qw) >= FAQ_ECHO_OVERLAP:
+                hits.append(f"{q[:80]} ≈ ## {h[:60]}")
+                break
+    if not hits:
+        return None
+    return Finding(
+        "fail",
+        "Style: FAQ repeats a section heading — a question the body already answers doesn't belong in the FAQ",
+        hits,
+    )
+
+
+def check_long_paragraphs(prose: list[str], intro: str) -> Finding | None:
+    intro_plain = " ".join(_plain(intro).split())
+    hits = []
+    for b in prose:
+        text = " ".join(b.split())
+        if text and text in intro_plain:
+            continue
+        n = len(text.split())
+        if n > MAX_PARAGRAPH_WORDS:
+            hits.append(f"{n} words: {text[:90]}")
+    if not hits:
+        return None
+    return Finding(
+        "warn",
+        f"Style: {len(hits)} paragraphs over {MAX_PARAGRAPH_WORDS} words — one claim per paragraph",
+        hits,
+    )
 
 
 def check_heading_echo(sections: list[tuple[str, str]]) -> Finding | None:
@@ -413,14 +487,21 @@ def check_signposts(prose: list[str]) -> Finding | None:
     )
 
 
-def run_all(body: str, word_count: int) -> list[Finding]:
+def run_all(
+    body: str,
+    word_count: int,
+    *,
+    takeaways: tuple[int, int] = (KEY_TAKEAWAYS, KEY_TAKEAWAYS),
+) -> list[Finding]:
     blocks, prose = prose_blocks(body)
     intro, sections = split_sections(body)
     findings: list[Finding | None] = [
         check_faq_filler(sections),
+        check_faq_answer_length(sections),
+        check_faq_repeats_h2(sections),
         check_definitions(body),
         check_takeaway_restatement(intro, sections),
-        check_takeaway_count(sections),
+        check_takeaway_count(sections, takeaways),
         check_intro_hooks(intro),
         check_heading_echo(sections),
         check_contrasts(blocks, word_count),
@@ -431,6 +512,7 @@ def run_all(body: str, word_count: int) -> list[Finding]:
         check_rhythm(prose),
         check_signposts(prose),
         check_long_sentences(prose),
+        check_long_paragraphs(prose, intro),
     ]
     return [f for f in findings if f]
 

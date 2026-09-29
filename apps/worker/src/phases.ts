@@ -25,6 +25,8 @@ export interface PhaseContext {
   gateFeedback?: string[];
   /** Edit only: the edit gate's problems on the incoming draft, before attempt 1. */
   preAudit?: string[];
+  /** Design only: the format's default header pattern (formats.json). */
+  headerPattern?: string;
 }
 
 const FILE_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep"];
@@ -112,6 +114,9 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           header(ctx, 2, "Strategist"),
           ``,
           `Inputs to read first:`,
+          `- articles/${ctx.article.folder}/page.md — this page's spec (D45–D50): facets, the rules they`,
+          `  resolve to (length band, Key Takeaways count, FAQ range, CTA) and the format guide. Build the`,
+          `  outline on the format guide and include a \`## Page Facets\` section${ctx.article.facets ? " copied from page.md" : " — this page has no facets yet, so choose them from standards/formats.json"}.`,
           `- articles/${ctx.article.folder}/research-notes.md`,
           ...(ctx.article.brief
             ? [
@@ -139,12 +144,13 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           header(ctx, 3, "Writer"),
           ``,
           `Inputs to read first:`,
+          `- articles/${ctx.article.folder}/page.md (format guide, Key Takeaways count, FAQ range, closing CTA)`,
           `- articles/${ctx.article.folder}/outline.md`,
           `- articles/${ctx.article.folder}/research-notes.md`,
           `- context/author-style/ (or your spec's default voice rules if empty)`,
           `- context/brand/ (skip if empty)`,
           `- context/case-studies/ — real engagements (skip README.md, _template.md, and any file marked "Permission: internal only")`,
-          `- config/company.yaml (author + canonical URL pattern for frontmatter)`,
+          `- config/company.yaml (author for frontmatter; the worker stamps canonical_url and the facet keys)`,
           ``,
           `Write the full article to: articles/${ctx.article.folder}/article.md`,
           `Also update articles/${ctx.article.folder}/meta.json (title, slug, meta_description, keywords, canonical).`,
@@ -163,6 +169,7 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           `Inputs to read first:`,
           `- standards/quality-bar.md, standards/seo-checklist.md, standards/geo-checklist.md, standards/aio-checklist.md`,
           `- standards/banned-phrases.txt and the voice rules in config/company.yaml`,
+          `- articles/${ctx.article.folder}/page.md (format guide, Key Takeaways count, FAQ range, closing CTA)`,
           `- articles/${ctx.article.folder}/article.md and research-notes.md`,
           `- context/sales/competitive-landscape.md (head-to-head vs. complementary vendors; skip if absent)`,
           `- context/case-studies/ — real engagements (skip README.md, _template.md, and any file marked "Permission: internal only")`,
@@ -184,6 +191,7 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           ``,
           `Inputs to read first:`,
           `- standards/schema-spec.md and templates/schema-template.json`,
+          `- articles/${ctx.article.folder}/page.md (the schema types for this page's format)`,
           `- articles/${ctx.article.folder}/article.md (finalized frontmatter + body + FAQ)`,
           `- config/company.yaml (Organization/Person/breadcrumb/locale values)`,
           ``,
@@ -206,7 +214,7 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           `Generate the 1200×600 hero image with:`,
           `  ${ctx.cfg.headerGenPython} blogheaderimagegen/generate_header.py \\`,
           `    --from-article articles/${ctx.article.folder}/ \\`,
-          `    --pattern auto`,
+          `    --pattern ${ctx.headerPattern ?? "auto"}`,
           `(Override --pattern with a named pattern only when your spec gives you a reason.)`,
           ``,
           `After generation, update articles/${ctx.article.folder}/article.md frontmatter:`,

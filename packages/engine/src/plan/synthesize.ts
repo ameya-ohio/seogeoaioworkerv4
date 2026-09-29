@@ -4,6 +4,18 @@ import { deriveQueryTarget } from "./queryTarget.js";
 import type { NormalizedPlanRow } from "./normalize.js";
 import { normalizeHeader } from "./mapping.js";
 import type { FunnelStage, PageRole, PlanConcept, PlanPillar, PlanSubtopic } from "./types.js";
+import {
+  facetWarnings,
+  faqRangeFor,
+  fillPassage,
+  formatBySlug,
+  isRoutingRole,
+  lengthBandForFormat,
+  schemaTypesForFormat,
+  takeawaysFor,
+  type FormatRegistry,
+  type FormatSpec,
+} from "../formats.js";
 
 /**
  * Build a complete SpokeBrief from one planned row, deterministically.
@@ -30,85 +42,60 @@ export interface SynthesisContext {
   companyName: string;
   /** ICP placeholder used until enrichment proposes a real persona. */
   defaultPersona: string;
+  /** D45: the format registry (standards/formats.json). */
+  formats: FormatRegistry;
+  /** D46: reserved site paths by externalId, when the plan computed them. */
+  paths?: Map<string, string>;
 }
 
 /** Siblings listed per D35; more than this is link spam, not navigation. */
 const MAX_SIBLINGS = 5;
 
-// ── length bands (all within D31's 800–2,000 unless justified) ────────────
+// ── length, schema (D45: from the format registry) ─────────────────────
 
-interface Band {
-  min: number;
-  max: number;
+function formatOf(row: NormalizedPlanRow, ctx: SynthesisContext): FormatSpec {
+  return formatBySlug(ctx.formats, row.articleType);
 }
 
-const ROUTING_BANDS: Record<"pillar" | "hub", Band> = {
-  // A pillar page is a ROUTING page, not the retired encyclopedic 3,500–4,500
-  // pillar (D31 amended that model away).
-  pillar: { min: 1400, max: 2000 },
-  hub: { min: 1000, max: 1600 },
-};
-
-const FORMAT_BANDS: { match: RegExp; band: Band }[] = [
-  { match: /definition|explainer/i, band: { min: 800, max: 1200 } },
-  { match: /integration|solution page|landing page|offer/i, band: { min: 800, max: 1200 } },
-  { match: /stats|data|original research|examples|use case|listicle|tools/i, band: { min: 900, max: 1400 } },
-  { match: /how-?to|checklist|template|framework/i, band: { min: 1000, max: 1600 } },
-  { match: /thought leadership/i, band: { min: 1000, max: 1500 } },
-  { match: /comparison|alternatives|vs\b/i, band: { min: 1200, max: 1800 } },
-  { match: /deep-?dive|best practices|assessment|buyer|metrics/i, band: { min: 1400, max: 2000 } },
-];
-
-/** D31's default when a format is unmapped. */
-const DEFAULT_BAND: Band = { min: 800, max: 2000 };
-
 export function lengthBandFor(
-  format: string,
-  pageRole: PageRole,
+  row: Pick<NormalizedPlanRow, "articleType" | "format" | "pageRole">,
+  formats: FormatRegistry,
 ): { min: number; max: number; justification: string } {
-  if (pageRole === "pillar" || pageRole === "hub") {
-    const band = ROUTING_BANDS[pageRole];
+  const format = formatBySlug(formats, row.articleType);
+  const band = lengthBandForFormat(formats, format, row.pageRole);
+  if (isRoutingRole(formats, row.pageRole)) {
     return {
       ...band,
-      justification: `${pageRole === "pillar" ? "Pillar" : "Hub"} routing page (content plan import) — routes to its children, never an encyclopedic guide`,
+      justification: `Hub routing page (content plan import) — routes to its children; ${format.label} sets only its framing (D47)`,
     };
   }
-  const hit = FORMAT_BANDS.find((f) => f.match.test(format));
-  const band = hit?.band ?? DEFAULT_BAND;
   return {
     ...band,
-    justification: format
-      ? `Format: ${format} (content plan import)`
-      : "No format given in the plan — D31 default band",
+    justification: row.format
+      ? `Format: ${format.label} (content plan import, formats.json)`
+      : "No format given in the plan — generic band",
   };
 }
 
-// ── schema ────────────────────────────────────────────────────────────────
-
 /**
- * Only types `standards/schema-spec.md` actually documents — stamping a type
- * the Schema Builder has no spec for means it improvises or silently drops
- * it. CollectionPage and ItemList were added to that spec for routing pages;
- * pass `routingTypesDocumented: false` for a company whose schema spec has
- * been edited to remove them.
+ * Only types `standards/schema-spec.md` documents — stamping a type the
+ * Schema Builder has no spec for means it improvises or silently drops it.
+ * Pass `routingTypesDocumented: false` for a company whose schema spec has
+ * been edited to remove CollectionPage/ItemList.
  */
 export const ROUTING_SCHEMA_TYPES = ["CollectionPage", "ItemList"] as const;
 
 export function schemaTypesFor(
-  format: string,
-  pageRole: PageRole,
+  row: Pick<NormalizedPlanRow, "articleType" | "pageRole" | "funnel">,
+  formats: FormatRegistry,
   opts: { routingTypesDocumented?: boolean } = {},
 ): string[] {
-  const base = ["BlogPosting", "BreadcrumbList"];
-  if (pageRole === "pillar" || pageRole === "hub") {
-    return opts.routingTypesDocumented === false ? base : [...base, ...ROUTING_SCHEMA_TYPES];
+  const format = formatBySlug(formats, row.articleType);
+  const types = schemaTypesForFormat(formats, format, row.pageRole, row.funnel);
+  if (opts.routingTypesDocumented === false) {
+    return types.filter((t) => !(ROUTING_SCHEMA_TYPES as readonly string[]).includes(t) || format.schema.includes(t));
   }
-  // A definition page is the one case where DefinedTerm is unambiguous.
-  if (/definition|explainer/i.test(format)) return [...base, "DefinedTerm"];
-  // FAQPage is deliberately NOT stamped: agents/strategist.md decides whether
-  // an article has genuine Q&A. Pre-stamping it manufactures an obligatory
-  // FAQ block on every article, which is answer-farm pressure by the back door.
-  return base;
+  return types;
 }
 
 // ── other deterministic facets ────────────────────────────────────────────
@@ -223,41 +210,6 @@ export function internalLinksFor(
 
 // ── required passages ─────────────────────────────────────────────────────
 
-const FORMAT_PASSAGES: { match: RegExp; passages: (subject: string) => string[] }[] = [
-  { match: /definition|explainer/i, passages: (s) => [
-    `What ${s} means, in one extractable definition`,
-    `How ${s} differs from the adjacent terms it gets confused with`,
-    `Why ${s} matters to the reader's environment right now`,
-  ] },
-  { match: /comparison|alternatives|vs\b/i, passages: (s) => [
-    `What each side of ${s} actually is`,
-    `Where the two genuinely differ, not just in marketing terms`,
-    `Which one fits which situation, stated plainly`,
-  ] },
-  { match: /how-?to/i, passages: (s) => [
-    `What has to be true before starting ${s}`,
-    `The steps for ${s}, in the order they are performed`,
-    `How to confirm ${s} worked, and what to do when it did not`,
-  ] },
-  { match: /checklist|template|framework/i, passages: (s) => [
-    `The items ${s} covers, each independently actionable`,
-    `How to apply ${s} without turning it into box-ticking`,
-  ] },
-  { match: /listicle|tools/i, passages: (s) => [
-    `What to evaluate ${s} against before looking at any vendor`,
-    `Where each option genuinely fits, and where it does not`,
-  ] },
-  { match: /stats|data|original research/i, passages: (s) => [
-    `The load-bearing numbers on ${s}, each cited to the page that states it`,
-    `What the numbers do and do not support`,
-  ] },
-  { match: /deep-?dive|best practices|assessment|buyer|metrics/i, passages: (s) => [
-    `What ${s} involves in practice`,
-    `The failure modes practitioners hit with ${s}`,
-    `How to judge whether ${s} is working`,
-  ] },
-];
-
 function subjectOf(row: NormalizedPlanRow): string {
   return row.subtopicName ?? row.pillarName;
 }
@@ -266,38 +218,41 @@ function subjectOf(row: NormalizedPlanRow): string {
  * D33: these are a COVERAGE CONTRACT, not an outline. Each must be answered
  * somewhere as an extractable, answer-first passage; the Strategist owns the
  * narrative arc and the (declarative) headings.
+ *
+ * D47: a pillar is a full Pillar Guide — every sub-theme answered completely,
+ * then pointed down to. A hub routes: its format frames the opening only.
  */
 export function requiredPassagesFor(
   row: NormalizedPlanRow,
   rows: NormalizedPlanRow[],
+  formats: FormatRegistry,
 ): string[] {
   const subject = subjectOf(row);
+  const format = formatBySlug(formats, row.articleType);
+  const vars = { subject, title: row.title };
+  const fromFormat = format.passages.map((p) => fillPassage(p, vars));
 
   if (row.pageRole === "pillar") {
     const children = childrenOf(row, rows);
     return [
-      `What ${row.pillarName} covers, and who this page is for`,
+      ...fromFormat,
       ...children.map(
-        (c) => `What ${c.subtopicName ?? c.title} is, in 2–3 sentences, and where to go for the detail`,
+        (c) => `A section on ${c.subtopicName ?? c.title} that answers its own question completely, then links down to "${c.title}"`,
       ),
       `The thesis that ties these subtopics into one argument, not a list`,
     ];
   }
 
-  if (row.pageRole === "hub") {
+  if (isRoutingRole(formats, row.pageRole)) {
     const children = childrenOf(row, rows);
     return [
+      ...(fromFormat[0] ? [fromFormat[0]] : []),
       `What ${subject} is, and where it sits under ${row.pillarName}`,
       ...children.map((c) => `A 2–3 sentence answer to "${c.title}", and where to go for the full treatment`),
       `Why ${subject} is worth a reader's attention now`,
     ];
   }
 
-  const hit = FORMAT_PASSAGES.find((f) => f.match.test(row.format));
-  const fromFormat = hit ? hit.passages(subject) : [
-    `A direct answer to "${row.title}" in the first 40–60 words`,
-    `What the reader should do differently as a result`,
-  ];
   return [...fromFormat, `A direct, extractable answer to "${row.title}"`];
 }
 
@@ -355,6 +310,44 @@ function differentiationFor(row: NormalizedPlanRow, ctx: SynthesisContext): stri
   return parts.join(" ");
 }
 
+// ── facets (D45–D49) ──────────────────────────────────────────────────────
+
+export function pageFacetsFor(row: NormalizedPlanRow, ctx: SynthesisContext): NonNullable<SpokeBrief["page"]> {
+  const format = formatOf(row, ctx);
+  const path = ctx.paths?.get(row.externalId);
+  return {
+    pageRole: row.pageRole,
+    articleType: format.slug,
+    articleTypeLabel: format.label,
+    searchIntent: row.searchIntent,
+    funnel: row.funnel,
+    ...(path ? { path } : {}),
+    faq: faqRangeFor(ctx.formats, format, row.pageRole, row.funnel),
+    takeaways: takeawaysFor(ctx.formats, format),
+    routing: isRoutingRole(ctx.formats, row.pageRole),
+    competitorMode: format.competitorMode,
+    signoff: format.signoff,
+  };
+}
+
+/** Import warnings for combinations the build spec calls mis-tagged. */
+export function facetWarningsFor(row: NormalizedPlanRow, formats: FormatRegistry): string[] {
+  if (!row.format) return [];
+  return facetWarnings(formatBySlug(formats, row.articleType), row.pageRole, row.funnel, row.searchIntent);
+}
+
+function siblingQueriesFor(row: NormalizedPlanRow, ctx: SynthesisContext): { title: string; query: string }[] {
+  const pillar = ctx.pillars.get(row.pillarId);
+  return siblingsOf(row, ctx.rows)
+    .slice(0, MAX_SIBLINGS)
+    .map((s) => {
+      const q: { headTerm?: string; subtopicName?: string } = {};
+      if (pillar?.headTerm) q.headTerm = pillar.headTerm;
+      if (s.subtopicName) q.subtopicName = s.subtopicName;
+      return { title: s.title, query: deriveQueryTarget(s.title, q).target };
+    });
+}
+
 // ── the synthesizer ───────────────────────────────────────────────────────
 
 export interface SynthesisResult {
@@ -390,13 +383,15 @@ export function synthesizeBrief(
     // No fan-out produced this brief, so there are no sub-queries. Inventing
     // them would be fabricating provenance.
     representativeSubQueries: [],
-    h2Outline: requiredPassagesFor(row, ctx.rows),
+    h2Outline: requiredPassagesFor(row, ctx.rows, ctx.formats),
     evidence: evidenceFor(row, ctx),
     differentiationAngle: differentiationFor(row, ctx),
     internalLinks: internalLinksFor(row, ctx.rows),
-    lengthBand: lengthBandFor(row.format, row.pageRole),
-    schemaTypes: schemaTypesFor(row.format, row.pageRole, opts),
+    lengthBand: lengthBandFor(row, ctx.formats),
+    schemaTypes: schemaTypesFor(row, ctx.formats, opts),
     priorityScore: priorityScoreFor(row.priority, sub?.tier ?? null, row.funnel),
+    page: pageFacetsFor(row, ctx),
+    siblingQueries: siblingQueriesFor(row, ctx),
   };
 
   return {
@@ -413,6 +408,8 @@ export function buildSynthesisContext(params: {
   rows: NormalizedPlanRow[];
   companyName: string;
   defaultPersona?: string;
+  formats: FormatRegistry;
+  paths?: Map<string, string>;
 }): SynthesisContext {
   const conceptsByPillar = new Map<string, PlanConcept[]>();
   for (const c of params.concepts) {
@@ -427,6 +424,8 @@ export function buildSynthesisContext(params: {
     conceptsByPillar,
     rows: params.rows,
     companyName: params.companyName,
+    formats: params.formats,
+    ...(params.paths ? { paths: params.paths } : {}),
     defaultPersona:
       params.defaultPersona ??
       "the practitioner who owns this problem day to day (placeholder — refine at enrichment)",

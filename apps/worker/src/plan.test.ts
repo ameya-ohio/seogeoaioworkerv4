@@ -11,6 +11,7 @@ import {
   connect,
   createPlan,
   listPlanItems,
+  loadFormatRegistry,
   readWorkbook,
   requestPlanEnrichment,
   suggestMapping,
@@ -108,7 +109,7 @@ beforeEach(async () => {
 async function seedPlan(): Promise<PlanDoc> {
   const wb = await readWorkbook(readFileSync(FIXTURE), "sample-plan.xlsx");
   const { mapping } = suggestMapping(wb);
-  const analysis = analyzePlan({ workbook: wb, mapping, companyName: "Acme" });
+  const analysis = analyzePlan({ workbook: wb, mapping, companyName: "Acme", formats: loadFormatRegistry(REAL_REPO) });
   const plan = await createPlan(db, {
     companyId: COMPANY,
     filename: "sample-plan.xlsx",

@@ -28,7 +28,7 @@ import {
   type ParsedWorkbook,
 } from "@blogagent/engine";
 import { requireAuth } from "../auth";
-import { getCompany, getDb } from "../db";
+import { getCompany, getDb, getFormats } from "../db";
 
 export interface PlanFormState {
   error?: string;
@@ -96,6 +96,7 @@ export async function uploadPlan(
       workbook: wb,
       mapping,
       companyName: company.companyName,
+      formats: await getFormats(),
       takenSlugs,
       existingKeywords,
     });
@@ -153,6 +154,7 @@ export async function updateMapping(
     workbook: workbookFromPlan(plan.sheets, plan.notes),
     mapping,
     companyName: getCompany().companyName,
+    formats: await getFormats(),
     takenSlugs,
     existingKeywords,
   });
@@ -189,6 +191,7 @@ export async function setValueMapping(
     workbook: workbookFromPlan(plan.sheets, plan.notes),
     mapping,
     companyName: getCompany().companyName,
+    formats: await getFormats(),
     takenSlugs,
     existingKeywords,
   });
@@ -213,6 +216,7 @@ export async function commitPlanAction(
     workbook: workbookFromPlan(plan.sheets, plan.notes),
     mapping: plan.mapping,
     companyName: getCompany().companyName,
+    formats: await getFormats(),
     takenSlugs,
     existingKeywords,
   });

@@ -111,16 +111,38 @@ class MentionTests(unittest.TestCase):
     def test_one_factual_mention_passes(self):
         self.assertEqual(run(article(body=self.ONE)), [])
 
-    def test_second_mention_warns_unless_comparison(self):
+    def test_second_mention_warns_unless_vendor_format(self):
         warns = [f for f in run(article(body=self.TWO)) if f.level == "warn"]
         self.assertEqual(len(warns), 1)
         self.assertIn("2 sentences", warns[0].message)
-        self.assertEqual(run(article(body=self.TWO), article_type="comparison"), [])
+        for t in ("tools-listicle", "alternatives", "comparison-vendor", "Tools Listicle"):
+            self.assertEqual(run(article(body=self.TWO), article_type=t), [], t)
+        # Session 24's values still mean the vendor formats.
         self.assertEqual(run(article(body=self.TWO), article_type="tool-list"), [])
+        # A concept comparison is a strict format.
+        self.assertTrue([f for f in run(article(body=self.TWO), article_type="comparison-concept") if f.level == "warn"])
 
-    def test_comparison_article_still_bans_hook_and_sources(self):
+
+class VendorModeTests(unittest.TestCase):
+    """D51: the scoped exception for Tools Listicle / Alternatives / Comparison (Vendor)."""
+
+    def test_vendor_may_be_named_in_the_intro(self):
         intro = CLEAN_INTRO + "\nBloodHound is where most teams start.\n"
-        self.assertTrue(fails(run(article(intro=intro), article_type="comparison")))
+        self.assertTrue(fails(run(article(intro=intro))))
+        self.assertFalse(fails(run(article(intro=intro), article_type="alternatives")))
+
+    def test_their_own_docs_may_back_a_claim_about_them(self):
+        body = "## BloodHound Enterprise\n\nBloodHound Enterprise supports Entra ID ([docs](https://specterops.io/docs/entra)).\n"
+        self.assertTrue(fails(run(article(body=body))))
+        self.assertFalse(fails(run(article(body=body), article_type="tools-listicle")))
+
+    def test_their_url_backing_someone_else_still_fails(self):
+        body = "## Market\n\nMost domains carry stale admin rights ([source](https://specterops.io/blog/x)).\n"
+        self.assertTrue(any("outside a sentence about them" in m for m in fails(run(article(body=body), article_type="tools-listicle"))))
+
+    def test_a_statistic_sourced_to_the_vendor_still_fails(self):
+        body = "## Scale\n\nAccording to SpecterOps, 95% of domains have an attack path to Domain Admins.\n"
+        self.assertTrue(any("used as a source" in m for m in fails(run(article(body=body), article_type="comparison-vendor"))))
 
     def test_whole_word_names_only(self):
         body = "## Words\n\nThe bloodhounds of old tracked scent; specteropsis is not a word.\n"
