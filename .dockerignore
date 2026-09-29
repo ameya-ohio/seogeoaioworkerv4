@@ -18,6 +18,8 @@ blogsagent
 !agents/*.md
 !standards/*.md
 !templates/*.md
+# Format guides (D45) live one level down — templates/*.md alone would drop them.
+!templates/**/*.md
 !context/**/*.md
 
 # Seeded into prod Mongo via `import-articles --only` (2026-09-25): only these
