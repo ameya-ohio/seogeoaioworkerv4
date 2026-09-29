@@ -49,6 +49,12 @@ export interface UiArticleSummary {
   hasHeader: boolean;
   auditFailures: number | null;
   hubspotUrl: string | null;
+  /** D52: confirmed live URL (Framer target). */
+  liveUrl: string | null;
+  /** D45: page facets, when set. */
+  facets: { pageRole: string; searchIntent: string; articleType: string; funnel: string } | null;
+  /** D46: reserved site path. */
+  path: string | null;
 }
 
 export interface UiPhaseResult {
@@ -113,6 +119,16 @@ export function toUiArticleSummary(doc: ArticleDoc): UiArticleSummary {
     hasHeader: Boolean(doc.header),
     auditFailures: doc.audit ? doc.audit.failures : null,
     hubspotUrl: doc.hubspot?.url ?? null,
+    liveUrl: doc.live?.url ?? null,
+    facets: doc.facets
+      ? {
+          pageRole: doc.facets.pageRole,
+          searchIntent: doc.facets.searchIntent,
+          articleType: doc.facets.articleType,
+          funnel: doc.facets.funnel,
+        }
+      : null,
+    path: doc.path ?? null,
   };
 }
 

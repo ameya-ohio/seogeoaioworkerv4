@@ -5,6 +5,9 @@ import { toUiRun, type UiRun } from "@/lib/ui-types";
 import { PageHeader, StageBadge } from "@/components/ui";
 import { ReviewEditor, type ReviewArticle } from "@/components/review-editor";
 import { hubspotStatus } from "@/lib/actions/content";
+import { publishTarget } from "@/lib/actions/publishing";
+import { getFormats } from "@/lib/db";
+import { formatBySlug } from "@blogagent/engine";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +26,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
   const runs: UiRun[] = runDocs.map(toUiRun);
   const activeRun = runs.find((r) => r.status === "queued" || r.status === "running") ?? null;
 
+  const format = formatBySlug(await getFormats(), doc.facets?.articleType);
   const article: ReviewArticle = {
     slug: doc.slug,
     folder: doc.folder,
@@ -69,6 +73,14 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
         }
       : null,
     hubspotConfig: await hubspotStatus(),
+    publishTarget: await publishTarget(),
+    live: doc.live ? { url: doc.live.url, verifiedAt: new Date(doc.live.verifiedAt).toISOString(), status: doc.live.status } : null,
+    signoffRequired: format.signoff,
+    signoff: doc.signoff ? { by: doc.signoff.by, at: new Date(doc.signoff.at).toISOString(), note: doc.signoff.note ?? null } : null,
+    facets: doc.facets ? { ...doc.facets } : null,
+    formatLabel: format.label,
+    path: doc.path ?? null,
+    canonicalUrl: String(doc.frontmatter?.["canonical_url"] ?? doc.canonicalUrl ?? "") || null,
     hasHeader: Boolean(doc.header),
     activeRun,
     runs,

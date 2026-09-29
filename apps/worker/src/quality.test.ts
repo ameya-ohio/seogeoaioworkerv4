@@ -170,6 +170,36 @@ describe("LiveLinkChecker (D35)", () => {
     expect(report.missingCount).toBe(2);
   });
 
+  it("resolves /learn/ pages by reserved path and marked-live URL (D46/D52)", async () => {
+    const live = await createArticle(db, {
+      companyId: "testco",
+      slug: "identity-exposure-vs-identity-risk",
+      folder: "2026-09-29-identity-exposure-vs-identity-risk",
+      topic: "t3",
+      path: "/learn/identity-exposure-management/identity-exposure/vs-identity-risk/",
+    });
+    await db.articles.updateOne(
+      { _id: live._id as ObjectId },
+      { $set: { stage: "published", live: { url: "https://www.saporo.io/learn/identity-exposure-management/identity-exposure/vs-identity-risk/", verifiedAt: new Date(), status: 200 } } },
+    );
+    await createArticle(db, {
+      companyId: "testco",
+      slug: "how-to-measure-identity-exposure",
+      folder: "2026-09-29-how-to-measure-identity-exposure",
+      topic: "t4",
+      path: "/learn/identity-exposure-management/identity-exposure/how-to-measure/",
+    });
+    const checker = new LiveLinkChecker(db, "testco", ["saporo.io"], async () => ({ ok: false, note: "HTTP 404" }));
+    const report = await checker.check(
+      `See [the comparison](https://www.saporo.io/learn/identity-exposure-management/identity-exposure/vs-identity-risk) and ` +
+        `[measuring](https://www.saporo.io/learn/identity-exposure-management/identity-exposure/how-to-measure/).`,
+    );
+    const statusFor = (u: string) => report.results.find((r) => r.url.includes(u));
+    expect(statusFor("vs-identity-risk")?.status).toBe("ok");
+    expect(statusFor("how-to-measure")?.status).toBe("missing");
+    expect(statusFor("how-to-measure")?.note).toContain("how-to-measure-identity-exposure");
+  });
+
   it("ignores the article's own canonical_url, comments, and the json-ld fence", async () => {
     // Replay of the first live direct-route failure: an absolute self
     // canonical in frontmatter read as an unpublished internal link.

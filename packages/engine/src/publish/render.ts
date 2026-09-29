@@ -58,6 +58,7 @@ function ownHosts(company: CompanyConfig): string[] {
   };
   add(cfgGet(company, "company.domain", ""));
   add(cfgGet(company, "blog.base_url", ""));
+  add(cfgGet(company, "site.base_url", ""));
   return [...hosts];
 }
 
@@ -72,7 +73,11 @@ function isExternal(href: string, own: string[]): boolean {
 }
 
 /** The HubSpot template renders the title, so the article's H1 is dropped; any other H1 becomes an H2. */
-export function renderPostBody(articleMd: string, company: CompanyConfig): string {
+export function renderPostBody(
+  articleMd: string,
+  company: CompanyConfig,
+  opts: { styled?: boolean } = {},
+): string {
   let body = cleanBody(parseArticle(articleMd).body);
   body = body.replace(/^#\s+.+$/m, ""); // first H1 only
   let html = markdown.parse(body, { async: false }) as string;
@@ -82,6 +87,8 @@ export function renderPostBody(articleMd: string, company: CompanyConfig): strin
     if (!isExternal(href, own) || /\btarget=/i.test(pre + post)) return m;
     return `<a ${pre}href="${href}"${post} target="_blank" rel="noopener">`;
   });
+  // A site builder (Framer) styles the page itself: plain semantic HTML only.
+  if (opts.styled === false) return html.trim();
   return `${styleBlock(company)}<div class="${POST_CSS_CLASS}">${html.trim()}</div>`;
 }
 

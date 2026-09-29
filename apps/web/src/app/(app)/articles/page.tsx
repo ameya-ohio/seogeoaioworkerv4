@@ -90,6 +90,11 @@ export default async function ArticlesPage({
                       <Link href={`/production/review/${a.slug}`} className="text-accent hover:underline">
                         review
                       </Link>
+                      {a.liveUrl && (
+                        <a href={a.liveUrl} target="_blank" rel="noreferrer" className="text-emerald-700 hover:underline">
+                          live ↗
+                        </a>
+                      )}
                       {a.hubspotUrl && (
                         <a href={a.hubspotUrl} target="_blank" rel="noreferrer" className="text-slate-400 hover:underline">
                           hubspot ↗

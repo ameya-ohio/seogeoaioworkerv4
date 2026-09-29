@@ -12,6 +12,7 @@ import {
   saveArticleMarkdown,
   sendArticleToHubSpot,
 } from "@/lib/actions/content";
+import { markArticleLive, signOffArticle } from "@/lib/actions/publishing";
 import type { CheckLine, TechnicalIssue } from "@blogagent/engine";
 import type { UiRun } from "@/lib/ui-types";
 import { buttonCls, cls, inputCls } from "./ui";
@@ -46,6 +47,18 @@ export interface ReviewArticle {
   /** HubSpot post for this article (roadmap Phase 5), once sent. */
   hubspot: { postId: string; url: string | null; state: string; syncedAt: string | null } | null;
   hubspotConfig: { configured: boolean; tokenEnv: string };
+  /** D52: where finished pages go. */
+  publishTarget: "framer-export" | "hubspot";
+  /** D52: confirmed live URL. */
+  live: { url: string; verifiedAt: string; status: number } | null;
+  /** D51: vendor formats need a human sign-off before export. */
+  signoffRequired: boolean;
+  signoff: { by: string; at: string; note: string | null } | null;
+  /** D45/D46: the page's facets, format and reserved URL. */
+  facets: { pageRole: string; searchIntent: string; articleType: string; funnel: string; source: string } | null;
+  formatLabel: string;
+  path: string | null;
+  canonicalUrl: string | null;
   hasHeader: boolean;
   activeRun: UiRun | null;
   runs: UiRun[];
@@ -119,7 +132,67 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
         >
           {pending ? "Working…" : dirty ? "Save changes" : "Saved"}
         </button>
-        {article.hubspotConfig.configured ? (
+        {article.publishTarget === "framer-export" ? (
+          canPublish && (
+            <>
+              {article.signoffRequired && !article.signoff && (
+                <button
+                  onClick={() => {
+                    const by = window.prompt(
+                      `${article.formatLabel} pages need a sign-off before export (D51).\n\nWho is signing off? (name)`,
+                    );
+                    if (by) act(() => signOffArticle(article.slug, by), `Signed off by ${by}.`);
+                  }}
+                  disabled={pending || dirty}
+                  className={buttonCls("secondary")}
+                >
+                  Sign off
+                </button>
+              )}
+              <a
+                href={dirty || (article.signoffRequired && !article.signoff) ? undefined : `/api/export/${article.slug}`}
+                aria-disabled={dirty || (article.signoffRequired && !article.signoff)}
+                title={
+                  dirty
+                    ? "Save your edits first"
+                    : article.signoffRequired && !article.signoff
+                      ? "Sign off first — this format needs a human sign-off before export"
+                      : "Download the paste-ready Framer bundle (HTML, markdown, head tags, meta, hero)"
+                }
+                className={cls(
+                  buttonCls("secondary"),
+                  (dirty || (article.signoffRequired && !article.signoff)) && "pointer-events-none opacity-50",
+                )}
+              >
+                Download Framer package
+              </a>
+              <button
+                onClick={() => {
+                  const url = window.prompt(
+                    "Mark live: the page's URL on the site (checked before the article counts as published).",
+                    article.live?.url ?? article.canonicalUrl ?? "",
+                  );
+                  if (url) act(() => markArticleLive(article.slug, url), "Marked live.");
+                }}
+                disabled={pending || dirty}
+                className={buttonCls(article.live ? "ghost" : "primary")}
+              >
+                {article.live ? "Re-check live URL" : "Mark live"}
+              </button>
+              {article.live && (
+                <span className="text-xs text-slate-500">
+                  <span className="font-medium text-emerald-700">Live</span> ·{" "}
+                  <a href={article.live.url} target="_blank" rel="noopener" className="underline">
+                    {article.live.url.replace(/^https?:\/\//, "")}
+                  </a>
+                </span>
+              )}
+              {article.signoff && (
+                <span className="text-xs text-slate-500">Signed off by {article.signoff.by}</span>
+              )}
+            </>
+          )
+        ) : article.hubspotConfig.configured ? (
           canPublish && (
             <>
               <button

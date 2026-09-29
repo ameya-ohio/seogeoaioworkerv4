@@ -1,4 +1,4 @@
-import { inflateRawSync } from "node:zlib";
+import { crc32, deflateRawSync, inflateRawSync } from "node:zlib";
 
 /**
  * A minimal ZIP reader, just enough to open an .xlsx (which is a ZIP of XML
@@ -101,4 +101,60 @@ export function unzip(buf: Buffer): Map<string, Buffer> {
     out.set(e.name, readEntry(buf, e));
   }
   return out;
+}
+
+/**
+ * A minimal ZIP writer for export bundles (D52): DEFLATE entries, no ZIP64,
+ * no encryption — a handful of small files per article. Same no-dependency
+ * reasoning as the reader above; round-trips through unzip() in the tests.
+ */
+export function zip(entries: { name: string; data: Buffer | string }[], when = new Date()): Buffer {
+  const dosTime = ((when.getHours() << 11) | (when.getMinutes() << 5) | Math.floor(when.getSeconds() / 2)) & 0xffff;
+  const dosDate = (((when.getFullYear() - 1980) << 9) | ((when.getMonth() + 1) << 5) | when.getDate()) & 0xffff;
+  const locals: Buffer[] = [];
+  const centrals: Buffer[] = [];
+  let offset = 0;
+  for (const e of entries) {
+    const name = Buffer.from(e.name, "utf-8");
+    const raw = typeof e.data === "string" ? Buffer.from(e.data, "utf-8") : e.data;
+    const packed = deflateRawSync(raw);
+    const crc = crc32(raw) >>> 0;
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(SIG_LOCAL, 0);
+    local.writeUInt16LE(20, 4); // version needed
+    local.writeUInt16LE(0x0800, 6); // UTF-8 names
+    local.writeUInt16LE(8, 8); // deflate
+    local.writeUInt16LE(dosTime, 10);
+    local.writeUInt16LE(dosDate, 12);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(packed.length, 18);
+    local.writeUInt32LE(raw.length, 22);
+    local.writeUInt16LE(name.length, 26);
+    local.writeUInt16LE(0, 28);
+    locals.push(local, name, packed);
+
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(SIG_CENTRAL, 0);
+    central.writeUInt16LE(20, 4); // version made by
+    central.writeUInt16LE(20, 6); // version needed
+    central.writeUInt16LE(0x0800, 8);
+    central.writeUInt16LE(8, 10);
+    central.writeUInt16LE(dosTime, 12);
+    central.writeUInt16LE(dosDate, 14);
+    central.writeUInt32LE(crc, 16);
+    central.writeUInt32LE(packed.length, 20);
+    central.writeUInt32LE(raw.length, 24);
+    central.writeUInt16LE(name.length, 28);
+    central.writeUInt32LE(offset, 42);
+    centrals.push(central, name);
+    offset += local.length + name.length + packed.length;
+  }
+  const centralBuf = Buffer.concat(centrals);
+  const eocd = Buffer.alloc(EOCD_MIN_SIZE);
+  eocd.writeUInt32LE(SIG_EOCD, 0);
+  eocd.writeUInt16LE(entries.length, 8);
+  eocd.writeUInt16LE(entries.length, 10);
+  eocd.writeUInt32LE(centralBuf.length, 12);
+  eocd.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, centralBuf, eocd]);
 }

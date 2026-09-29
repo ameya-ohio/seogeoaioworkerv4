@@ -227,6 +227,8 @@ export interface ArticleDoc {
   live?: { url: string; verifiedAt: Date; status: number };
   /** D51: human sign-off for formats that require it, before export. */
   signoff?: { by: string; at: Date; note?: string };
+  /** D52: last Framer export download. */
+  exportedAt?: Date;
   header?: { storageKey: string; url?: string; contentType: string };
   audit?: ScriptReport;
   schemaValidation?: ScriptReport;

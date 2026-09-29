@@ -10,6 +10,11 @@ export interface NewArticleInput {
   targetKeyword?: string;
   brief?: ArticleDoc["brief"];
   pendingLinks?: string[];
+  facets?: ArticleDoc["facets"];
+  path?: string;
+  trail?: ArticleDoc["trail"];
+  planId?: ArticleDoc["planId"];
+  planItemId?: ArticleDoc["planItemId"];
 }
 
 export async function createArticle(db: EngineDb, input: NewArticleInput): Promise<ArticleDoc> {

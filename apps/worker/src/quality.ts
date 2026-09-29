@@ -277,7 +277,8 @@ export class LiveCitationVerifier implements CitationVerifier {
 
 /**
  * D35: internal links resolve against the articles collection (published
- * HubSpot URL or slug) or a live HTTP check for non-blog site pages.
+ * HubSpot URL, marked-live URL, slug, or reserved /learn/ path) or a live
+ * HTTP check for other site pages.
  */
 export class LiveLinkChecker implements LinkChecker {
   constructor(
@@ -292,20 +293,37 @@ export class LiveLinkChecker implements LinkChecker {
     const results: LinkCheckResult[] = [];
     for (const url of urls) {
       const slug = url.split("/").filter(Boolean).pop() ?? "";
+      // D46: /learn/ pages end in a short segment, not the article slug, so
+      // match the reserved path too (with or without the trailing slash).
+      let pathname = "";
+      try {
+        pathname = new URL(url).pathname;
+      } catch {
+        pathname = "";
+      }
+      const paths = pathname ? [pathname.endsWith("/") ? pathname : `${pathname}/`, pathname.replace(/\/+$/, "")] : [];
       const known = await this.db.articles.findOne({
         companyId: this.companyId,
-        $or: [{ "hubspot.url": url }, { slug, stage: "published" }],
+        $or: [
+          { "hubspot.url": url },
+          { "live.url": url },
+          { slug, stage: "published" },
+          ...(paths.length ? [{ path: { $in: paths }, stage: "published" as const }] : []),
+        ],
       });
       if (known) {
         results.push({ url, status: "ok", note: "resolves to a published article" });
         continue;
       }
-      const draft = await this.db.articles.findOne({ companyId: this.companyId, slug });
+      const draft = await this.db.articles.findOne({
+        companyId: this.companyId,
+        $or: [{ slug }, ...(paths.length ? [{ path: { $in: paths } }] : [])],
+      });
       if (draft) {
         results.push({
           url,
           status: "missing",
-          note: `article "${slug}" exists but is not published (stage: ${draft.stage}) — pending link`,
+          note: `article "${draft.slug}" exists but is not published (stage: ${draft.stage}) — pending link`,
         });
         continue;
       }

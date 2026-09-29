@@ -262,6 +262,8 @@ export interface PlanItemDoc {
   path?: string;
   /** D51: why this item can't be produced yet (missing fact sheet, non-producible format). */
   heldReason?: string;
+  /** D52: the live URL, once the article is marked live. */
+  publishedUrl?: string;
   funnel: FunnelStage;
   searchIntent: SearchIntent;
   priority: PriorityTier;
