@@ -30,6 +30,9 @@ Reports per-check PASS / WARN / FAIL on:
     citation array, named in the intro / Key Takeaways / FAQ, or used as a
     source (FAIL); named next to a link, or more than once outside a vendor
     format — Tools Listicle, Alternatives, Comparison (Vendor) (WARN)
+  - the format's required elements (scripts/format_checks.py): numbered steps
+    for How-to, a comparison table high on the page, checklist items, stats
+    bullets with number + year, metrics formulas, limitations lines (FAIL/WARN)
   - schema.json file present
 """
 from __future__ import annotations
@@ -42,6 +45,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from company_config import load_banned_phrases, load_config  # noqa: E402
 from competitor_checks import load_competitors, parse_jsonld, run_all as run_competitor_checks  # noqa: E402
 from formats import article_type_slug, load_registry  # noqa: E402
+from format_checks import run_all as run_format_checks  # noqa: E402
 from style_checks import format_finding, run_all as run_style_checks  # noqa: E402
 
 # Single source: standards/banned-phrases.txt + config/company.yaml
@@ -378,6 +382,14 @@ def audit(folder: Path) -> int:
         (a.fail if f.level == "fail" else a.warn)(format_finding(f))
     if not any(f.level == "fail" for f in style):
         a.ok("Style: contrast, repetition and hedging within limits.")
+
+    # the format's required elements (templates/formats/<slug>.md)
+    if fmt_slug:
+        fmt_findings = run_format_checks(body_clean, fmt_slug)
+        for f in fmt_findings:
+            (a.fail if f.level == "fail" else a.warn)(format_finding(f))
+        if not any(f.level == "fail" for f in fmt_findings):
+            a.ok(f"Format: {fmt_slug} structure checks passed.")
 
     # head-to-head competitors (standards/quality-bar.md → Competitor handling)
     if COMPETITORS:
