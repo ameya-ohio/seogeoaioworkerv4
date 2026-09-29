@@ -324,6 +324,8 @@ Articles are produced as part of a **cluster** — a pillar article + N companio
 
 ## 6. The publishing pipeline
 
+> **Page formats and Framer (2026-09-29, D45–D52).** Each article carries four facets: page role, search intent, article type and funnel. The type comes from `standards/formats.json`, with a writing guide in `templates/formats/`. The worker writes `page.md` before every phase, telling it the format guide, Key Takeaways count, FAQ range, schema types, the funnel's CTA and the page's `/learn/<pillar>/<hub>/<page>/` path. For Saporo, publishing is the Framer export package plus "Mark live" (`publish.target: framer-export`). The HubSpot flow described below applies to companies with `publish.target: hubspot`. See roadmap.md → Phase 4F.
+
 The end-to-end flow from "user types a topic" to "draft live in HubSpot":
 
 ```

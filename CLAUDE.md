@@ -196,6 +196,9 @@ standards/
   aio-checklist.md    AI-engine citation bar
   schema-spec.md      JSON-LD reference + example @graph
   quality-bar.md      Banned phrases, voice, fact-check
+  formats.json        Format registry (D45): the 23 article types — length,
+                      schema, header pattern, FAQ/takeaway rules, competitor
+                      mode, sign-off, fact-sheet requirements
 
 config/
   company.yaml        Single company config surface (identity, blog, author,
@@ -208,6 +211,7 @@ context/              Company proprietary context (populate over time)
 templates/
   article-template.md     Frontmatter + body skeleton
   schema-template.json    Base @graph skeleton
+  formats/<slug>.md       Writing guide per article type (D45); generic.md fallback
 
 scripts/
   new_article.py      Scaffold a new article folder
@@ -215,6 +219,9 @@ scripts/
   seo_audit.py        Audit a finished article folder
   company_config.py   Config loader (run directly = parse check)
   validate_hubspot.py Verify token + resolve blog/author IDs + list posts
+  formats.py          Format registry loader (mirrors the engine)
+  format_checks.py    Per-format required elements (steps, tables, formulas)
+  proof_points.py     Company numbers must come from context/sales/proof-points.md
 
 articles/             One subfolder per article (YYYY-MM-DD-slug)
 
