@@ -10,6 +10,7 @@ You are the last phase. The article is already written and edited. Your job is t
 
 ## Inputs to load
 
+0. `articles/YYYY-MM-DD-slug/page.md` — this page's facets, its **schema types** (from `standards/formats.json`), its canonical URL and its **breadcrumb trail**. The types listed there decide the graph's main entity and extra nodes; the breadcrumbs there are the BreadcrumbList, in order.
 1. `standards/schema-spec.md` — your reference manual. Each schema type's required and recommended properties live there.
 2. `templates/schema-template.json` — the skeleton `@graph` you'll fill in.
 3. `articles/YYYY-MM-DD-slug/article.md` (final, post-Editor version)
@@ -22,11 +23,13 @@ You are the last phase. The article is already written and edited. Your job is t
 
 Every article gets all of these. If a property is genuinely unavailable (e.g. no hero image yet), use a placeholder URL string and let the Editor / Audit flag it — don't omit the type.
 
-- **`BlogPosting`** (or `Article`) — the post itself. Includes `headline`, `description`, `author`, `datePublished`, `dateModified`, `image`, `publisher`, `mainEntityOfPage`, `keywords`, `wordCount`, `articleSection`, `inLanguage`, `mentions`, `citation`.
+- **The main entity** — the type page.md lists first: `Article` for /learn/ pages (they are not blog posts), `TechArticle` for Deep-dives, `BlogPosting` only for a page that really is on the blog, `Service` / `SoftwareApplication` for Solution and Integration pages. It carries Includes `headline`, `description`, `author`, `datePublished`, `dateModified`, `image`, `publisher`, `mainEntityOfPage`, `keywords`, `wordCount`, `articleSection`, `inLanguage`, `mentions`, `citation`.
 - **`Person`** — the author. Includes `name`, `url`, `image`, `jobTitle`, `worksFor`, `sameAs` (LinkedIn, Twitter, personal site, Wikipedia/Wikidata if applicable).
 - **`Organization`** — the publisher, from `config/company.yaml` (`company.*` + `organization.*`). Includes `name`, `url`, `logo` (as `ImageObject` with width/height), `sameAs`.
-- **`BreadcrumbList`** — at minimum: Home → Blog → Post.
-- **`FAQPage`** — `mainEntity` is an array of `Question`, each with an `acceptedAnswer` of type `Answer`. Q/A text must match the article's FAQ section verbatim.
+- **`BreadcrumbList`** — exactly the trail page.md lists (Home → Learn → Pillar → Hub → Page for a /learn/ page); fall back to `config/company.yaml` `blog.breadcrumbs` + the post only when page.md has none.
+- **`FAQPage`** — only when the article has an FAQ section (some formats carry none, D49). `mainEntity` is an array of `Question`, each with an `acceptedAnswer` of type `Answer`. Q/A text must match the article's FAQ section verbatim.
+- **The format's extra types** listed in page.md — `HowTo` (How-to, Assessment, Integration setup), `ItemList` (Checklist, Best Practices, Examples, Tools Listicle, Alternatives, Buyer's Guide; and on hubs, the child pages), `Dataset` (Stats / Data, Original Research), `DigitalDocument` (Template), `CollectionPage` (hubs). See `standards/schema-spec.md` → *Types by format*.
+- **Never** `Review` or `AggregateRating` about a competitor (D51) — the validator fails it.
 - **`WebPage`** — wraps the post URL with a `speakable` `SpeakableSpecification` pointing at the Key Takeaways block via `cssSelector` (e.g. `["#key-takeaways", ".key-takeaways"]`) or `xpath`.
 - **`ImageObject`** — the hero image, with `url`, `width`, `height`, `caption`. (Placeholder OK with a note if no asset.)
 - **`DefinedTerm`** entries — one per inline-defined term in the body (`**X** is …`), each with `name`, `description`, optional `inDefinedTermSet`.

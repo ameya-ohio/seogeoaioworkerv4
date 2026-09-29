@@ -340,6 +340,47 @@ the child ships.
 
 ---
 
+## Types by format (D45)
+
+`standards/formats.json` lists each format's schema types; page.md prints them for the page being built. The main entity for a `/learn/` page is `Article` (not `BlogPosting` — these pages are not blog posts), `TechArticle` for a Deep-dive, `Service` for a Solution Page, `SoftwareApplication` for an Integration Page. `FAQPage` is added only when the article has an FAQ section. The additional types:
+
+### HowTo (How-to Guide, Assessment Guide, Integration Page setup)
+
+```json
+{
+  "@type": "HowTo",
+  "@id": "<canonical_url>#howto",
+  "name": "<the H1 outcome>",
+  "totalTime": "PT30M",
+  "tool": [{ "@type": "HowToTool", "name": "<tool>" }],
+  "step": [
+    { "@type": "HowToStep", "position": 1, "name": "<step heading>", "text": "<the action, one or two sentences>", "url": "<canonical_url>#step-1" }
+  ]
+}
+```
+
+One `HowToStep` per numbered step, in order, named exactly as the step heading. Use `HowTo` only when the reader is the actor.
+
+### ItemList (non-routing: Checklist, Best Practices, Examples, Tools Listicle, Alternatives, Buyer's Guide)
+
+The list the page is built around: `itemListElement` of `ListItem` with `position` and `name` (the practice, the checklist section, the tool). For a Tools Listicle or Alternatives page each item names the tool; **never** attach `Review` or `AggregateRating` to a competitor.
+
+### Dataset (Stats / Data, Original Research)
+
+`name`, `description`, `creator` (the Organization for first-party data; for a stats roundup, `isBasedOn` the primary sources), `temporalCoverage`, `variableMeasured` (the statistics' subjects), `license` where the data is shared.
+
+### DigitalDocument (Template)
+
+The downloadable asset: `name`, `encodingFormat`, `url`. The template's content itself is on the page as HTML.
+
+### Service / SoftwareApplication (Solution Page, Integration Page)
+
+`Service`: `name`, `provider` (the Organization), `serviceType`, `areaServed`. `SoftwareApplication`: `name`, `applicationCategory`, `operatingSystem` ("Web"), `offers` only if pricing is public.
+
+### Breadcrumbs for /learn/ pages (D46)
+
+The `BreadcrumbList` mirrors the page's path: Home → Learn → Pillar → Hub → Page, each `ListItem` with the page's name and absolute URL, exactly as page.md lists them.
+
 ## ImageObject
 
 The hero image (and any other named images).

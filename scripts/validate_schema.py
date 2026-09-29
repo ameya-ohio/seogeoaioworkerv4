@@ -10,11 +10,15 @@ Checks performed:
   - File parses as JSON.
   - Top-level has @context (string or list) and @graph (list).
   - Every @graph entry has @type (string or list) and @id (string).
-  - Required nodes are present: BlogPosting (or Article), Person, Organization,
-    BreadcrumbList, FAQPage, WebPage, ImageObject. (DefinedTerm is encouraged but
-    not strictly required — warned if missing.)
-  - BlogPosting has: headline, author, datePublished, image, publisher,
+  - Required nodes are present: the main entity (the Article family —
+    BlogPosting, Article, TechArticle, OpinionNewsArticle, ScholarlyArticle — or
+    Service / SoftwareApplication for product-fact formats), Person,
+    Organization, BreadcrumbList, WebPage (or CollectionPage), ImageObject.
+    FAQPage is required only when the sibling article.md has an FAQ section
+    (D49: some formats carry none). DefinedTerm is warned if missing.
+  - The article node has: headline, author, datePublished, image, publisher,
     mainEntityOfPage.
+  - No Review / AggregateRating about a head-to-head competitor (D51).
   - FAQPage has mainEntity (list of Question), each Question has name and
     acceptedAnswer (Answer with text).
   - Person has name; sameAs is recommended (warn if missing).
@@ -28,15 +32,38 @@ from pathlib import Path
 from typing import Any
 
 
+ARTICLE_FAMILY = ("BlogPosting", "Article", "TechArticle", "NewsArticle", "OpinionNewsArticle", "ScholarlyArticle")
+MAIN_ENTITY = ARTICLE_FAMILY + ("Service", "SoftwareApplication")
+
 REQUIRED_GRAPH_TYPES = (
-    ("BlogPosting", "Article"),  # either acceptable
+    MAIN_ENTITY,  # any one
     ("Person",),
     ("Organization",),
     ("BreadcrumbList",),
-    ("FAQPage",),
-    ("WebPage",),
+    ("WebPage", "CollectionPage"),
     ("ImageObject",),
 )
+
+
+def _article_has_faq(schema_path: Path) -> bool | None:
+    """True/False from the sibling article.md; None when there is no article to read."""
+    article = schema_path.parent / "article.md"
+    if not article.is_file():
+        return None
+    import re
+
+    return bool(re.search(r"^##\s+frequently asked questions\s*$", article.read_text(encoding="utf-8"), re.I | re.M))
+
+
+def _competitor_names() -> list[str]:
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from company_config import load_config  # noqa: E402
+        from competitor_checks import load_competitors  # noqa: E402
+
+        return [n for c in load_competitors(load_config(strict=False)) for n in (c.names or [c.name])]
+    except Exception:  # noqa: BLE001 — a missing config just skips the check
+        return []
 
 
 class Report:
@@ -138,23 +165,51 @@ def validate(path: Path) -> int:
         else:
             r.fail(f"Missing required type: {' or '.join(wanted)}")
 
+    has_faq = _article_has_faq(path)
+    if has_faq is False:
+        r.ok("article.md has no FAQ section — FAQPage not required (D49).")
+    elif _find_first(graph, ("FAQPage",)):
+        r.ok("Found required type: FAQPage")
+    else:
+        r.fail("Missing required type: FAQPage" + (" (article.md has an FAQ section)" if has_faq else ""))
+
+    # D51: never Review / AggregateRating schema about a competitor.
+    names = [n.lower() for n in _competitor_names()]
+    if names:
+        for node in graph:
+            if not isinstance(node, dict):
+                continue
+            rated = []
+            if _has_type(node, ("Review", "AggregateRating")):
+                rated.append(node)
+            for key in ("review", "aggregateRating"):
+                v = node.get(key)
+                if v:
+                    rated.append(node)
+            for n in rated:
+                blob = json.dumps(n).lower()
+                hit = next((c for c in names if c in blob), None)
+                if hit:
+                    r.fail(f"Review/AggregateRating schema about a head-to-head competitor ({hit}) — never rate a competitor (D51).")
+
     if not _find_all(graph, ("DefinedTerm",)):
         r.warn("No DefinedTerm nodes found. Add at least one if the article defines a key term.")
 
-    # BlogPosting / Article required props
-    bp = _find_first(graph, ("BlogPosting", "Article"))
+    # Article-family required props
+    bp = _find_first(graph, ARTICLE_FAMILY)
     if bp:
+        kind = _types(bp)[0]
         for prop in ("headline", "author", "datePublished", "image", "publisher", "mainEntityOfPage"):
             if prop not in bp:
-                r.fail(f"BlogPosting missing required property: {prop}")
+                r.fail(f"{kind} missing required property: {prop}")
             else:
-                r.ok(f"BlogPosting has {prop}.")
+                r.ok(f"{kind} has {prop}.")
         if "description" not in bp:
-            r.warn("BlogPosting has no `description`. Add the meta description.")
+            r.warn(f"{kind} has no `description`. Add the meta description.")
         if "wordCount" not in bp:
-            r.warn("BlogPosting has no `wordCount`.")
+            r.warn(f"{kind} has no `wordCount`.")
         if "keywords" not in bp:
-            r.warn("BlogPosting has no `keywords`.")
+            r.warn(f"{kind} has no `keywords`.")
 
     # FAQPage required structure
     faq = _find_first(graph, ("FAQPage",))
