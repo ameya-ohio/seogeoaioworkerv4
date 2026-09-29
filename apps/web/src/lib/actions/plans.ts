@@ -6,6 +6,8 @@ import { ObjectId } from "mongodb";
 import {
   analyzePlan,
   cfgGet,
+  contextFileChecker,
+  PlanItemHeldError,
   commitPlan,
   createPlan,
   createSchedule,
@@ -31,6 +33,7 @@ import {
 } from "@blogagent/engine";
 import { requireAuth } from "../auth";
 import { getCompany, getDb, getFormats } from "../db";
+import { repoRoot } from "../repo";
 
 export interface PlanFormState {
   error?: string;
@@ -100,6 +103,7 @@ export async function uploadPlan(
       companyName: company.companyName,
       formats: await getFormats(),
     pathPrefix: cfgGet<string>(getCompany(), "site.path_prefix", "/learn/"),
+    contextFileExists: await contextFileChecker(await getDb(), getCompany().companyId, repoRoot()),
       takenSlugs,
       existingKeywords,
     });
@@ -159,6 +163,7 @@ export async function updateMapping(
     companyName: getCompany().companyName,
     formats: await getFormats(),
     pathPrefix: cfgGet<string>(getCompany(), "site.path_prefix", "/learn/"),
+    contextFileExists: await contextFileChecker(await getDb(), getCompany().companyId, repoRoot()),
     takenSlugs,
     existingKeywords,
   });
@@ -197,6 +202,7 @@ export async function setValueMapping(
     companyName: getCompany().companyName,
     formats: await getFormats(),
     pathPrefix: cfgGet<string>(getCompany(), "site.path_prefix", "/learn/"),
+    contextFileExists: await contextFileChecker(await getDb(), getCompany().companyId, repoRoot()),
     takenSlugs,
     existingKeywords,
   });
@@ -223,6 +229,7 @@ export async function commitPlanAction(
     companyName: getCompany().companyName,
     formats: await getFormats(),
     pathPrefix: cfgGet<string>(getCompany(), "site.path_prefix", "/learn/"),
+    contextFileExists: await contextFileChecker(await getDb(), getCompany().companyId, repoRoot()),
     takenSlugs,
     existingKeywords,
   });
@@ -387,14 +394,18 @@ export async function sendPlanItemsToPipeline(ids: string[]): Promise<SendPlanRe
       continue;
     }
     try {
-      await enqueuePlanItem(db, { companyId, planItemId: id });
+      await enqueuePlanItem(db, {
+        companyId,
+        planItemId: id,
+        contextFileExists: await contextFileChecker(db, companyId, repoRoot()),
+      });
       result.sent.push(item.slug);
     } catch (err) {
       result.errors.push({
         slug: item.slug,
-        message: err instanceof SlugTakenError ? err.message : "failed to queue",
+        message: err instanceof SlugTakenError || err instanceof PlanItemHeldError ? err.message : "failed to queue",
       });
-      if (!(err instanceof SlugTakenError)) throw err;
+      if (!(err instanceof SlugTakenError) && !(err instanceof PlanItemHeldError)) throw err;
     }
   }
   revalidatePlan(planId);
@@ -497,6 +508,7 @@ export async function runScheduleNow(planId: string): Promise<PlanActionState> {
     workerId: "web-run-now",
     leaseMs: 120_000,
     heartbeatMs: 300_000,
+    contextFileExists: await contextFileChecker(db, getCompany().companyId, repoRoot()),
   });
   revalidatePlan(planId);
   if (outcome.status === "enqueued") {

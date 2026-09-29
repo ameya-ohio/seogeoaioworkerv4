@@ -259,6 +259,11 @@ export async function competitiveLandscape(cfg: WorkerConfig): Promise<InputFile
   return readAll(cfg, ["context/sales/competitive-landscape.md"]);
 }
 
+/** D51: the only company numbers an article may cite. */
+export async function proofPoints(cfg: WorkerConfig): Promise<InputFile[]> {
+  return readAll(cfg, ["context/sales/proof-points.md"]);
+}
+
 async function readAll(cfg: WorkerConfig, rels: string[]): Promise<InputFile[]> {
   const out: InputFile[] = [];
   for (const rel of rels) {
@@ -324,6 +329,7 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           ...(await readDir(cfg, "context/author-style")),
           ...(await readDir(cfg, "context/brand")),
           ...(await readAll(cfg, ["config/company.yaml"])),
+          ...(await proofPoints(cfg)),
           ...(await caseStudies(cfg)),
         ],
         inputs: await readAll(cfg, [
@@ -356,6 +362,7 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           ])),
           ...(await readDir(cfg, "context/author-style")),
           ...(await competitiveLandscape(cfg)),
+          ...(await proofPoints(cfg)),
           ...(await caseStudies(cfg)),
         ],
         inputs: await readAll(cfg, [inFolder("page.md"), inFolder("article.md"), inFolder("research-notes.md")]),

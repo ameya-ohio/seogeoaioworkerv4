@@ -6,6 +6,7 @@ import { emitPlanEvent } from "../dal/planEvents.js";
 import {
   enqueuePlanItem,
   planCostUsd,
+  releaseMetHolds,
 } from "../dal/plans.js";
 import {
   claimScheduleTick,
@@ -50,6 +51,8 @@ export interface TickDeps {
   maxRunAttempts?: number;
   /** Log and report what WOULD happen without enqueueing anything. */
   dryRun?: boolean;
+  /** D51: releases fact-sheet / dataset holds whose file now exists. */
+  contextFileExists?: (repoPath: string) => boolean;
   log?: (msg: string) => void;
   now?: () => Date;
 }
@@ -370,11 +373,18 @@ async function tickBody(
   }
 
   // 6. SELECT + ENQUEUE — sequence order, readiness per item, skip never stall.
+  // D51: held items (vendor formats, missing fact sheets, non-producible
+  // formats) are never produced unattended. Release the ones now met first.
+  if (deps.contextFileExists && !deps.dryRun) {
+    const released = await releaseMetHolds(db, planId, deps.contextFileExists);
+    if (released.length) log(`released ${released.length} held item(s): ${released.join(", ")}`);
+  }
   const candidates = await db.planItems
     .find({
       planId,
       ...scope,
       status: { $in: ["planned", "failed"] },
+      held: { $exists: false },
     })
     .sort({ sequence: 1 })
     .toArray();

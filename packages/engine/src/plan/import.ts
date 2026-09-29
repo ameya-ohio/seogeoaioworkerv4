@@ -12,7 +12,7 @@ import {
 } from "./normalize.js";
 import { assignSlugs, type SlugPlanInput } from "./slug.js";
 import { buildSynthesisContext, facetWarningsFor, parentOf, synthesizeBrief } from "./synthesize.js";
-import { formatBySlug, type FormatRegistry } from "../formats.js";
+import { formatBySlug, type FormatRegistry, type FormatSpec } from "../formats.js";
 import { computePaths, mergedHubs } from "./paths.js";
 import type {
   FunnelStage,
@@ -23,6 +23,7 @@ import type {
   PlanPillar,
   PlanSubtopic,
   PriorityTier,
+  PlanItemHold,
   SearchIntent,
   SlugStrategy,
 } from "./types.js";
@@ -51,8 +52,8 @@ export interface DraftPlanItem {
   articleType: string;
   /** D46: reserved site path. */
   path?: string;
-  /** D51: why this item can't be produced yet. */
-  heldReason?: string;
+  /** D51: why the scheduler won't produce this item on its own. */
+  held?: PlanItemHold;
   funnel: FunnelStage;
   searchIntent: SearchIntent;
   priority: PriorityTier;
@@ -76,6 +77,8 @@ export interface PlanAnalysisInput {
   pathPrefix?: string;
   /** D46: operator-set paths by externalId. */
   pathOverrides?: Map<string, string>;
+  /** D51: whether a repo-relative context file exists (fact sheets, datasets). */
+  contextFileExists?: (repoPath: string) => boolean;
   /** slug -> stage of an existing article, for collision reporting. */
   takenSlugs?: Map<string, string>;
   /** keyword text -> status, for duplicate reporting. */
@@ -296,6 +299,10 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
       format: r.format,
       articleType: r.articleType,
       ...(paths.get(r.externalId) ? { path: paths.get(r.externalId) as string } : {}),
+      ...((): { held?: PlanItemHold } => {
+        const held = holdFor(formatBySlug(input.formats, r.articleType), slug?.slug ?? "", input.contextFileExists);
+        return held ? { held } : {};
+      })(),
       funnel: r.funnel,
       searchIntent: r.searchIntent,
       priority: r.priority,
@@ -385,4 +392,34 @@ function emptyReport(sheet: string, blocking: string[]): PlanImportReport {
     needsQueryTarget: [],
     blocking,
   };
+}
+
+/**
+ * D51: why the scheduler shouldn't produce a page of this format unattended.
+ * A fact sheet or dataset that already exists means no hold.
+ */
+export function holdFor(
+  format: FormatSpec,
+  slug: string,
+  contextFileExists?: (repoPath: string) => boolean,
+): PlanItemHold | undefined {
+  if (!format.producible) {
+    return { kind: "not_producible", reason: `${format.label} pages are built by marketing, not by the engine` };
+  }
+  const need = format.requires?.factSheet ?? format.requires?.dataset;
+  if (need) {
+    const requires = need.replace("{slug}", slug);
+    if (!contextFileExists?.(requires)) {
+      const kind = format.requires?.factSheet ? "fact_sheet" : "dataset";
+      return {
+        kind,
+        reason: `${format.label} needs ${kind === "fact_sheet" ? "a product fact sheet" : "its dataset"} at ${requires}`,
+        requires,
+      };
+    }
+  }
+  if (format.signoff) {
+    return { kind: "signoff", reason: `${format.label} is a vendor format: send it by hand; it needs a human sign-off before export` };
+  }
+  return undefined;
 }

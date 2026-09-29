@@ -151,7 +151,7 @@ export async function commitPlan(
     format: i.format,
     articleType: i.articleType,
     ...(i.path ? { path: i.path } : {}),
-    ...(i.heldReason ? { heldReason: i.heldReason } : {}),
+    ...(i.held ? { held: i.held } : {}),
     funnel: i.funnel,
     searchIntent: i.searchIntent,
     priority: i.priority,
@@ -307,10 +307,18 @@ export async function enqueuePlanItem(
     planItemId: ObjectId;
     maxAttempts?: number;
     eventData?: Record<string, unknown>;
+    /** D51: checks a context file exists — releases a fact_sheet / dataset hold. */
+    contextFileExists?: (repoPath: string) => boolean;
   },
 ): Promise<{ article: ArticleDoc; run: RunDoc; item: PlanItemDoc }> {
   const item = await getPlanItem(db, params.planItemId);
   if (!item) throw new PlanItemNotFoundError(params.planItemId.toHexString());
+  // D51: a signoff hold is fine for a hand send; the others block until met.
+  if (item.held && item.held.kind !== "signoff") {
+    const met = item.held.requires && params.contextFileExists?.(item.held.requires);
+    if (!met) throw new PlanItemHeldError(item.externalId, item.held.reason);
+    await db.planItems.updateOne({ _id: params.planItemId }, { $unset: { held: "" }, $set: { updatedAt: new Date() } });
+  }
 
   const { article, run } = await enqueueArticlePipeline(db, {
     companyId: params.companyId,
@@ -457,4 +465,37 @@ export async function setPlanItemPath(
     { $set: { path, brief: { ...brief, markdown: renderBriefMarkdown(brief) }, updatedAt: new Date() } },
   );
   return { ok: true, path };
+}
+
+export class PlanItemHeldError extends Error {
+  constructor(
+    public externalId: string,
+    public reason: string,
+  ) {
+    super(`${externalId} is held: ${reason}`);
+  }
+}
+
+/**
+ * D51: release fact_sheet / dataset holds whose file now exists. Run at the
+ * start of a scheduler tick (after repo_files are applied) and from the plan
+ * UI, so dropping a fact sheet into Admin → Context unblocks its item.
+ */
+export async function releaseMetHolds(
+  db: EngineDb,
+  planId: ObjectId,
+  contextFileExists: (repoPath: string) => boolean,
+): Promise<string[]> {
+  const held = await db.planItems
+    .find({ planId, "held.kind": { $in: ["fact_sheet", "dataset"] } })
+    .project<{ _id: ObjectId; externalId: string; held: PlanItemDoc["held"] }>({ externalId: 1, held: 1 })
+    .toArray();
+  const released: string[] = [];
+  for (const h of held) {
+    if (h.held?.requires && contextFileExists(h.held.requires)) {
+      await db.planItems.updateOne({ _id: h._id }, { $unset: { held: "" }, $set: { updatedAt: new Date() } });
+      released.push(h.externalId);
+    }
+  }
+  return released;
 }

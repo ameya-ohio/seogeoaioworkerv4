@@ -454,6 +454,10 @@ Banned outright. Acceptable only for genuine acronyms (LLM, RAG, CRM, GTM). Neve
 
 ---
 
+## Company numbers (D51)
+
+The company's own figures are the most defensible claims an article can make, and the easiest to discredit when they float free of a method. Cite them only from `context/sales/proof-points.md` entries marked `Citable: yes`, with the methodology line attached. `scripts/seo_audit.py` FAILs a sentence that names the company with a number whose entry is marked `no`, and WARNs on a company number that isn't in the table at all (fine for a case-study figure; a product claim needs an entry).
+
 ## Competitor handling (absolute)
 
 The company's head-to-head competitors are listed in `context/sales/competitive-landscape.md` → *Blog-use rules*, along with the scope of each (whole company or one product). If that file is absent, this section doesn't apply. For every head-to-head vendor:

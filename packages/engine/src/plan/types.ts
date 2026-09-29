@@ -236,6 +236,20 @@ export type EnrichmentState = "pending" | "done" | "failed" | "skipped";
 /** How a plan item's slug was arrived at (surfaced in the import report). */
 export type SlugStrategy = "title" | "trimmed" | "suffixed" | "manual";
 
+/**
+ * D51: an item the scheduler won't produce unattended.
+ *   signoff        — vendor format: an operator sends it, and a human signs it off before export
+ *   fact_sheet     — needs `requires` (a context file) to exist; released once it does
+ *   dataset        — Original Research: needs its dataset file
+ *   not_producible — Offer / Landing Page: built by marketing, never by the engine
+ */
+export interface PlanItemHold {
+  kind: "signoff" | "fact_sheet" | "dataset" | "not_producible";
+  reason: string;
+  /** Repo-relative context file that releases a fact_sheet / dataset hold. */
+  requires?: string;
+}
+
 export interface PlanItemDoc {
   _id?: ObjectId;
   companyId: string;
@@ -260,8 +274,8 @@ export interface PlanItemDoc {
   articleType?: string;
   /** D46: reserved site path, e.g. "/learn/<pillar>/<hub>/<page>/". Editable until articleId is set. */
   path?: string;
-  /** D51: why this item can't be produced yet (missing fact sheet, non-producible format). */
-  heldReason?: string;
+  /** D51: why the scheduler won't produce this item on its own. */
+  held?: PlanItemHold;
   /** D52: the live URL, once the article is marked live. */
   publishedUrl?: string;
   funnel: FunnelStage;

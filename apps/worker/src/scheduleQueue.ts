@@ -1,4 +1,5 @@
-import { runScheduleTick, type EngineDb, type TickOutcome } from "@blogagent/engine";
+import {
+  contextFileChecker, runScheduleTick, type EngineDb, type TickOutcome } from "@blogagent/engine";
 import type { WorkerConfig } from "./config.js";
 import type { QueueController } from "./queue.js";
 
@@ -64,6 +65,8 @@ export function startScheduleQueue(deps: ScheduleDeps): QueueController {
           maxRunAttempts: cfg.maxRunAttempts,
           dryRun: cfg.schedule.dryRun,
           log: deps.log,
+          // D51: a fact sheet saved in Admin → Context releases its item.
+          contextFileExists: await contextFileChecker(deps.db, deps.companyId, cfg.repoRoot),
         });
         const outcome = await tick;
         if (outcome.status !== "no_work") {

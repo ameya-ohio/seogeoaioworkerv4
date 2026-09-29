@@ -22,6 +22,7 @@ import {
   analyzePlan,
   applyRepoFiles,
   cfgGet,
+  contextFileChecker,
   loadFormatRegistry,
   commitPlan,
   createPlan,
@@ -660,6 +661,7 @@ async function cmdPlanImport(argv: string[]): Promise<void> {
       companyName,
       formats,
       pathPrefix: cfgGet<string>(company, "site.path_prefix", "/learn/"),
+      contextFileExists: await contextFileChecker(db, companyId, cfg.repoRoot),
       takenSlugs,
       existingKeywords,
     });
@@ -985,6 +987,7 @@ async function cmdScheduleTick(argv: string[]): Promise<void> {
       maxRunAttempts: cfg.maxRunAttempts,
       dryRun,
       log,
+      contextFileExists: await contextFileChecker(db, companyId, cfg.repoRoot),
     });
     console.log(`${outcome.status}${dryRun ? " (dry run — nothing was written)" : ""}`);
     for (const e of outcome.enqueued) console.log(`  queued #${e.sequence} ${e.slug}`);

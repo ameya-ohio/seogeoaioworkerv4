@@ -127,6 +127,10 @@ Build the worked example on exactly what the outline's **Real-World Anchor** nam
 
 Never invent a scenario: no "picture a…", "imagine a…", "suppose…", "let's say…". The edit gate fails them.
 
+## Company numbers
+
+Cite a company figure (attack paths found, reduction percentages, deployment time, integration counts) only from `context/sales/proof-points.md`, and only an entry marked `Citable: yes`. Attach its methodology line the way the table states it ("5.9M+ attack paths identified across customer environments (Saporo platform data, 2026)"). The audit fails a company number marked `no`. Figures from a case study you're anchored on are fine; they come from that file.
+
 ## Competitors
 
 Name vendors exactly as the outline's **Competitor Handling** section plans. The rules are in `standards/quality-bar.md` → *Competitor handling*:

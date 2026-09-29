@@ -46,6 +46,7 @@ from company_config import load_banned_phrases, load_config  # noqa: E402
 from competitor_checks import load_competitors, parse_jsonld, run_all as run_competitor_checks  # noqa: E402
 from formats import article_type_slug, load_registry  # noqa: E402
 from format_checks import run_all as run_format_checks  # noqa: E402
+from proof_points import load_proof_points, run_all as run_proof_point_checks  # noqa: E402
 from style_checks import format_finding, run_all as run_style_checks  # noqa: E402
 
 # Single source: standards/banned-phrases.txt + config/company.yaml
@@ -390,6 +391,12 @@ def audit(folder: Path) -> int:
             (a.fail if f.level == "fail" else a.warn)(format_finding(f))
         if not any(f.level == "fail" for f in fmt_findings):
             a.ok(f"Format: {fmt_slug} structure checks passed.")
+
+    # the company's own numbers must come from context/sales/proof-points.md (D51)
+    company_name = str((_CONFIG.get("company") or {}).get("name", "")) if isinstance(_CONFIG, dict) else ""
+    pp = run_proof_point_checks(body_clean, [company_name], load_proof_points())
+    for f in pp:
+        (a.fail if f.level == "fail" else a.warn)(format_finding(f))
 
     # head-to-head competitors (standards/quality-bar.md → Competitor handling)
     if COMPETITORS:

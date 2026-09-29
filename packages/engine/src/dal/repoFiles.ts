@@ -83,3 +83,25 @@ export async function applyRepoFiles(
   }
   return { written, removed };
 }
+
+/**
+ * D51: a synchronous "does this context file exist?" check that sees both
+ * the repo copy and Admin-saved files (repo_files), with tombstones winning.
+ * Loaded once per call site, so a scheduler tick or an import checks many
+ * fact-sheet paths without a query each.
+ */
+export async function contextFileChecker(
+  db: EngineDb,
+  companyId: string,
+  repoRoot: string,
+): Promise<(repoPath: string) => boolean> {
+  const saved = await listRepoFiles(db, companyId);
+  const present = new Set(saved.filter((f) => !f.deleted).map((f) => f.path));
+  const deleted = new Set(saved.filter((f) => f.deleted).map((f) => f.path));
+  return (repoPath: string) => {
+    const p = repoPath.replace(/^\/+/, "");
+    if (present.has(p)) return true;
+    if (deleted.has(p)) return false;
+    return existsSync(join(repoRoot, p));
+  };
+}
