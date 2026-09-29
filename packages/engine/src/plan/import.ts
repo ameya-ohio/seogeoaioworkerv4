@@ -13,6 +13,7 @@ import {
 import { assignSlugs, type SlugPlanInput } from "./slug.js";
 import { buildSynthesisContext, facetWarningsFor, parentOf, synthesizeBrief } from "./synthesize.js";
 import { formatBySlug, type FormatRegistry } from "../formats.js";
+import { computePaths, mergedHubs } from "./paths.js";
 import type {
   FunnelStage,
   PageRole,
@@ -71,6 +72,10 @@ export interface PlanAnalysisInput {
   companyName: string;
   /** D45: standards/formats.json, parsed. */
   formats: FormatRegistry;
+  /** D46: site path prefix (company.yaml site.path_prefix); default "/learn/". */
+  pathPrefix?: string;
+  /** D46: operator-set paths by externalId. */
+  pathOverrides?: Map<string, string>;
   /** slug -> stage of an existing article, for collision reporting. */
   takenSlugs?: Map<string, string>;
   /** keyword text -> status, for duplicate reporting. */
@@ -122,7 +127,14 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
   const subtopics = extractSubtopics(workbook, mapping.sheet);
   const concepts = extractConcepts(workbook, mapping.sheet, pillars);
   const taxonomyIndex = indexTaxonomy(pillars, subtopics);
-  const { rows, skipped, unrecognized, defaulted } = normalizeRows(sheet, mapping, taxonomyIndex, input.formats);
+  const normalized = normalizeRows(sheet, mapping, taxonomyIndex, input.formats);
+  const { skipped, unrecognized, defaulted } = normalized;
+  // D46: a hub that duplicates its pillar's topic merges into the pillar —
+  // the pillar answers its query and its articles hang off the pillar.
+  const merged = mergedHubs(normalized.rows);
+  const mergedIds = new Set(merged.map((m) => m.externalId));
+  const rows = normalized.rows.filter((r) => !mergedIds.has(r.externalId));
+  const mergedSubtopics = new Set(merged.map((m) => `${m.pillarId}::${m.subtopicId ?? ""}`));
   if (rows.length === 0) {
     blocking.push("No rows could be read with this mapping — check the sheet and columns.");
   }
@@ -197,7 +209,7 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
       rows
         .filter((r) => r.pageRole === "cluster" && r.subtopicId)
         .map((r) => `${r.pillarId}::${r.subtopicId ?? ""}`)
-        .filter((k) => !hubKeys.has(k)),
+        .filter((k) => !hubKeys.has(k) && !mergedSubtopics.has(k)),
     ),
   ];
   for (const r of rows) {
@@ -205,8 +217,17 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
       orphanRows.push({ externalId: r.externalId, reason: "cluster article with no subtopic" });
     }
   }
+  // ── paths (D46) ─────────────────────────────────────────────────────────
+  const { paths, collisions: pathCollisions } = computePaths(rows, {
+    ...(input.pathPrefix ? { prefix: input.pathPrefix } : {}),
+    ...(input.pathOverrides ? { overrides: input.pathOverrides } : {}),
+  });
+  const mergedQueries = new Map<string, string[]>();
+  for (const m of merged) mergedQueries.set(m.pillarId, [...(mergedQueries.get(m.pillarId) ?? []), m.title]);
   // ── briefs ──────────────────────────────────────────────────────────────
   const ctx = buildSynthesisContext({
+    paths,
+    mergedQueries,
     pillars,
     subtopics,
     concepts,
@@ -274,6 +295,7 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
       title: r.title,
       format: r.format,
       articleType: r.articleType,
+      ...(paths.get(r.externalId) ? { path: paths.get(r.externalId) as string } : {}),
       funnel: r.funnel,
       searchIntent: r.searchIntent,
       priority: r.priority,
@@ -299,6 +321,8 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
     byIntent: countBy(rows.map((r) => r.searchIntent)),
     byFormat: countBy(rows.map((r) => (r.format ? formatBySlug(input.formats, r.articleType).label : "(none)"))),
     unrecognized,
+    mergedHubs: merged.map((m) => ({ externalId: m.externalId, title: m.title, pillarId: m.pillarId })),
+    pathCollisions,
     facetWarnings: rows.flatMap((r) =>
       facetWarningsFor(r, input.formats).map((warning) => ({ externalId: r.externalId, warning })),
     ),
@@ -349,6 +373,8 @@ function emptyReport(sheet: string, blocking: string[]): PlanImportReport {
     byFormat: {},
     unrecognized: [],
     facetWarnings: [],
+    mergedHubs: [],
+    pathCollisions: [],
     duplicateSlugs: [],
     duplicateTitles: [],
     articleCollisions: [],

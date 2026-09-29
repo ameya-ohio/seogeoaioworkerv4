@@ -63,6 +63,24 @@ export async function canonicalFor(db: EngineDb, article: ArticleDoc): Promise<s
   return `${base}${article.path.startsWith("/") ? "" : "/"}${article.path}`;
 }
 
+/** D46: the configured root crumbs (Home › Learn) plus the page's own trail. */
+export async function breadcrumbsFor(
+  db: EngineDb,
+  article: ArticleDoc,
+): Promise<{ name: string; url: string }[] | undefined> {
+  if (!article.trail?.length) return undefined;
+  const company = await db.companies.findOne({ companyId: article.companyId });
+  const cfg = (company?.config ?? {}) as Record<string, Record<string, unknown> | undefined>;
+  const base = String(cfg["site"]?.["base_url"] ?? cfg["company"]?.["url"] ?? "").replace(/\/+$/, "");
+  if (!base) return undefined;
+  const root = Array.isArray(cfg["site"]?.["breadcrumb_root"])
+    ? (cfg["site"]?.["breadcrumb_root"] as { name?: unknown; url?: unknown }[])
+        .filter((c) => typeof c.name === "string" && typeof c.url === "string")
+        .map((c) => ({ name: String(c.name), url: String(c.url) }))
+    : [{ name: "Home", url: `${base}/` }];
+  return [...root, ...article.trail.map((t) => ({ name: t.name, url: `${base}${t.path}` }))];
+}
+
 export async function pageRulesFor(
   db: EngineDb,
   cfg: WorkerConfig,
@@ -71,10 +89,12 @@ export async function pageRulesFor(
 ): Promise<{ rules: PageRules; formats: FormatRegistry }> {
   const reg = formats ?? loadFormatRegistry(cfg.repoRoot);
   const canonicalUrl = await canonicalFor(db, article);
+  const breadcrumbs = await breadcrumbsFor(db, article);
   const rules = resolvePageRules(reg, article.facets, {
     ctas: await readCtaSettings(db, article.companyId),
     ...(article.path ? { path: article.path } : {}),
     ...(canonicalUrl ? { canonicalUrl } : {}),
+    ...(breadcrumbs ? { breadcrumbs } : {}),
   });
   return { rules, formats: reg };
 }

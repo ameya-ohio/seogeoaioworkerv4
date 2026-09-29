@@ -49,12 +49,19 @@ export interface PageRules {
   otherCtaUrls: string[];
   path?: string;
   canonicalUrl?: string;
+  /** D46: Home › Learn › Pillar › Hub › Page, absolute URLs. */
+  breadcrumbs?: { name: string; url: string }[];
 }
 
 export function resolvePageRules(
   reg: FormatRegistry,
   facets: ArticleFacets | undefined,
-  opts: { ctas?: CtaSettings; path?: string; canonicalUrl?: string } = {},
+  opts: {
+    ctas?: CtaSettings;
+    path?: string;
+    canonicalUrl?: string;
+    breadcrumbs?: { name: string; url: string }[];
+  } = {},
 ): PageRules {
   const format = formatBySlug(reg, facets?.articleType ?? GENERIC_FORMAT_SLUG);
   const role = facets?.pageRole ?? "cluster";
@@ -76,6 +83,7 @@ export function resolvePageRules(
   if (cta) rules.cta = cta;
   if (opts.path) rules.path = opts.path;
   if (opts.canonicalUrl) rules.canonicalUrl = opts.canonicalUrl;
+  if (opts.breadcrumbs?.length) rules.breadcrumbs = opts.breadcrumbs;
   return rules;
 }
 
@@ -169,6 +177,9 @@ export function renderPageSpec(rules: PageRules, formatGuide: string): string {
   }
   if (rules.path) lines.push(`- **Path:** ${rules.path}`);
   if (rules.canonicalUrl) lines.push(`- **Canonical URL:** ${rules.canonicalUrl} (stamped by the worker — do not change it)`);
+  if (rules.breadcrumbs?.length) {
+    lines.push(`- **Breadcrumbs (BreadcrumbList, in order):** ${rules.breadcrumbs.map((b) => `${b.name} <${b.url}>`).join(" › ")}`);
+  }
   lines.push(
     ``,
     `## Rules for this page`,

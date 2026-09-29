@@ -20,6 +20,40 @@ company:
   url: https://www.saporo.io
   description: "Saporo delivers Preemptive Identity Exposure Management (PIEM), continuously discovering, prioritizing, and reducing identity exposure across hybrid environments for human and non-human identities."
 
+# D46: pillar pages, hubs and cluster articles all live under /learn/
+# (/learn/<pillar>/<hub>/<page>/), on Framer — not on the blog. canonical_url
+# = base_url + the plan item's reserved path, stamped by the worker.
+site:
+  base_url: https://www.saporo.io
+  path_prefix: /learn/
+  breadcrumb_root:
+    - name: Home
+      url: https://www.saporo.io/
+    - name: Learn
+      url: https://www.saporo.io/learn/
+
+# D52: where finished pages go. framer-export = the Review screen downloads a
+# paste-ready bundle and "Mark live" confirms the page is up. hubspot = the
+# HubSpot publish flow (roadmap Phase 5), kept for other companies.
+publish:
+  target: framer-export
+
+# D50: the closing CTA per funnel stage. These are the seed values; Admin →
+# CTAs saves overrides in Mongo (settings "cta.byFunnel"), which win.
+ctas:
+  tofu:
+    label: Download the Saporo overview
+    url: https://framerusercontent.com/assets/kDfpMeVvQpR5EKG0RY4c3ZMWVA.pdf
+    blurb: A short PDF on what Saporo does and how it works
+  mofu:
+    label: Get a free identity exposure assessment
+    url: https://www.saporo.io/resources/downloads/free-identity-exposure-assessment
+    blurb: See your own identity exposure and attack paths
+  bofu:
+    label: Book a demo
+    url: https://www.saporo.io/demo
+    blurb: A walkthrough of Saporo on your environment
+
 blog:
   base_url: https://www.saporo.io/resources/blog
   canonical_pattern: "https://www.saporo.io/resources/blog/{slug}"  # verified against a live post's canonical tag

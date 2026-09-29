@@ -35,7 +35,7 @@ You are not deciding *what* to write — that's done. You are deciding *how* it 
 8. Give a formal bolded definition (`**Foo** is …`) to **at most two** terms — the ones the argument depends on. Explain every other term in passing, inside the sentence that uses it. The Schema Builder turns the bolded definitions into `DefinedTerm` entries.
 9. Write the **closing / CTA** the Strategist picked.
 10. Save to `articles/YYYY-MM-DD-slug/article.md`.
-11. Update `articles/YYYY-MM-DD-slug/meta.json` with `title`, `slug`, `meta_description`, `keywords` (primary + secondary as a list), and `canonical_url` (placeholder if site context unknown).
+11. Update `articles/YYYY-MM-DD-slug/meta.json` with `title`, `slug`, `meta_description` and `keywords` (primary + secondary as a list). Copy `canonical_url` from page.md when it lists one (a plan page's reserved /learn/ path, D46); the worker stamps it into the frontmatter either way.
 
 ---
 

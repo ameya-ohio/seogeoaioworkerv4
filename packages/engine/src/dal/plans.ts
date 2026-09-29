@@ -1,3 +1,5 @@
+import { normalizePath } from "../plan/paths.js";
+import { renderBriefMarkdown } from "../cluster/brief.js";
 import { ObjectId } from "mongodb";
 import type { EngineDb } from "../db.js";
 import { enqueueArticlePipeline } from "../pipelineOps.js";
@@ -428,4 +430,31 @@ export async function failPlanEnrichment(
       $unset: { leaseUntil: "", workerId: "" },
     },
   );
+}
+
+/**
+ * D46: change a plan item's reserved path. Refused once the item is in
+ * production (the article's canonical URL is already stamped) and when the
+ * path belongs to another item in the same plan.
+ */
+export async function setPlanItemPath(
+  db: EngineDb,
+  planItemId: ObjectId,
+  rawPath: string,
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  const path = normalizePath(rawPath);
+  if (path === "/") return { ok: false, error: "a path needs at least one segment" };
+  const item = await db.planItems.findOne({ _id: planItemId });
+  if (!item) return { ok: false, error: "item not found" };
+  if (item.articleId) return { ok: false, error: "this item is already in production — its URL is fixed" };
+  const clash = await db.planItems.findOne({ planId: item.planId, path, _id: { $ne: planItemId } });
+  if (clash) return { ok: false, error: `${path} already belongs to ${clash.externalId}` };
+  const page = item.brief.page ? { ...item.brief.page, path } : undefined;
+  const { markdown: _old, ...rest } = item.brief;
+  const brief = { ...rest, ...(page ? { page } : {}) };
+  await db.planItems.updateOne(
+    { _id: planItemId },
+    { $set: { path, brief: { ...brief, markdown: renderBriefMarkdown(brief) }, updatedAt: new Date() } },
+  );
+  return { ok: true, path };
 }

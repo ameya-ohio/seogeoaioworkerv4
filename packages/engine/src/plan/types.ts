@@ -129,6 +129,10 @@ export interface PlanImportReport {
   unrecognized: { field: PlanColumn; value: string; rows: number[] }[];
   /** Role/funnel/intent combinations the build spec calls mis-tagged (never blocking). */
   facetWarnings?: { externalId: string; warning: string }[];
+  /** D46: hub rows dropped because their subtopic is the pillar's own topic. */
+  mergedHubs?: { externalId: string; title: string; pillarId: string }[];
+  /** D46: rows whose path had to be suffixed to stay unique. */
+  pathCollisions?: { externalId: string; wanted: string; got: string }[];
   /** Two rows in THIS import resolving to the same slug after disambiguation. */
   duplicateSlugs: { slug: string; externalIds: string[] }[];
   duplicateTitles: { title: string; externalIds: string[] }[];

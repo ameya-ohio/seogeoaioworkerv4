@@ -46,6 +46,8 @@ export interface SynthesisContext {
   formats: FormatRegistry;
   /** D46: reserved site paths by externalId, when the plan computed them. */
   paths?: Map<string, string>;
+  /** D46: titles of hubs merged into each pillar (by pillarId) — the pillar owns their queries. */
+  mergedQueries?: Map<string, string[]>;
 }
 
 /** Siblings listed per D35; more than this is link spam, not navigation. */
@@ -154,7 +156,15 @@ export function childrenOf(
   rows: NormalizedPlanRow[],
 ): NormalizedPlanRow[] {
   if (row.pageRole === "pillar") {
-    return rows.filter((r) => r.pageRole === "hub" && r.pillarId === row.pillarId);
+    // Hubs, plus articles whose subtopic has no hub (merged into the pillar, D46).
+    const hubSubtopics = new Set(
+      rows.filter((r) => r.pageRole === "hub" && r.pillarId === row.pillarId).map((r) => r.subtopicId),
+    );
+    return rows.filter(
+      (r) =>
+        r.pillarId === row.pillarId &&
+        (r.pageRole === "hub" || (r.pageRole === "cluster" && !hubSubtopics.has(r.subtopicId))),
+    );
   }
   if (row.pageRole === "hub") {
     return rows.filter(
@@ -383,7 +393,14 @@ export function synthesizeBrief(
     // No fan-out produced this brief, so there are no sub-queries. Inventing
     // them would be fabricating provenance.
     representativeSubQueries: [],
-    h2Outline: requiredPassagesFor(row, ctx.rows, ctx.formats),
+    h2Outline: [
+      ...requiredPassagesFor(row, ctx.rows, ctx.formats),
+      ...(row.pageRole === "pillar"
+        ? (ctx.mergedQueries?.get(row.pillarId) ?? []).map(
+            (q) => `A complete answer to "${q}" — that hub merged into this pillar, which now owns its query (D46)`,
+          )
+        : []),
+    ],
     evidence: evidenceFor(row, ctx),
     differentiationAngle: differentiationFor(row, ctx),
     internalLinks: internalLinksFor(row, ctx.rows),
@@ -410,6 +427,7 @@ export function buildSynthesisContext(params: {
   defaultPersona?: string;
   formats: FormatRegistry;
   paths?: Map<string, string>;
+  mergedQueries?: Map<string, string[]>;
 }): SynthesisContext {
   const conceptsByPillar = new Map<string, PlanConcept[]>();
   for (const c of params.concepts) {
@@ -426,6 +444,7 @@ export function buildSynthesisContext(params: {
     companyName: params.companyName,
     formats: params.formats,
     ...(params.paths ? { paths: params.paths } : {}),
+    ...(params.mergedQueries ? { mergedQueries: params.mergedQueries } : {}),
     defaultPersona:
       params.defaultPersona ??
       "the practitioner who owns this problem day to day (placeholder — refine at enrichment)",

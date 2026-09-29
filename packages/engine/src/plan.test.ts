@@ -13,6 +13,7 @@ import {
   commitPlan,
   createPlan,
   enqueuePlanItem,
+  setPlanItemPath,
   getPlanItem,
   listPlanItems,
   planCounts,
@@ -189,6 +190,35 @@ describe("enqueuePlanItem", () => {
     });
     expect(article.pendingLinks).toContain("What is Widget Exposure");
     expect(article.pendingLinks).toContain("How to Harden Widgets");
+  });
+
+  it("carries facets, the reserved /learn/ path and the breadcrumb trail (D45/D46)", async () => {
+    const plan = await seedPlan();
+    const items = await listPlanItems(db, { planId: plan._id as ObjectId, limit: 100 });
+    const spoke = items.find((i) => i.pageRole === "cluster" && i.parentItemId);
+    expect(spoke?.path).toMatch(/^\/learn\/[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-]+\/$/);
+    const { article } = await enqueuePlanItem(db, { companyId: COMPANY, planItemId: spoke?._id as ObjectId });
+    expect(article.facets).toMatchObject({ pageRole: "cluster", source: "plan", funnel: spoke?.funnel });
+    expect(article.facets?.articleType).toBe(spoke?.articleType);
+    expect(article.path).toBe(spoke?.path);
+    // Pillar → hub → page, each with its own reserved path.
+    expect(article.trail?.map((t) => t.path)).toHaveLength(3);
+    expect(article.trail?.[2]?.path).toBe(spoke?.path);
+    expect(article.trail?.[0]?.path).toMatch(/^\/learn\/[a-z0-9-]+\/$/);
+  });
+
+  it("lets an operator change a path until the item is in production", async () => {
+    const plan = await seedPlan();
+    const items = await listPlanItems(db, { planId: plan._id as ObjectId, limit: 100 });
+    const [a, b] = items.filter((i) => i.pageRole === "cluster");
+    const moved = await setPlanItemPath(db, a?._id as ObjectId, "Learn/Widgets/Custom Page");
+    expect(moved).toEqual({ ok: true, path: "/learn/widgets/custom-page/" });
+    const fresh = await getPlanItem(db, a?._id as ObjectId);
+    expect(fresh?.brief.markdown).toContain("/learn/widgets/custom-page/");
+    const clash = await setPlanItemPath(db, b?._id as ObjectId, "/learn/widgets/custom-page/");
+    expect(clash.ok).toBe(false);
+    await enqueuePlanItem(db, { companyId: COMPANY, planItemId: a?._id as ObjectId });
+    expect((await setPlanItemPath(db, a?._id as ObjectId, "/learn/x/")).ok).toBe(false);
   });
 
   it("moves the item to in_progress and links the article back", async () => {

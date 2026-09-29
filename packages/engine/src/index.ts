@@ -23,6 +23,7 @@ export * from "./plan/mapping.js";
 export * from "./plan/normalize.js";
 export * from "./plan/queryTarget.js";
 export * from "./plan/slug.js";
+export * from "./plan/paths.js";
 export * from "./plan/synthesize.js";
 export * from "./schedule/types.js";
 export * from "./schedule/calendar.js";

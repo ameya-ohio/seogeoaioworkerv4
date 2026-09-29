@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { ObjectId } from "mongodb";
 import {
   analyzePlan,
+  cfgGet,
   commitPlan,
   createPlan,
   createSchedule,
@@ -18,6 +19,7 @@ import {
   requestPlanEnrichment,
   resumeSchedule,
   runScheduleTick,
+  setPlanItemPath,
   SlugTakenError,
   suggestMapping,
   updatePlanMapping,
@@ -97,6 +99,7 @@ export async function uploadPlan(
       mapping,
       companyName: company.companyName,
       formats: await getFormats(),
+    pathPrefix: cfgGet<string>(getCompany(), "site.path_prefix", "/learn/"),
       takenSlugs,
       existingKeywords,
     });
@@ -155,6 +158,7 @@ export async function updateMapping(
     mapping,
     companyName: getCompany().companyName,
     formats: await getFormats(),
+    pathPrefix: cfgGet<string>(getCompany(), "site.path_prefix", "/learn/"),
     takenSlugs,
     existingKeywords,
   });
@@ -192,6 +196,7 @@ export async function setValueMapping(
     mapping,
     companyName: getCompany().companyName,
     formats: await getFormats(),
+    pathPrefix: cfgGet<string>(getCompany(), "site.path_prefix", "/learn/"),
     takenSlugs,
     existingKeywords,
   });
@@ -217,6 +222,7 @@ export async function commitPlanAction(
     mapping: plan.mapping,
     companyName: getCompany().companyName,
     formats: await getFormats(),
+    pathPrefix: cfgGet<string>(getCompany(), "site.path_prefix", "/learn/"),
     takenSlugs,
     existingKeywords,
   });
@@ -294,6 +300,18 @@ export async function setItemQueryTarget(
   );
   revalidatePlan(item.planId.toHexString());
   return { message: `Target set to "${text}".` };
+}
+
+/** D46: set a plan item's reserved /learn/ path (until it is in production). */
+export async function setItemPath(planItemId: string, path: string): Promise<PlanActionState> {
+  await requireAuth();
+  if (!ObjectId.isValid(planItemId)) return { error: "bad item id" };
+  const db = await getDb();
+  const res = await setPlanItemPath(db, new ObjectId(planItemId), path);
+  if (!res.ok) return { error: res.error };
+  const item = await db.planItems.findOne({ _id: new ObjectId(planItemId) });
+  if (item) revalidatePlan(item.planId.toHexString());
+  return { message: `Path set to ${res.path}` };
 }
 
 export async function setItemStatus(

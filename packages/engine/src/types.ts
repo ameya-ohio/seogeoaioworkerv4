@@ -221,6 +221,8 @@ export interface ArticleDoc {
   path?: string;
   /** Absolute canonical URL built from the path; stamped into frontmatter by the worker. */
   canonicalUrl?: string;
+  /** D46: the page's ancestors and itself, for breadcrumbs (pillar → hub → page). */
+  trail?: { name: string; path: string }[];
   /** D52: the page confirmed live on the site (Framer export target). */
   live?: { url: string; verifiedAt: Date; status: number };
   /** D51: human sign-off for formats that require it, before export. */

@@ -70,6 +70,7 @@ export async function enqueueArticlePipeline(
   let planId: ObjectId | undefined;
   let facets: ArticleFacets | undefined = input.facets;
   let path: string | undefined;
+  let trail: { name: string; path: string }[] | undefined;
   if (input.themeId) {
     const theme = await db.themes.findOne({ _id: input.themeId });
     const cluster = theme ? await db.clusters.findOne({ _id: theme.clusterId }) : null;
@@ -124,6 +125,21 @@ export async function enqueueArticlePipeline(
       };
       brief.facets = facets;
       path = item.path ?? item.brief.page?.path;
+      // Breadcrumb trail (D46): walk up the plan to the pillar.
+      if (path) {
+        const chain: { name: string; path: string }[] = [{ name: item.title, path }];
+        let parentId = item.parentItemId;
+        for (let depth = 0; parentId && depth < 3; depth++) {
+          const parent = await db.planItems.findOne({ _id: parentId });
+          if (!parent?.path) break;
+          chain.unshift({
+            name: parent.pageRole === "pillar" ? parent.pillarName : (parent.subtopicName ?? parent.title),
+            path: parent.path,
+          });
+          parentId = parent.parentItemId;
+        }
+        trail = chain;
+      }
       // A routing page also links DOWN to its children; all of them are
       // planned pages, so they are plain mentions until they exist (D35).
       pendingLinks = [
@@ -150,6 +166,7 @@ export async function enqueueArticlePipeline(
     ...(pendingLinks?.length ? { pendingLinks } : {}),
     ...(facets ? { facets } : {}),
     ...(path ? { path } : {}),
+    ...(trail ? { trail } : {}),
     ...(planId ? { planId } : {}),
     ...(input.planItemId ? { planItemId: input.planItemId } : {}),
   });

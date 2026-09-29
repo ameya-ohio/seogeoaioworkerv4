@@ -21,6 +21,7 @@ import {
   syncCompany,
   analyzePlan,
   applyRepoFiles,
+  cfgGet,
   loadFormatRegistry,
   commitPlan,
   createPlan,
@@ -627,7 +628,7 @@ async function cmdPlanImport(argv: string[]): Promise<void> {
     );
     process.exit(2);
   }
-  const { cfg, db, companyId, companyName } = await setup();
+  const { cfg, db, companyId, companyName, company } = await setup();
   try {
     const path = isAbsolute(file) ? file : resolve(process.cwd(), file);
     const buf = await readFile(path);
@@ -658,6 +659,7 @@ async function cmdPlanImport(argv: string[]): Promise<void> {
       mapping,
       companyName,
       formats,
+      pathPrefix: cfgGet<string>(company, "site.path_prefix", "/learn/"),
       takenSlugs,
       existingKeywords,
     });
