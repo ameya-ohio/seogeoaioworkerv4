@@ -175,7 +175,7 @@ export async function updateMapping(
 /** Assign a facet value the auto-detection could not resolve. */
 export async function setValueMapping(
   planId: string,
-  field: "pageRole" | "funnel" | "priority" | "searchIntent",
+  field: "pageRole" | "funnel" | "priority" | "searchIntent" | "format",
   rawValue: string,
   canonical: string,
 ): Promise<PlanActionState> {
@@ -186,10 +186,12 @@ export async function setValueMapping(
   const plan = await getPlan(db, id);
   if (!plan) return { error: "plan not found" };
 
+  // D45: an Article Type label maps onto a formats.json slug.
+  const key = field === "format" ? "articleType" : field;
   const values = {
     ...plan.mapping.values,
-    [field]: {
-      ...plan.mapping.values[field],
+    [key]: {
+      ...(plan.mapping.values[key] ?? {}),
       [rawValue.toLowerCase()]: field === "priority" ? Number.parseInt(canonical, 10) : canonical,
     },
   } as PlanMapping["values"];

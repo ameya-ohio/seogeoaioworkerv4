@@ -24,12 +24,12 @@ export interface MapperField {
 }
 
 export interface UnresolvedValue {
-  field: "pageRole" | "funnel" | "priority" | "searchIntent";
+  field: "pageRole" | "funnel" | "priority" | "searchIntent" | "format";
   value: string;
   rows: number;
 }
 
-const CANONICAL: Record<UnresolvedValue["field"], { value: string; label: string }[]> = {
+const CANONICAL: Record<Exclude<UnresolvedValue["field"], "format">, { value: string; label: string }[]> = {
   pageRole: [
     { value: "pillar", label: "Pillar page" },
     { value: "hub", label: "Subtopic hub" },
@@ -61,6 +61,7 @@ export function PlanMapper({
   fields,
   unresolved,
   blocking,
+  formatOptions,
 }: {
   planId: string;
   sheets: { name: string; rows: number }[];
@@ -69,6 +70,8 @@ export function PlanMapper({
   fields: MapperField[];
   unresolved: UnresolvedValue[];
   blocking: string[];
+  /** D45: the formats.json formats an unknown Article Type label can map to. */
+  formatOptions: { value: string; label: string }[];
 }) {
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<string | null>(null);
@@ -150,7 +153,8 @@ export function PlanMapper({
         <Card title="Values we could not place">
           <p className="mb-3 text-sm text-slate-600">
             These appear in the sheet but do not match anything known. A page role must be
-            assigned; the rest fall back to a sensible default.
+            assigned; the rest fall back to a sensible default (an unmapped article type uses the
+            generic format guide).
           </p>
           <div className="space-y-2">
             {unresolved.map((u) => (
@@ -171,7 +175,7 @@ export function PlanMapper({
                   }
                 >
                   <option value="">means…</option>
-                  {CANONICAL[u.field].map((c) => (
+                  {(u.field === "format" ? formatOptions : CANONICAL[u.field]).map((c) => (
                     <option key={c.value} value={c.value}>
                       {c.label}
                     </option>

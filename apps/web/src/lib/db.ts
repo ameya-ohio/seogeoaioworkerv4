@@ -74,3 +74,9 @@ export async function getFormats(): Promise<FormatRegistry> {
   if (saved && !saved.deleted) return parseFormatRegistry(JSON.parse(saved.content));
   return loadFormatRegistry(repoRoot());
 }
+
+/** formats.json slug -> label, for badges. */
+export async function getFormatLabels(): Promise<Record<string, string>> {
+  const reg = await getFormats();
+  return Object.fromEntries(reg.formats.map((f) => [f.slug, f.label]));
+}

@@ -52,7 +52,7 @@ export interface UiArticleSummary {
   /** D52: confirmed live URL (Framer target). */
   liveUrl: string | null;
   /** D45: page facets, when set. */
-  facets: { pageRole: string; searchIntent: string; articleType: string; funnel: string } | null;
+  facets: { pageRole: string; searchIntent: string; articleType: string; funnel: string; typeLabel: string } | null;
   /** D46: reserved site path. */
   path: string | null;
 }
@@ -105,7 +105,8 @@ export function toUiKeyword(doc: KeywordDoc, articleSlug?: string | null): UiKey
   };
 }
 
-export function toUiArticleSummary(doc: ArticleDoc): UiArticleSummary {
+/** `typeLabels` maps formats.json slugs to labels; unknown slugs show as-is. */
+export function toUiArticleSummary(doc: ArticleDoc, typeLabels?: Record<string, string>): UiArticleSummary {
   return {
     id: doc._id?.toHexString() ?? "",
     slug: doc.slug,
@@ -126,6 +127,7 @@ export function toUiArticleSummary(doc: ArticleDoc): UiArticleSummary {
           searchIntent: doc.facets.searchIntent,
           articleType: doc.facets.articleType,
           funnel: doc.facets.funnel,
+          typeLabel: typeLabels?.[doc.facets.articleType] ?? doc.facets.articleType,
         }
       : null,
     path: doc.path ?? null,
@@ -466,6 +468,15 @@ export interface UiPlanItemRow {
   failureCount: number;
   lastError: string | null;
   articleSlug: string | null;
+  /** D45: formats.json slug + label. */
+  articleType: string;
+  articleTypeLabel: string;
+  searchIntent: string;
+  /** D46: reserved /learn/ path. */
+  path: string | null;
+  /** D51: why the scheduler won't produce it on its own. */
+  held: { kind: string; reason: string } | null;
+  publishedUrl: string | null;
 }
 
 export interface UiPlanItemDetail extends UiPlanItemRow {
@@ -494,6 +505,10 @@ export interface UiPlanReport {
   missingPillars: string[];
   needsQueryTarget: string[];
   blocking: string[];
+  /** D45–D46 */
+  facetWarnings: { externalId: string; warning: string }[];
+  mergedHubs: { externalId: string; title: string }[];
+  pathCollisions: { externalId: string; wanted: string; got: string }[];
 }
 
 export interface UiSchedule {
@@ -576,6 +591,12 @@ export function toUiPlanItemRow(doc: PlanItemDoc, articleSlug?: string): UiPlanI
     failureCount: doc.failureCount,
     lastError: doc.lastError ?? null,
     articleSlug: articleSlug ?? null,
+    articleType: doc.articleType ?? doc.brief.page?.articleType ?? "generic",
+    articleTypeLabel: doc.brief.page?.articleTypeLabel ?? (doc.format || "Article"),
+    searchIntent: doc.searchIntent,
+    path: doc.path ?? null,
+    held: doc.held ? { kind: doc.held.kind, reason: doc.held.reason } : null,
+    publishedUrl: doc.publishedUrl ?? null,
   };
 }
 
@@ -613,6 +634,9 @@ export function toUiPlanReport(r: NonNullable<PlanDoc["report"]>): UiPlanReport 
     missingPillars: r.missingPillars,
     needsQueryTarget: r.needsQueryTarget,
     blocking: r.blocking,
+    facetWarnings: r.facetWarnings ?? [],
+    mergedHubs: (r.mergedHubs ?? []).map((m) => ({ externalId: m.externalId, title: m.title })),
+    pathCollisions: r.pathCollisions ?? [],
   };
 }
 

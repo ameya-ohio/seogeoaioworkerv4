@@ -12,7 +12,8 @@ import {
   saveArticleMarkdown,
   sendArticleToHubSpot,
 } from "@/lib/actions/content";
-import { markArticleLive, signOffArticle } from "@/lib/actions/publishing";
+import { markArticleLive, setArticleFacets, signOffArticle } from "@/lib/actions/publishing";
+import { FACET_OPTIONS } from "./facets";
 import type { CheckLine, TechnicalIssue } from "@blogagent/engine";
 import type { UiRun } from "@/lib/ui-types";
 import { buttonCls, cls, inputCls } from "./ui";
@@ -57,6 +58,10 @@ export interface ReviewArticle {
   /** D45/D46: the page's facets, format and reserved URL. */
   facets: { pageRole: string; searchIntent: string; articleType: string; funnel: string; source: string } | null;
   formatLabel: string;
+  /** formats.json slugs + labels for the Facets tab. */
+  formatOptions: { value: string; label: string }[];
+  /** What the facets resolve to (D49/D50), for the Facets tab. */
+  rules: { lengthBand: string; takeaways: string; faq: string; cta: string; schema: string[] } | null;
   path: string | null;
   canonicalUrl: string | null;
   hasHeader: boolean;
@@ -74,7 +79,7 @@ function previewBody(markdown: string): string {
     .replace(/<!--[\s\S]*?-->/g, "");
 }
 
-type SideTab = "preview" | "research" | "outline" | "draft" | "audit" | "review" | "header" | "runs";
+type SideTab = "preview" | "facets" | "research" | "outline" | "draft" | "audit" | "review" | "header" | "runs";
 
 export function ReviewEditor({ article }: { article: ReviewArticle }) {
   const router = useRouter();
@@ -113,6 +118,7 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
 
   const sideTabs: { key: SideTab; label: string; disabled?: boolean }[] = [
     { key: "preview", label: "Preview" },
+    { key: "facets", label: "Facets" },
     { key: "research", label: "Research", disabled: !article.researchNotes },
     { key: "outline", label: "Outline", disabled: !article.outline },
     { key: "draft", label: "First draft", disabled: !article.draft },
@@ -355,6 +361,13 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
               />
             )}
             {tab === "runs" && <RunHistory runs={article.runs} />}
+            {tab === "facets" && (
+              <FacetsPanel
+                article={article}
+                pending={pending}
+                onSave={(f) => act(() => setArticleFacets(article.slug, f), "Facets saved.")}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -513,6 +526,79 @@ function RunHistory({ runs }: { runs: UiRun[] }) {
           </ul>
         </div>
       ))}
+    </div>
+  );
+}
+
+function FacetsPanel({
+  article,
+  pending,
+  onSave,
+}: {
+  article: ReviewArticle;
+  pending: boolean;
+  onSave: (f: { pageRole: string; articleType: string; searchIntent: string; funnel: string }) => void;
+}) {
+  const f = article.facets;
+  const [pageRole, setPageRole] = useState(f?.pageRole ?? "cluster");
+  const [articleType, setArticleType] = useState(f?.articleType ?? "generic");
+  const [searchIntent, setSearchIntent] = useState(f?.searchIntent ?? "informational");
+  const [funnel, setFunnel] = useState(f?.funnel ?? "mofu");
+  const changed =
+    !f || pageRole !== f.pageRole || articleType !== f.articleType || searchIntent !== f.searchIntent || funnel !== f.funnel;
+  const select = (label: string, value: string, set: (v: string) => void, options: readonly { value: string; label: string }[]) => (
+    <label className="block text-xs font-medium text-slate-600">
+      {label}
+      <select value={value} onChange={(e) => set(e.target.value)} className={cls(inputCls, "mt-1 w-full")}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  return (
+    <div className="space-y-5 text-sm">
+      <p className="text-xs text-slate-500">
+        {f ? `Set by: ${f.source}.` : "No facets yet — the Strategist chooses them on the next outline run, or set them here."} Page
+        role sets the skeleton, article type the body, intent what the SERP expects, funnel the CTA (D45–D50).
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {select("Page role", pageRole, setPageRole, FACET_OPTIONS.pageRole)}
+        {select("Article type", articleType, setArticleType, article.formatOptions)}
+        {select("Search intent", searchIntent, setSearchIntent, FACET_OPTIONS.searchIntent)}
+        {select("Funnel", funnel, setFunnel, FACET_OPTIONS.funnel)}
+      </div>
+      <button
+        type="button"
+        disabled={pending || !changed}
+        onClick={() => onSave({ pageRole, articleType, searchIntent, funnel })}
+        className={buttonCls("primary")}
+      >
+        Save facets
+      </button>
+      {article.rules && (
+        <div className="rounded-md border border-slate-200 p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">What these resolve to</p>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+            <dt className="text-slate-500">Path</dt>
+            <dd className="font-mono text-slate-700">{article.path ?? "—"}</dd>
+            <dt className="text-slate-500">Canonical</dt>
+            <dd className="break-all font-mono text-slate-700">{article.canonicalUrl ?? "—"}</dd>
+            <dt className="text-slate-500">Length band</dt>
+            <dd className="text-slate-700">{article.rules.lengthBand}</dd>
+            <dt className="text-slate-500">Key Takeaways</dt>
+            <dd className="text-slate-700">{article.rules.takeaways}</dd>
+            <dt className="text-slate-500">FAQ</dt>
+            <dd className="text-slate-700">{article.rules.faq}</dd>
+            <dt className="text-slate-500">Closing CTA</dt>
+            <dd className="break-all text-slate-700">{article.rules.cta}</dd>
+            <dt className="text-slate-500">Schema</dt>
+            <dd className="text-slate-700">{article.rules.schema.join(", ")}</dd>
+          </dl>
+        </div>
+      )}
     </div>
   );
 }

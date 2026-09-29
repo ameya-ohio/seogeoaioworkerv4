@@ -7,7 +7,7 @@ import { ReviewEditor, type ReviewArticle } from "@/components/review-editor";
 import { hubspotStatus } from "@/lib/actions/content";
 import { publishTarget } from "@/lib/actions/publishing";
 import { getFormats } from "@/lib/db";
-import { formatBySlug } from "@blogagent/engine";
+import { CTA_SETTINGS_KEY, formatBySlug, mergeCtaSettings, resolvePageRules } from "@blogagent/engine";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,11 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
   const runs: UiRun[] = runDocs.map(toUiRun);
   const activeRun = runs.find((r) => r.status === "queued" || r.status === "running") ?? null;
 
-  const format = formatBySlug(await getFormats(), doc.facets?.articleType);
+  const formats = await getFormats();
+  const format = formatBySlug(formats, doc.facets?.articleType);
+  const ctas = mergeCtaSettings(getCompany().raw, (await db.settings.findOne({ companyId, key: CTA_SETTINGS_KEY }))?.value);
+  const rules = resolvePageRules(formats, doc.facets, { ctas });
+  const range = (r: { min: number; max: number }) => (r.min === r.max ? `exactly ${r.min}` : `${r.min}–${r.max}`);
   const article: ReviewArticle = {
     slug: doc.slug,
     folder: doc.folder,
@@ -79,6 +83,21 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
     signoff: doc.signoff ? { by: doc.signoff.by, at: new Date(doc.signoff.at).toISOString(), note: doc.signoff.note ?? null } : null,
     facets: doc.facets ? { ...doc.facets } : null,
     formatLabel: format.label,
+    formatOptions: [
+      { value: "generic", label: "Generic article" },
+      ...formats.formats.filter((f) => f.producible).map((f) => ({ value: f.slug, label: f.label })),
+    ],
+    rules: {
+      lengthBand: `${rules.lengthBand.min}–${rules.lengthBand.max} words`,
+      takeaways: range(rules.takeaways),
+      faq: rules.faq.max === 0 ? "none" : `${range(rules.faq)}${rules.faq.optional ? " (or none)" : ""}`,
+      cta: rules.cta
+        ? `${rules.cta.label} — ${rules.cta.url}`
+        : doc.facets
+          ? "not configured for this funnel (Admin → CTAs)"
+          : "set by the funnel once the page has facets",
+      schema: rules.schemaTypes,
+    },
     path: doc.path ?? null,
     canonicalUrl: String(doc.frontmatter?.["canonical_url"] ?? doc.canonicalUrl ?? "") || null,
     hasHeader: Boolean(doc.header),

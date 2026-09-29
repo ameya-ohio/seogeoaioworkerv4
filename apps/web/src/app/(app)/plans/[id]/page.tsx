@@ -13,7 +13,7 @@ import {
   previewSchedule,
   type PlanItemStatus,
 } from "@blogagent/engine";
-import { getCompany, getDb } from "@/lib/db";
+import { getCompany, getDb, getFormats } from "@/lib/db";
 import {
   toUiPlanItemRow,
   toUiPlanReport,
@@ -70,7 +70,7 @@ export default async function PlanPage({
     }));
     const unresolved: UnresolvedValue[] = (plan.report?.unrecognized ?? [])
       .filter((u) =>
-        ["pageRole", "funnel", "priority", "searchIntent"].includes(u.field),
+        ["pageRole", "funnel", "priority", "searchIntent", "format"].includes(u.field),
       )
       .map((u) => ({
         field: u.field as UnresolvedValue["field"],
@@ -94,6 +94,7 @@ export default async function PlanPage({
             fields={fields}
             unresolved={unresolved}
             blocking={plan.report?.blocking ?? []}
+            formatOptions={(await getFormats()).formats.map((f) => ({ value: f.slug, label: f.label }))}
           />
           <Card title="What we read">
             {plan.report ? (

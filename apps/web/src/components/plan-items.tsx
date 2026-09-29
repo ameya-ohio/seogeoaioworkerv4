@@ -5,9 +5,11 @@ import { useState, useTransition } from "react";
 import {
   overrideItemDependency,
   sendPlanItemsToPipeline,
+  setItemPath,
   setItemQueryTarget,
   setItemStatus,
 } from "@/lib/actions/plans";
+import { FacetBadges, HoldBadge } from "./facets";
 import type { UiPlanItemRow } from "@/lib/ui-types";
 import { buttonCls, cls, inputCls, tableCls } from "./ui";
 import { EnrichmentBadge, PlanItemStatusBadge, RoleBadge } from "./plan-ui";
@@ -17,6 +19,8 @@ export function PlanItemsTable({ rows }: { rows: UiPlanItemRow[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [editingPath, setEditingPath] = useState<string | null>(null);
+  const [pathDraft, setPathDraft] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -85,6 +89,7 @@ export function PlanItemsTable({ rows }: { rows: UiPlanItemRow[] }) {
               <th className={tableCls.th}>#</th>
               <th className={tableCls.th}>Title</th>
               <th className={tableCls.th}>Role</th>
+              <th className={tableCls.th}>Type</th>
               <th className={tableCls.th}>P</th>
               <th className={tableCls.th}>Keyword target</th>
               <th className={tableCls.th}>Brief</th>
@@ -110,12 +115,57 @@ export function PlanItemsTable({ rows }: { rows: UiPlanItemRow[] }) {
                     {r.pillarName}
                     {r.subtopicName ? ` › ${r.subtopicName}` : ""} · {r.slug}
                   </div>
+                  {editingPath === r.id ? (
+                    <div className="mt-1 flex items-center gap-1">
+                      <input
+                        className={cls(inputCls, "w-80 py-0.5 font-mono text-xs")}
+                        value={pathDraft}
+                        autoFocus
+                        onChange={(e) => setPathDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            setEditingPath(null);
+                            run(() => setItemPath(r.id, pathDraft));
+                          }
+                          if (e.key === "Escape") setEditingPath(null);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className={buttonCls("ghost")}
+                        onClick={() => {
+                          setEditingPath(null);
+                          run(() => setItemPath(r.id, pathDraft));
+                        }}
+                      >
+                        Save
+                      </button>
+                    </div>
+                  ) : (
+                    r.path && (
+                      <button
+                        type="button"
+                        className="mt-0.5 block text-left font-mono text-xs text-slate-500 hover:text-accent"
+                        disabled={pending || Boolean(r.articleSlug)}
+                        title={r.articleSlug ? "In production — the URL is fixed" : "Edit the reserved /learn/ path"}
+                        onClick={() => {
+                          setEditingPath(r.id);
+                          setPathDraft(r.path ?? "");
+                        }}
+                      >
+                        {r.path}
+                      </button>
+                    )
+                  )}
                   {r.lastError && (
                     <div className="mt-0.5 text-xs text-red-600">{r.lastError}</div>
                   )}
                 </td>
                 <td className={tableCls.td}>
                   <RoleBadge role={r.pageRole} />
+                </td>
+                <td className={tableCls.td}>
+                  <FacetBadges typeLabel={r.articleTypeLabel} funnel={r.funnel} />
                 </td>
                 <td className={cls(tableCls.td, "tabular-nums text-slate-500")}>P{r.priority}</td>
                 <td className={tableCls.td}>
@@ -168,7 +218,15 @@ export function PlanItemsTable({ rows }: { rows: UiPlanItemRow[] }) {
                   <EnrichmentBadge state={r.enrichment} />
                 </td>
                 <td className={tableCls.td}>
-                  <PlanItemStatusBadge status={r.status} />
+                  <div className="flex flex-col items-start gap-1">
+                    <PlanItemStatusBadge status={r.status} />
+                    {r.held && <HoldBadge kind={r.held.kind} reason={r.held.reason} />}
+                    {r.publishedUrl && (
+                      <a href={r.publishedUrl} target="_blank" rel="noopener" className="text-xs text-emerald-700 hover:underline">
+                        live ↗
+                      </a>
+                    )}
+                  </div>
                 </td>
                 <td className={cls(tableCls.td, "whitespace-nowrap")}>
                   {r.articleSlug && (

@@ -65,6 +65,7 @@ export function PlanReport({ report }: { report: UiPlanReport }) {
         <Chips title="Priority" counts={report.byPriority} />
         <Chips title="Funnel" counts={report.byFunnel} />
         <Chips title="Intent" counts={report.byIntent} />
+        <Chips title="Type" counts={report.byFormat} />
       </div>
 
       {report.blocking.length > 0 && (
@@ -119,6 +120,21 @@ export function PlanReport({ report }: { report: UiPlanReport }) {
           title="Subtopics with no hub row"
           hint="Their articles will link up to the pillar page instead."
           rows={report.missingHubs.map((h) => ({ key: h, text: h }))}
+        />
+        <Problems
+          title="Hubs merged into their pillar"
+          hint="The subtopic is the pillar's own topic, so the pillar page answers it and its articles sit under /learn/<pillar>/ (D46)."
+          rows={report.mergedHubs.map((m) => ({ key: m.externalId, text: `${m.externalId} — ${m.title}` }))}
+        />
+        <Problems
+          title="Paths suffixed to stay unique"
+          hint="Two rows wanted the same /learn/ URL; edit either path on the Articles tab after importing."
+          rows={report.pathCollisions.map((c) => ({ key: c.externalId, text: `${c.externalId}: ${c.wanted} → ${c.got}` }))}
+        />
+        <Problems
+          title="Unusual facet combinations"
+          hint="The build spec calls these mis-tagged. Not blocking — check the sheet."
+          rows={report.facetWarnings.map((w, i) => ({ key: `${w.externalId}-${i}`, text: `${w.externalId}: ${w.warning}` }))}
         />
       </div>
 

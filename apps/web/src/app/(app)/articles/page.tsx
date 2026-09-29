@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { getCompany, getDb } from "@/lib/db";
+import { getCompany, getDb, getFormatLabels } from "@/lib/db";
 import { toUiArticleSummary } from "@/lib/ui-types";
+import { FacetBadges } from "@/components/facets";
 import { EmptyState, PageHeader, StageBadge, cls, tableCls } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -12,25 +13,32 @@ export default async function ArticlesPage({
 }) {
   const params = await searchParams;
   const stage = typeof params.stage === "string" ? params.stage : "all";
+  const funnel = typeof params.funnel === "string" && ["tofu", "mofu", "bofu"].includes(params.funnel) ? params.funnel : "all";
 
   const db = await getDb();
   const companyId = getCompany().companyId;
   const filter: Record<string, unknown> = { companyId };
   if (stage !== "all") filter.stage = stage;
+  if (funnel !== "all") filter["facets.funnel"] = funnel;
 
   const docs = await db.articles.find(filter).sort({ updatedAt: -1 }).limit(300).toArray();
-  const rows = docs.map(toUiArticleSummary);
+  const labels = await getFormatLabels();
+  const rows = docs.map((d) => toUiArticleSummary(d, labels));
+  const href = (s: string, f: string) => {
+    const q = [s !== "all" ? `stage=${s}` : "", f !== "all" ? `funnel=${f}` : ""].filter(Boolean).join("&");
+    return q ? `/articles?${q}` : "/articles";
+  };
 
   const stages = ["all", "review", "approved", "published", "failed"];
 
   return (
     <>
       <PageHeader title="Articles" subtitle={`${rows.length} article${rows.length === 1 ? "" : "s"}`} />
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex flex-wrap gap-2">
         {stages.map((s) => (
           <Link
             key={s}
-            href={s === "all" ? "/articles" : `/articles?stage=${s}`}
+            href={href(s, funnel)}
             className={cls(
               "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
               s === stage
@@ -39,6 +47,21 @@ export default async function ArticlesPage({
             )}
           >
             {s}
+          </Link>
+        ))}
+        <span className="mx-1 h-6 w-px bg-slate-200" />
+        {["all", "tofu", "mofu", "bofu"].map((f) => (
+          <Link
+            key={f}
+            href={href(stage, f)}
+            className={cls(
+              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+              f === funnel
+                ? "border-accent bg-accent-soft text-accent"
+                : "border-slate-200 bg-white text-slate-500 hover:border-slate-300",
+            )}
+          >
+            {f === "all" ? "any funnel" : f.toUpperCase()}
           </Link>
         ))}
       </div>
@@ -65,9 +88,14 @@ export default async function ArticlesPage({
                       {a.title}
                     </Link>
                     <p className="text-xs text-slate-400">
-                      {a.folder}
+                      {a.path ?? a.folder}
                       {a.imported && " · imported"}
                     </p>
+                    {a.facets && (
+                      <div className="mt-1">
+                        <FacetBadges typeLabel={a.facets.typeLabel} funnel={a.facets.funnel} intent={a.facets.searchIntent} />
+                      </div>
+                    )}
                   </td>
                   <td className={cls(tableCls.td, "text-slate-500")}>{a.targetKeyword ?? "—"}</td>
                   <td className={tableCls.td}>

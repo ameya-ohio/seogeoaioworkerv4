@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Stage } from "@blogagent/engine";
-import { getCompany, getDb } from "@/lib/db";
+import { getCompany, getDb, getFormatLabels } from "@/lib/db";
+import { FacetBadges } from "@/components/facets";
 import {
   toUiArticleSummary,
   toUiEvent,
@@ -66,7 +67,8 @@ async function WorkTab({ stageFilter }: { stageFilter: string }) {
   const recentEvents = await db.events.find({ companyId }).sort({ _id: -1 }).limit(25).toArray();
   const events = recentEvents.map(toUiEvent);
 
-  const uiArticles = articles.map(toUiArticleSummary);
+  const labels = await getFormatLabels();
+  const uiArticles = articles.map((a) => toUiArticleSummary(a, labels));
   const grouped = new Map<string, UiArticleSummary[]>();
   for (const a of uiArticles) {
     if (stageFilter !== "all" && a.stage !== stageFilter) continue;
@@ -164,6 +166,11 @@ function ArticleCard({ article, run }: { article: UiArticleSummary; run?: UiRun 
       <p className="mt-1 truncate text-xs text-slate-400">
         {article.targetKeyword ?? article.slug}
       </p>
+      {article.facets && (
+        <div className="mt-1.5">
+          <FacetBadges typeLabel={article.facets.typeLabel} funnel={article.facets.funnel} />
+        </div>
+      )}
       {run && (
         <p className="mt-2 text-xs text-slate-500">
           run {run.status}
@@ -194,7 +201,8 @@ async function ReviewTab() {
     .sort({ updatedAt: -1 })
     .limit(100)
     .toArray();
-  const rows = docs.map(toUiArticleSummary);
+  const labels = await getFormatLabels();
+  const rows = docs.map((d) => toUiArticleSummary(d, labels));
 
   if (rows.length === 0) {
     return (
@@ -220,7 +228,14 @@ async function ReviewTab() {
         <tbody>
           {rows.map((a) => (
             <tr key={a.id} className={tableCls.tr}>
-              <td className={cls(tableCls.td, "font-medium text-slate-800")}>{a.title}</td>
+              <td className={cls(tableCls.td, "font-medium text-slate-800")}>
+                {a.title}
+                {a.facets && (
+                  <div className="mt-1">
+                    <FacetBadges typeLabel={a.facets.typeLabel} funnel={a.facets.funnel} />
+                  </div>
+                )}
+              </td>
               <td className={cls(tableCls.td, "text-slate-500")}>{a.targetKeyword ?? "—"}</td>
               <td className={tableCls.td}>
                 <StageBadge stage={a.stage} />

@@ -87,3 +87,42 @@ export async function signOffArticle(slug: string, by: string, note?: string): P
   revalidate(slug);
   return { message: `Signed off by ${name}.` };
 }
+
+/**
+ * D45: an operator changes a page's facets from the Review screen. The new
+ * type only takes effect on the next run — the page has to be rebuilt for
+ * its new format — so the caller is told to re-run from the outline.
+ */
+export async function setArticleFacets(
+  slug: string,
+  facets: { pageRole: string; articleType: string; searchIntent: string; funnel: string },
+): Promise<PublishingState> {
+  await requireAuth();
+  const roles = ["pillar", "hub", "cluster"];
+  const intents = ["informational", "commercial", "transactional", "navigational"];
+  const funnels = ["tofu", "mofu", "bofu"];
+  if (!roles.includes(facets.pageRole)) return { error: `unknown page role "${facets.pageRole}"` };
+  if (!intents.includes(facets.searchIntent)) return { error: `unknown search intent "${facets.searchIntent}"` };
+  if (!funnels.includes(facets.funnel)) return { error: `unknown funnel "${facets.funnel}"` };
+  const reg = await getFormats();
+  if (facets.articleType !== "generic" && !reg.formats.some((f) => f.slug === facets.articleType)) {
+    return { error: `"${facets.articleType}" is not in formats.json` };
+  }
+  const { db, article } = await load(slug);
+  if (!article) return { error: "article not found" };
+  const next = {
+    pageRole: facets.pageRole as "pillar" | "hub" | "cluster",
+    articleType: facets.articleType,
+    searchIntent: facets.searchIntent as "informational" | "commercial" | "transactional" | "navigational",
+    funnel: facets.funnel as "tofu" | "mofu" | "bofu",
+    source: "operator" as const,
+  };
+  await db.articles.updateOne({ _id: article._id }, { $set: { facets: next, updatedAt: new Date() } });
+  revalidate(slug);
+  const typeChanged = article.facets?.articleType !== next.articleType || article.facets?.pageRole !== next.pageRole;
+  return {
+    message: typeChanged
+      ? "Facets saved. Re-run from outline so the page is rebuilt for its new format."
+      : "Facets saved. The next run uses them.",
+  };
+}
