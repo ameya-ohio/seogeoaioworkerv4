@@ -23,6 +23,11 @@ Reports per-check PASS / WARN / FAIL on:
   - style limits (scripts/style_checks.py): 'not X, but Y' contrasts, a claim
     restated 3+ times, hedge density (FAIL); lists of three, uniform sentence
     length, signpost openers (WARN)
+  - head-to-head competitors (scripts/competitor_checks.py, list in
+    config/company.yaml competitors.head_to_head): linked, in the JSON-LD
+    citation array, named in the intro / Key Takeaways / FAQ, or used as a
+    source (FAIL); named next to a link, or more than once outside
+    article_type: comparison | tool-list (WARN)
   - schema.json file present
 """
 from __future__ import annotations
@@ -33,11 +38,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from company_config import load_banned_phrases, load_config  # noqa: E402
+from competitor_checks import load_competitors, parse_jsonld, run_all as run_competitor_checks  # noqa: E402
 from style_checks import format_finding, run_all as run_style_checks  # noqa: E402
 
 # Single source: standards/banned-phrases.txt + config/company.yaml
 # voice.banned_phrases (company-specific additions).
-BANNED_PHRASES = load_banned_phrases(load_config(strict=False))
+_CONFIG = load_config(strict=False)
+BANNED_PHRASES = load_banned_phrases(_CONFIG)
+COMPETITORS = load_competitors(_CONFIG)
 
 
 def banned_hits(text: str, phrase: str) -> list[str]:
@@ -337,6 +345,17 @@ def audit(folder: Path) -> int:
         (a.fail if f.level == "fail" else a.warn)(format_finding(f))
     if not any(f.level == "fail" for f in style):
         a.ok("Style: contrast, repetition and hedging within limits.")
+
+    # head-to-head competitors (standards/quality-bar.md → Competitor handling)
+    if COMPETITORS:
+        jsonld = parse_jsonld(body, schema_path.read_text(encoding="utf-8") if schema_path.is_file() else None)
+        comp = run_competitor_checks(
+            body_clean, COMPETITORS, article_type=str(fm.get("article_type", "")), jsonld=jsonld
+        )
+        for f in comp:
+            (a.fail if f.level == "fail" else a.warn)(format_finding(f))
+        if not any(f.level == "fail" for f in comp):
+            a.ok(f"Competitors: no head-to-head vendor as a source or in the intro, Key Takeaways or FAQ ({len(COMPETITORS)} checked).")
 
     return a.report()
 

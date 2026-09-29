@@ -37,10 +37,11 @@ ICP profiles, top objections, value-prop one-pagers, competitive battle cards.
 - `icp.md` — ideal customer profile(s) with firmographics, role, pain, decision criteria.
 - `objections.md` — top objections from real sales conversations + the company's response to each.
 - `value-props.md` — primary value props with proof points (case studies, numbers, customer quotes).
+- `competitive-landscape.md` — the category map: which vendors compete head-to-head and which are complementary, with the *Blog-use rules* at the top. The Researcher, Strategist, Editor, technical reviewer and cluster generator enforce it through `standards/quality-bar.md` → *Competitor handling*. Keep the rules and the head-to-head table in the first ~4,000 characters, because the cluster generator reads only that much of each file.
 - `battle-cards/` — one file per competitor: positioning, when we win, when they win, traps to set, traps to dodge.
 - `case-studies.md` — short summaries of customer wins with named companies, named outcomes, named numbers (when permitted).
 
-Used by: **Strategist** (angle, intent, audience-resonant framing) and **Writer** (concrete examples and proof points to weave in).
+Used by: **Strategist** (angle, intent, audience-resonant framing, competitor handling) and **Writer** (concrete examples and proof points to weave in). `competitive-landscape.md` also reaches the **Researcher**, **Editor** and technical reviewer.
 
 ---
 

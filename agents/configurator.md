@@ -123,6 +123,7 @@ order, with the same inline comment style. Key sources:
 | `brand.font.*` | research/interview; **omit the `files` block entirely** when the company has no licensed webfont files to drop in |
 | `brand.logos.*` | keep standard basenames `logo-light-bg.svg` / `logo-dark-bg.svg` |
 | `voice.*` | interview #6 (empty lists are fine: `banned_phrases: []`) |
+| `competitors.head_to_head` | the company's direct competitors (interview or competitive docs): one entry per vendor with `domains`, `url_prefixes` (for vendors banned at product level only) and `names`. Keep it in sync with `context/sales/competitive-landscape.md`. An empty list (`head_to_head: []`) turns the audit check off. On re-runs, keep the existing list unless the operator changes it. |
 
 Show the full proposed file (on re-runs: a diff). On explicit approval, write
 it. Immediately run the parse check:

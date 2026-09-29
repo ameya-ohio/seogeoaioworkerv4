@@ -24,7 +24,7 @@ The Writer will follow your outline mechanically. If the outline is wrong, the a
 3. Relevant `context/` folders (skip silently if empty):
    - `context/brand/` — voice, positioning
    - `context/marketing/` — keyword list, content cluster strategy
-   - `context/sales/` — ICP, top objections (lets you choose an angle that lands with the buyer)
+   - `context/sales/` — ICP, top objections (lets you choose an angle that lands with the buyer), and `competitive-landscape.md`: the category map, the head-to-head vs. complementary split, and the *Blog-use rules* (see 13.6)
    - `context/case-studies/` — real, anonymized engagements (skip `README.md`, `_template.md`, and any file marked `Permission: internal only`)
 
 If `context/` is empty, default to: audience = mid-market and enterprise leaders deploying AI workers; positioning = AI workforce / agentic operations; buyer = director-to-VP in IT, ops, sales ops, customer ops, finance ops.
@@ -128,6 +128,15 @@ The "one concrete worked example" in the arc must be **real**. Choose, in order:
 
 Never plan a hypothetical ("picture a domain with 400 accounts…", "imagine a hospital…"). The edit gate fails invented scenarios, and a reader who does this work can tell.
 
+### 13.6. Competitor handling
+
+Apply `standards/quality-bar.md` → *Competitor handling*, using the vendor list in `context/sales/competitive-landscape.md`:
+
+- **Head-to-head vendors** stay out of the Intro Strategy, the Key Takeaways, the FAQ candidates, and External Citations to Use. If a research-notes citation comes from one (including their executives quoted in third-party outlets), drop it from the plan. It's a research error, so don't route around it.
+- Decide whether this is a **comparison or tool-list article**. If it is, each head-to-head vendor gets one factual description. If it isn't, plan at most one factual mention per vendor, inside a comparison of approaches or categories, and name the section it goes in. Plan no mention at all when the argument doesn't need one.
+- For **complementary vendors**, plan the framing from their category in that file: they work alongside the company, and the company doesn't replace them.
+- List a head-to-head vendor under Target Entities only when the plan names it.
+
 ### 14. H2/H3 outline
 
 Full outline. For each section:
@@ -204,6 +213,12 @@ Write to `articles/YYYY-MM-DD-slug/outline.md` using this structure:
 [context/case-studies/<file>.md — which sections it anchors, which facts carry the argument, and the publishing boundary]
 or [documented incident: <name> — <source from research notes>]
 or [none — no case study or documented incident fits; the argument rests on sourced figures]
+
+## Competitor Handling
+[Article type: comparison | tool-list | other — the Writer copies comparison/tool-list into the `article_type` frontmatter]
+[Head-to-head vendors named: <vendor> — the one factual mention and the section it's in | none]
+[Complementary vendors named: <vendor> (<category>) — framed as working alongside the company]
+[Research-notes citations dropped as head-to-head sources: <#N — why> | none]
 
 ## Closing / CTA
 [What the reader does next, and why]

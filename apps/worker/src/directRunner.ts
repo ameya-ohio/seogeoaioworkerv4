@@ -250,6 +250,15 @@ export async function caseStudies(cfg: WorkerConfig): Promise<InputFile[]> {
   );
 }
 
+/**
+ * The head-to-head vs. complementary vendor map the Editor and technical
+ * reviewer enforce (standards/quality-bar.md → Competitor handling). Empty
+ * when the company hasn't added one.
+ */
+export async function competitiveLandscape(cfg: WorkerConfig): Promise<InputFile[]> {
+  return readAll(cfg, ["context/sales/competitive-landscape.md"]);
+}
+
 async function readAll(cfg: WorkerConfig, rels: string[]): Promise<InputFile[]> {
   const out: InputFile[] = [];
   for (const rel of rels) {
@@ -337,6 +346,7 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
             "config/company.yaml",
           ])),
           ...(await readDir(cfg, "context/author-style")),
+          ...(await competitiveLandscape(cfg)),
           ...(await caseStudies(cfg)),
         ],
         inputs: await readAll(cfg, [inFolder("article.md"), inFolder("research-notes.md")]),

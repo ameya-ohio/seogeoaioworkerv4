@@ -12,6 +12,7 @@ canonical_url: ""
 hero_image: ""
 hero_image_alt: ""
 category: ""
+article_type: ""      # "comparison" | "tool-list" | "" — from the outline's Competitor Handling
 tags: []
 reading_time_minutes: 0
 ---

@@ -4,7 +4,7 @@ Standard library only, so every consumer (seo_audit.py, blogheaderimagegen,
 blogsagent) can use it regardless of venv. Parses the YAML subset used by
 company.yaml: nested maps (2-space indent), lists of scalars, lists of flat
 maps, quoted/unquoted scalars, and ``#`` comments. No anchors, no multi-line
-strings, no flow mappings.
+strings, no flow mappings (inline ``[a, b]`` lists of scalars are fine).
 
 Usage:
     from company_config import load_config, cfg_get, brand_assets_dir
@@ -212,6 +212,9 @@ def _scalar(s: str) -> Any:
         return []
     if s in ("{}",):
         return {}
+    if s.startswith("[") and s.endswith("]"):
+        # inline list of scalars: [a, "b c", d]
+        return [_scalar(x) for x in s[1:-1].split(",") if x.strip()]
     if s in ("null", "~", ""):
         return None
     if s in ("true", "True"):

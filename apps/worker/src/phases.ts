@@ -92,6 +92,9 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
                 ``,
               ]
             : []),
+          `Read context/sales/competitive-landscape.md first if it exists: head-to-head vendors`,
+          `listed there (and their executives quoted anywhere) are never sources.`,
+          ``,
           `Conduct deep multi-source web research (minimum 8 distinct sources, biased`,
           `toward primary/authoritative) and write the research notes to:`,
           `  articles/${ctx.article.folder}/research-notes.md`,
@@ -161,6 +164,7 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           `- standards/quality-bar.md, standards/seo-checklist.md, standards/geo-checklist.md, standards/aio-checklist.md`,
           `- standards/banned-phrases.txt and the voice rules in config/company.yaml`,
           `- articles/${ctx.article.folder}/article.md and research-notes.md`,
+          `- context/sales/competitive-landscape.md (head-to-head vs. complementary vendors; skip if absent)`,
           `- context/case-studies/ — real engagements (skip README.md, _template.md, and any file marked "Permission: internal only")`,
           ``,
           `Walk every checklist item, edit article.md in place to fix all failures,`,

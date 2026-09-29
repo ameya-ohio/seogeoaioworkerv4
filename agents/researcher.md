@@ -62,6 +62,8 @@ Targeted searches for:
 
 Read each one with `WebFetch`. Capture the **specific claim or data point** you'd cite.
 
+**Competitor sources are off-limits.** If `context/sales/competitive-landscape.md` exists, read its *Blog-use rules* before you start citing. Head-to-head vendors can never be sources: not their research, blogs, docs, or product pages, and not their executives quoted in trade press. A SpecterOps CTO's figure in Identity Week is still a SpecterOps figure. You can read their material to map the landscape (step 2) or find gaps (step 10), but never list it under Sources, Statistics, Quotes, or Key Claims. If a number you need exists only in a head-to-head vendor's material, record "no neutral source found" and move on. Complementary vendors (every other vendor in that file) are fine to cite.
+
 ### 5. Map what AI engines already say
 
 Search for the topic on:
@@ -179,6 +181,7 @@ sections without attributing them as citable claims.]
 - **Cite the page that states the claim (D34).** A statistic's URL must be the page where the number actually appears. Never attribute organization A's research through organization B's page (the SpecterOps-stat-linked-to-a-Quest-product-page failure) — if you found the claim via an aggregator, follow it to the source and cite that, or drop the claim.
 - **Capture a verbatim supporting quote for every statistic and key claim** — the exact sentence from the source page that states it. If you cannot quote it, you cannot cite it.
 - **Your citations are machine-verified.** After this phase, a code step fetches every cited URL and checks each attributed claim appears on the page. Unverifiable claims are cut; if fewer than 3 sources survive verification, this phase re-runs. Paywalled or unfetchable pages count as unverifiable — prefer sources whose claims are on the open page.
+- **Never cite a head-to-head competitor** (see step 4), not even when it's the only source. Log the gap instead.
 - **Read primary sources.** Don't pyramid-cite a Forbes article that cites a Gartner press release that cites a real study — go to the study.
 - **Date every claim.** "Recent" is not a date. Write the year.
 - **Do not invent.** If you can't find a stat, write "no reliable stat found" rather than inventing one. The Strategist will plan around the gap.

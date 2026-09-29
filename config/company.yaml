@@ -86,3 +86,40 @@ voice:
   # standards/banned-phrases.txt. None defined yet for Saporo.
   banned_phrases: []
   style_rules: []
+
+competitors:
+  # Head-to-head vendors (standards/quality-bar.md → Competitor handling;
+  # positioning in context/sales/competitive-landscape.md). seo_audit.py
+  # FAILs any of these as a link or citation, or named in the intro, Key
+  # Takeaways or FAQ; WARNs on more than one mention per vendor unless the
+  # article's frontmatter sets article_type: comparison | tool-list.
+  #   domains      — whole host and its subdomains (www. ignored)
+  #   url_prefixes — host + path prefix, for vendors banned at product level
+  #   names        — matched case-insensitively as whole words
+  head_to_head:
+    - name: SpecterOps
+      domains: [specterops.io, bloodhoundenterprise.io, bloodhound.readthedocs.io]
+      url_prefixes: [github.com/SpecterOps, github.com/BloodHoundAD]
+      names: [SpecterOps, BloodHound, BloodHound Enterprise, SharpHound, BloodHound Hunter]
+    - name: Semperis
+      domains: [semperis.com, purple-knight.com]
+      names: [Semperis, Purple Knight, Forest Druid, Directory Services Protector, Lightning Intelligence]
+    - name: Silverfort
+      domains: [silverfort.com]
+      names: [Silverfort]
+    - name: XM Cyber
+      domains: [xmcyber.com]
+      names: [XM Cyber]
+    - name: AuthMind
+      domains: [authmind.com]
+      names: [AuthMind]
+    # Product-only: the rest of the company's domain stays citable.
+    - name: Tenable Identity Exposure
+      url_prefixes: [tenable.com/products/identity-exposure]
+      names: [Tenable Identity Exposure, Tenable.ad]
+    - name: Microsoft Defender for Identity
+      url_prefixes: [learn.microsoft.com/en-us/defender-for-identity]
+      names: [Defender for Identity, Azure ATP]
+    - name: CrowdStrike Falcon Identity
+      url_prefixes: [crowdstrike.com/en-us/platform/next-gen-identity-security]
+      names: [Falcon Identity]

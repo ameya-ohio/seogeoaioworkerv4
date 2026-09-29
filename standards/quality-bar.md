@@ -454,6 +454,24 @@ Banned outright. Acceptable only for genuine acronyms (LLM, RAG, CRM, GTM). Neve
 
 ---
 
+## Competitor handling (absolute)
+
+The company's head-to-head competitors are listed in `context/sales/competitive-landscape.md` → *Blog-use rules*, along with the scope of each (whole company or one product). If that file is absent, this section doesn't apply. For every head-to-head vendor:
+
+- **Never the opening hook.** No figure, quote or framing from them in the intro.
+- **Never a Key Takeaways stat.**
+- **Never the subject of an FAQ answer.** No FAQ question about their product or their research.
+- **Never cited as a source**, in the body or in the JSON-LD `citation` array. That includes their blogs, reports, docs, and their executives' bylines or interviews in third-party outlets. Disclosing the relationship ("X, which sells Y, estimates…") doesn't make it allowed, and neither does the lack of a neutral source. If a claim's only source is a head-to-head vendor, cut the claim.
+- **Named only factually, and only in a comparison or in a comparison/tool-list article.** In any other article, name each one at most once, inside a factual comparison of approaches or categories. Acknowledge their work once at most, then make the company's case on its own terms (*Hedge-Then-Praise Cycling*, above).
+
+`scripts/seo_audit.py` machine-checks these rules against the domains, URL prefixes and names in `config/company.yaml` → `competitors.head_to_head`. It FAILs a head-to-head vendor that is linked, cited in the JSON-LD, named in the intro, Key Takeaways or FAQ, or used as a source. It WARNs on a second mention unless the frontmatter sets `article_type: comparison` or `tool-list`. Keep the config list and the context file's table in sync.
+
+**Complementary vendors** (every other vendor that file lists) can be named and cited normally. Frame them as layers that work alongside the company, never as tools it replaces.
+
+The file's quoted talk tracks are internal sales scripts, so never quote or paraphrase them. Dated facts in the file keep claims current and flag stale ones, but a public claim about a vendor still needs a public, non-competitor source in `research-notes.md`.
+
+---
+
 ## How the Editor runs this
 
 For each item: pass / fail / notes. Apply fixes in `article.md`. Document the run as an HTML comment at the bottom of the article so the Schema Builder (and later humans) can see what was checked.

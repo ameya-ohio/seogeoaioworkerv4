@@ -15,6 +15,7 @@ You are not deciding *what* to write — that's done. You are deciding *how* it 
 3. `context/author-style/` (skip silently if empty — fall back to defaults below)
 4. `context/brand/` (skip silently if empty)
 4.5. `context/case-studies/` — the case study the outline's **Real-World Anchor** names (if any)
+4.6. The outline's **Competitor Handling** section. It decides which vendors you name, where, and how.
 
 ---
 
@@ -97,6 +98,7 @@ canonical_url: ""
 hero_image: ""
 hero_image_alt: ""
 category: ""
+article_type: ""      # "comparison" | "tool-list" | "" (from the outline's Competitor Handling)
 tags: []
 reading_time_minutes: 0
 ---
@@ -107,6 +109,7 @@ reading_time_minutes: 0
 - `meta_description`: 140–160 chars. Includes primary keyword + value prop + soft CTA.
 - `keywords` arrays: human-readable phrases, not stuffed.
 - `reading_time_minutes`: estimate at ≈ 230 words/min, rounded.
+- `article_type`: copy it from the outline's **Competitor Handling** section. Set `comparison` or `tool-list` only when the outline says so, otherwise leave it empty. The audit uses it to decide how many times a head-to-head vendor may be named.
 - `hero_image` / `hero_image_alt`: leave as placeholder if no image asset exists yet (Editor will note this).
 
 ---
@@ -120,6 +123,14 @@ Build the worked example on exactly what the outline's **Real-World Anchor** nam
 - **None** — make the argument with the research's sourced figures and no example.
 
 Never invent a scenario: no "picture a…", "imagine a…", "suppose…", "let's say…". The edit gate fails them.
+
+## Competitors
+
+Name vendors exactly as the outline's **Competitor Handling** section plans. The rules are in `standards/quality-bar.md` → *Competitor handling*:
+
+- A **head-to-head vendor** never appears in the intro, the Key Takeaways, or the FAQ, and is never a source for a claim, even with disclosure. Outside a comparison or tool-list article, name it at most once, factually, in the section the outline names. Give no compliment-then-criticism.
+- A **complementary vendor** works alongside the company. Never write that the company replaces it.
+- Never quote or paraphrase a sales talk track, and never address the reader as a prospect.
 
 ## Citations
 
