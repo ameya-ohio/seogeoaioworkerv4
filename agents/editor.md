@@ -51,7 +51,7 @@ For each paragraph, ask:
 - Headings scannable and keyword-aligned where natural?
 - **Key Takeaways block** present near the top, under H2 `## Key Takeaways`, exactly 3 bullets, each clean and standalone? (machine-checked)
 - **FAQ section** present under H2 `## Frequently Asked Questions`, with H3 per question and an answer of 2–5 sentences?
-- Closing/CTA present?
+- Closing/CTA present, linking page.md's funnel CTA URL (and no other funnel's)? The edit gate checks it (D50).
 
 ### Pass 4 — SEO checklist (`standards/seo-checklist.md`)
 

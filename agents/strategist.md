@@ -116,9 +116,11 @@ Banned intro shapes: opening with a lone statistic followed by a dramatic fragme
 
 ### 12. Closing / CTA
 
-What does the reader do next? Pick one and explain why it fits the audience and intent: deeper read, free trial, demo, calculator, newsletter, share.
+The CTA is set by the page's **funnel stage** (D50), not chosen here: page.md names it (label and URL, configured in Admin → CTAs). TOFU pages close on the company overview, MOFU pages on the free assessment, BOFU pages on the demo. The closing section must link that URL, and the edit gate checks it. Plan how the close earns the click: what the reader now knows that makes the next step obvious. Never close on another funnel's CTA.
 
-For a **routing page**, the close is navigational, not commercial: send the reader to the specific child page they came for. A demo CTA on a page whose job is routing interrupts the journey it exists to serve.
+The funnel also sets **how much the company appears**: TOFU gets one section of about 100 words after the value is delivered, MOFU can use the company as the worked example, and BOFU makes the company the subject.
+
+For a **routing page** (a hub), the close is navigational first: send the reader to the specific child page they came for, then the funnel's CTA beneath it.
 
 ### 13. Thesis (D33 — this is the article's spine)
 

@@ -34,6 +34,43 @@ export type CtaSettings = Partial<Record<FunnelStage, FunnelCta>>;
 /** Settings doc key for the per-funnel CTAs (D50). */
 export const CTA_SETTINGS_KEY = "cta.byFunnel";
 
+function asCta(v: unknown): FunnelCta | undefined {
+  const o = v as Record<string, unknown> | undefined;
+  const url = typeof o?.["url"] === "string" ? o["url"].trim() : "";
+  if (!url) return undefined;
+  const label = typeof o?.["label"] === "string" && o["label"].trim() ? o["label"].trim() : url;
+  const blurb = typeof o?.["blurb"] === "string" && o["blurb"].trim() ? o["blurb"].trim() : undefined;
+  return { label, url, ...(blurb ? { blurb } : {}) };
+}
+
+/** Parse a stored or configured CTA block; entries without a URL are dropped. */
+export function parseCtaSettings(v: unknown): CtaSettings {
+  const o = (v ?? {}) as Record<string, unknown>;
+  const out: CtaSettings = {};
+  for (const f of FUNNEL_STAGES) {
+    const cta = asCta(o[f]);
+    if (cta) out[f] = cta;
+  }
+  return out;
+}
+
+/** company.yaml `ctas:` seeds each funnel; the Admin setting wins where set. */
+export function mergeCtaSettings(companyConfig: unknown, saved: unknown): CtaSettings {
+  const seeded = parseCtaSettings((companyConfig as Record<string, unknown> | undefined)?.["ctas"]);
+  return { ...seeded, ...parseCtaSettings(saved) };
+}
+
+/** Validate an operator-entered CTA URL: absolute http(s) only. */
+export function ctaUrlProblem(url: string): string | null {
+  if (!url.trim()) return null;
+  try {
+    const u = new URL(url.trim());
+    return u.protocol === "https:" || u.protocol === "http:" ? null : "must be an http(s) URL";
+  } catch {
+    return "is not a valid URL";
+  }
+}
+
 export interface PageRules {
   /** Absent until the plan, a brief, the Strategist or an operator sets them. */
   facets?: ArticleFacets;

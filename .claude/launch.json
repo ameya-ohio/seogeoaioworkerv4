@@ -4,9 +4,22 @@
     {
       "name": "web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "-w", "@blogagent/web"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "-w",
+        "@blogagent/web"
+      ],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "mongo",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/dev_mongo.mjs"
+      ],
+      "port": 27017
     }
   ]
 }

@@ -6,6 +6,7 @@ import {
   facetFrontmatter,
   formatTemplatePath,
   loadFormatRegistry,
+  mergeCtaSettings,
   renderPageSpec,
   resolvePageRules,
   stampFrontmatter,
@@ -13,7 +14,6 @@ import {
   type CtaSettings,
   type EngineDb,
   type FormatRegistry,
-  type FunnelCta,
   type PageRules,
 } from "@blogagent/engine";
 import type { WorkerConfig } from "./config.js";
@@ -26,31 +26,11 @@ import { articleDir } from "./workspace.js";
  * and again once the Strategist has chosen facets for a page that had none.
  */
 
-function asCta(v: unknown): FunnelCta | undefined {
-  const o = v as Record<string, unknown> | undefined;
-  const url = typeof o?.["url"] === "string" ? o["url"].trim() : "";
-  if (!url) return undefined;
-  const label = typeof o?.["label"] === "string" && o["label"].trim() ? o["label"].trim() : url;
-  const blurb = typeof o?.["blurb"] === "string" && o["blurb"].trim() ? o["blurb"].trim() : undefined;
-  return { label, url, ...(blurb ? { blurb } : {}) };
-}
-
-function asCtaSettings(v: unknown): CtaSettings {
-  const o = (v ?? {}) as Record<string, unknown>;
-  const out: CtaSettings = {};
-  for (const f of ["tofu", "mofu", "bofu"] as const) {
-    const cta = asCta(o[f]);
-    if (cta) out[f] = cta;
-  }
-  return out;
-}
-
 /** D50: the Admin setting wins per funnel; company.yaml `ctas:` is the seed. */
 export async function readCtaSettings(db: EngineDb, companyId: string): Promise<CtaSettings> {
   const saved = await db.settings.findOne({ companyId, key: CTA_SETTINGS_KEY });
   const company = await db.companies.findOne({ companyId });
-  const seeded = asCtaSettings((company?.config as Record<string, unknown> | undefined)?.["ctas"]);
-  return { ...seeded, ...asCtaSettings(saved?.value) };
+  return mergeCtaSettings(company?.config, saved?.value);
 }
 
 /** D46: absolute canonical URL for a reserved path, from company.yaml `site.base_url`. */

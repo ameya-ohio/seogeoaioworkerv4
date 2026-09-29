@@ -5,6 +5,8 @@ import { listAdminFiles, readAdminFile } from "@/lib/actions/admin";
 import { Card, EmptyState, PageHeader, TabNav, cls } from "@/components/ui";
 import { AdminEditor, NewCaseStudy } from "@/components/admin-editor";
 import { CompetitiveTab } from "./competitive-tab";
+import { CtaForm } from "@/components/cta-form";
+import { getCtaSettings } from "@/lib/actions/ctas";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,7 @@ const TABS = [
   { key: "templates", label: "Templates" },
   { key: "agents", label: "Agents" },
   { key: "context", label: "Context" },
+  { key: "ctas", label: "CTAs" },
   { key: "competitive", label: "Competitive" },
   { key: "company", label: "Company" },
 ];
@@ -36,6 +39,8 @@ export default async function AdminPage({
       <TabNav tabs={TABS} active={tab} hrefFor={(k) => (k === "standards" ? "/admin" : `/admin?tab=${k}`)} />
       {tab === "company" ? (
         <CompanyTab />
+      ) : tab === "ctas" ? (
+        <CtaTab />
       ) : tab === "competitive" ? (
         <CompetitiveTab scrapeId={scrape} />
       ) : (
@@ -99,6 +104,15 @@ async function EditorTab({ area, file }: { area: string; file: string | null }) 
           hint="Saved changes are stored in the app and reach the pipeline from the next article run."
         />
       )}
+    </div>
+  );
+}
+
+async function CtaTab() {
+  const { ctas, saved, updatedAt } = await getCtaSettings();
+  return (
+    <div className="max-w-3xl">
+      <CtaForm ctas={ctas} saved={saved} {...(updatedAt ? { updatedAt } : {})} />
     </div>
   );
 }

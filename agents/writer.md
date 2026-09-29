@@ -33,7 +33,7 @@ You are not deciding *what* to write — that's done. You are deciding *how* it 
    - The closing section crystallizes the thesis into one clean distinction (see `context/author-style/`).
 7. Write the **FAQ section verbatim** using the Strategist's questions. Each Q is an H3. Each A is short, direct, and standalone — AI engines will lift entire Q/A pairs as citations.
 8. Give a formal bolded definition (`**Foo** is …`) to **at most two** terms — the ones the argument depends on. Explain every other term in passing, inside the sentence that uses it. The Schema Builder turns the bolded definitions into `DefinedTerm` entries.
-9. Write the **closing / CTA** the Strategist picked.
+9. Write the **closing / CTA**: the closing section links the funnel's CTA from page.md (label and URL) and no other funnel's CTA. The edit gate checks it (D50).
 10. Save to `articles/YYYY-MM-DD-slug/article.md`.
 11. Update `articles/YYYY-MM-DD-slug/meta.json` with `title`, `slug`, `meta_description` and `keywords` (primary + secondary as a list). Copy `canonical_url` from page.md when it lists one (a plan page's reserved /learn/ path, D46); the worker stamps it into the frontmatter either way.
 
