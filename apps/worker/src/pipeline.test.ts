@@ -1047,6 +1047,39 @@ describe("runPipeline, expert interview (D59)", () => {
     expect(llm.calls.find((c) => c.phase === "write")!.req.prompt).not.toContain("pov.md");
   }, 120_000);
 
+  it("a re-run after a failed refine refines the finished interview instead of reopening it", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "interview-refine-rerun",
+      folder: "2026-09-30-interview-refine-rerun",
+      topic: "Refine rerun topic",
+      targetKeyword: "context engineering",
+      interviewMode: "pause",
+    });
+    const id = article._id as ObjectId;
+    const first = await enqueueRun(db, { companyId: "testco", articleId: id });
+    const interviewer = new FakeInterviewer();
+    const llm = new FakeDirectLlm();
+    const deps = makeDeps(new FakeInvoker(), {
+      cfg: directCfg(),
+      direct: new DirectPhaseRunner(llm, fakeRenderer([])),
+      interviewer,
+    });
+    expect(await runPipeline(deps, (await claimRun(db, "test-worker", 60_000))!)).toBe("awaiting_input");
+    await appendExpertMessage(db, id, "C. The failures come from what never reaches the model.");
+    await closeInterview(db, (await db.articles.findOne({ _id: id }))!, "complete");
+    // The refine attempt dies (a refusal, say) and the run fails for good.
+    await db.runs.updateOne({ _id: first._id }, { $set: { status: "failed" } });
+
+    await enqueueRun(db, { companyId: "testco", articleId: id, fromStage: "interview" });
+    expect(await runPipeline(deps, (await claimRun(db, "test-worker", 60_000))!)).toBe("completed");
+    expect(interviewer.calls).toBe(1);
+    const doc = await db.articles.findOne({ _id: id });
+    expect(doc?.interview?.status).toBe("refined");
+    expect(doc?.interview?.messages.some((m) => m.content.includes("never reaches the model"))).toBe(true);
+    expect(doc?.artifacts.pov).toContain("## Argument Spine");
+  }, 120_000);
+
   it("interviewMode skip never opens an interview", async () => {
     const article = await createArticle(db, {
       companyId: "testco",

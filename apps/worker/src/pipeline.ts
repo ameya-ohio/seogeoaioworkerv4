@@ -569,16 +569,19 @@ async function interviewStep(deps: PipelineDeps, run: RunDoc, article: ArticleDo
   if (!runId || !articleId) throw new Error("run/article missing _id");
   const tag = `[${article.slug}/interview]`;
   const iv = article.interview;
-  if (iv?.runId?.equals(runId)) {
-    if (iv.status === "complete") return "refine";
-    if (iv.status === "skipped" || iv.status === "refined") {
-      deps.log(`${tag} ${iv.status === "skipped" ? "skipped by the operator" : "already refined"} — on to the Writer`);
-      return "skip";
-    }
-    // Opened, but the worker stopped before parking: park again.
+  // Answers not yet turned into an outline are never thrown away: a run that
+  // failed while refining (a refusal, a gate failure) is re-run and refines
+  // them, and an open interview carries over to the run that re-ran it.
+  if (iv?.status === "complete") return "refine";
+  if (iv?.status === "open") {
+    await db.articles.updateOne({ _id: articleId }, { $set: { "interview.runId": runId } });
     await awaitInput(db, runId, cfg.workerId, "interview");
     deps.log(`${tag} interview already open — waiting for the operator`);
     return "park";
+  }
+  if (iv?.runId?.equals(runId)) {
+    deps.log(`${tag} ${iv.status === "skipped" ? "skipped by the operator" : "already refined"} — on to the Writer`);
+    return "skip";
   }
   const mode = article.interviewMode ?? (await defaultInterviewMode(db, article.companyId, article.planId));
   if (mode === "skip" || !deps.interviewer) {

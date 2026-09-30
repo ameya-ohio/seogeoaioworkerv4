@@ -574,6 +574,16 @@ export const renderHeaderCli: HeaderRenderer = async (cfg, folder, choice) => {
   );
 };
 
+/**
+ * Opus- and Fable-tier models run broader safety classifiers, and security
+ * topics trip the cyber one: the D59 interview refiner was refused mid-run
+ * on an identity-attack article. Those phases get the server-side fallback,
+ * which re-runs a declined request on the recommended model in the same call.
+ */
+export function wantsRefusalFallback(model: string): boolean {
+  return /^claude-(opus|fable)-/.test(model);
+}
+
 export class DirectPhaseRunner {
   constructor(
     private readonly llm: DirectLlm,
@@ -616,6 +626,7 @@ export class DirectPhaseRunner {
       prompt: buildUserPrompt(phase, ctx, plan),
       maxTokens: cfg.direct.maxTokens,
       effort: cfg.direct.effort[phase],
+      ...(wantsRefusalFallback(model) ? { fallbacks: true } : {}),
       ...(onProgress ? { onProgress } : {}),
     });
     Object.assign(usage, res.usage);

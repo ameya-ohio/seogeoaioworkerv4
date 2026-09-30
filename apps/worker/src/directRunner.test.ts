@@ -8,6 +8,7 @@ import {
   estimateCostUsd,
   parseFiles,
   setFrontmatter,
+  wantsRefusalFallback,
 } from "./directRunner.js";
 
 describe("Heartbeat", () => {
@@ -90,5 +91,14 @@ describe("HEADER_PATTERNS", () => {
     const block = /PATTERN_NAMES\s*=\s*\(([\s\S]*?)\)/.exec(py)?.[1] ?? "";
     const names = [...block.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
     expect(names).toEqual([...HEADER_PATTERNS]);
+  });
+});
+
+describe("wantsRefusalFallback", () => {
+  it("turns fallbacks on for Opus- and Fable-tier phases only", () => {
+    expect(wantsRefusalFallback("claude-opus-5-5")).toBe(true);
+    expect(wantsRefusalFallback("claude-fable-5-1")).toBe(true);
+    expect(wantsRefusalFallback("claude-sonnet-5")).toBe(false);
+    expect(wantsRefusalFallback("m")).toBe(false);
   });
 });
