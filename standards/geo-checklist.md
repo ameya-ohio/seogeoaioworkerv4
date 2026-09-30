@@ -19,7 +19,7 @@ The Editor walks this list explicitly.
 
 ### Direct answers near the top
 - The intro previews the thesis in plain language by paragraph two or three.
-- The Key Takeaways block sits near the top and contains the article's most quotable, citable lines — **specifics that support the thesis** (a number, a mechanism, a named control, an order of operations). None of them restates the intro's thesis sentence; a reader who reads both should learn something new from the takeaways. (The style gate fails a takeaway that repeats an intro sentence.)
+- The Key Takeaways block sits near the top and contains the article's most quotable, citable lines — **specifics that support the thesis** (a mechanism, a named control, an order of operations, a consequence; never a number or statistic repeated from the body (Stats / Data and Original Research pages excepted: there the takeaways are the key figures)). None of them restates the intro's thesis sentence; a reader who reads both should learn something new from the takeaways. (The style gate fails a takeaway that repeats an intro sentence.)
 
 ### Definition-style sentences — at most two
 - Give a formal definition only to the terms a reader genuinely needs defined to follow the argument — usually the article's primary concept and at most one supporting term. **Two per article, maximum** (the style gate enforces it).

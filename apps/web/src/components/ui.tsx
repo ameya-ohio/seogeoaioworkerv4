@@ -113,6 +113,7 @@ const STAGE_STYLE: Record<string, string> = {
   outline: "bg-cyan-100 text-cyan-700",
   write: "bg-blue-100 text-blue-700",
   edit: "bg-indigo-100 text-indigo-700",
+  hdcp: "bg-fuchsia-100 text-fuchsia-700",
   schema: "bg-violet-100 text-violet-700",
   design: "bg-purple-100 text-purple-700",
   review: "bg-amber-100 text-amber-800",

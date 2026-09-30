@@ -75,7 +75,7 @@ Walk every item. Specifically:
 - **Quotable** standalone sentences: 2–4, arising from the argument, none a restated thesis.
 - Formal definitions (`**X** is …`): **at most two**, for the terms the argument depends on; rewrite the rest as in-passing explanations.
 - Intro passes the hook-shaped-intro machine check (`scripts/style_checks.py`), and it reads at the register of the research notes' Topic Summary, paragraphs 1–2: the subject is named in the first sentence, the core distinction is stated and defined directly, and a why-now paragraph carries sourced specifics. Put the intro next to those two paragraphs. If it is less informative, or it leans on hook moves (a lone-stat opener with a dramatic fragment, "That number should…", "X and Y aren't the same", "…goes to die", "Confuse the two, and you'll…"), rewrite it from the Topic Summary.
-- Key Takeaways carry specifics; none repeats the intro's thesis sentence.
+- Key Takeaways carry specifics (mechanisms, controls, orders, consequences; never a number or statistic repeated from the body (Stats / Data and Original Research pages excepted: there the takeaways are the key figures)); none repeats the intro's thesis sentence.
 - Author and publisher authority signals visible (frontmatter `author`, `author_bio_url`).
 - Original insight or perspective present (the article's wedge from the Strategist's angle).
 - Entity richness: ≥ 5 named entities (people / organizations / products / concepts), each named explicitly.

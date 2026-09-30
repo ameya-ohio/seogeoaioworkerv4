@@ -63,13 +63,14 @@ beforeAll(async () => {
       outline: "m",
       write: "m",
       edit: "m",
+      hdcp: "m",
       schema: "m",
       design: "m",
     },
-    maxTurns: { research: 1, outline: 1, write: 1, edit: 1, schema: 1, design: 1 },
+    maxTurns: { research: 1, outline: 1, write: 1, edit: 1, hdcp: 1, schema: 1, design: 1 },
     direct: {
-      routes: { outline: "agent", write: "agent", edit: "agent", schema: "agent", design: "agent" },
-      effort: { outline: "high", write: "high", edit: "high", schema: "high", design: "high" },
+      routes: { outline: "agent", write: "agent", edit: "agent", hdcp: "agent", schema: "agent", design: "agent" },
+      effort: { outline: "high", write: "high", edit: "high", hdcp: "high", schema: "high", design: "high" },
       maxTokens: 64_000,
     },
     techReview: { enabled: false, model: "fake-reviewer", effort: "high" },
@@ -261,6 +262,26 @@ Four layers cover most teams.
 Markdown, because models parse its structure directly.
 `;
 
+const HDCP_LOG = JSON.stringify({
+  agent: "hdcp",
+  version: "1.0",
+  summary: "One statistic repeated in the intro and the body; the case study sat at the end.",
+  findings: [
+    { code: "A1", severity: "high", location: "Intro", excerpt: "four layers", diagnosis: "stat repeated", planned_fix: "keep once" },
+    { code: "C2", severity: "medium", location: "Layers", excerpt: "Context beats cleverness.", diagnosis: "aphoristic closer", planned_fix: "end on the point" },
+  ],
+  cuts: [{ content: "second copy of the layer count", reason: "A1" }],
+  flags: [],
+  verification: {
+    findings_before: { high: 1, medium: 1, low: 0 },
+    findings_after: { high: 0, medium: 0, low: 0 },
+    fact_diff_passed: true,
+    coverage_diff_passed: true,
+    link_diff_passed: true,
+  },
+  editor_notes: "Cut the repeated layer count.",
+});
+
 const SCHEMA = {
   "@context": "https://schema.org",
   "@graph": [
@@ -308,7 +329,7 @@ class FakeInvoker implements AgentInvoker {
   flakyOnce = new Set<string>();
 
   async run(inv: AgentInvocation): Promise<AgentRunOutcome> {
-    const phase = /Phase \d+ \((\w[\w ]*)\)/.exec(inv.prompt)?.[1] ?? "?";
+    const phase = /Phase [\d.]+ \((\w[\w ]*)\)/.exec(inv.prompt)?.[1] ?? "?";
     this.calls.push({ phase, prompt: inv.prompt });
     const folderMatch = /Article folder: (articles\/\S+)\//.exec(inv.prompt);
     const dir = join(inv.cwd, folderMatch?.[1] ?? "");
@@ -339,6 +360,10 @@ class FakeInvoker implements AgentInvoker {
         return ok();
       case "Editor":
         appendFileSync(join(dir, "article.md"), "\n<!-- EDIT SUMMARY: no changes needed -->\n");
+        return ok();
+      case "HDCP":
+        // Rewrites in place (here: unchanged) and logs its own verification.
+        writeFileSync(join(dir, "hdcp.json"), HDCP_LOG);
         return ok();
       case "Schema Builder": {
         writeFileSync(join(dir, "schema.json"), JSON.stringify(SCHEMA, null, 2));
@@ -442,6 +467,7 @@ describe("runPipeline end-to-end (fake agents, real gates + python checks)", () 
       "Strategist",
       "Writer",
       "Editor",
+      "HDCP",
       "Schema Builder",
       "Header Designer",
     ]);
@@ -468,6 +494,10 @@ describe("runPipeline end-to-end (fake agents, real gates + python checks)", () 
       source: "strategist",
     });
     expect(doc?.frontmatter?.["article_type"]).toBe("deep-dive");
+    // HDCP ran between Edit and Schema and its log is on the article.
+    expect(doc?.hdcp?.findings.map((f) => f.code)).toEqual(["A1", "C2"]);
+    expect(doc?.hdcp?.verification.findings_after.high).toBe(0);
+    expect(doc?.hdcp?.editorNotes).toContain("layer count");
     expect(doc?.frontmatter?.["funnel"]).toBe("mofu");
     const pageMd = readFileSync(join(repoRoot, "articles", "2026-09-14-pipeline-e2e", "page.md"), "utf-8");
     expect(pageMd).toContain("Deep-dive (`deep-dive`)");
@@ -475,11 +505,11 @@ describe("runPipeline end-to-end (fake agents, real gates + python checks)", () 
 
     const runDoc = await db.runs.findOne({ _id: run._id });
     expect(runDoc?.status).toBe("succeeded");
-    expect(runDoc?.phaseResults.filter((p) => p.status === "succeeded")).toHaveLength(6);
+    expect(runDoc?.phaseResults.filter((p) => p.status === "succeeded")).toHaveLength(7);
 
     const events = await eventsAfter(db, run._id as ObjectId, 0, 500);
     expect(events.some((e) => e.type === "run.succeeded")).toBe(true);
-    expect(events.filter((e) => e.type === "gate.passed")).toHaveLength(6);
+    expect(events.filter((e) => e.type === "gate.passed")).toHaveLength(7);
   }, 120_000);
 
   it("retries a phase with gate feedback, then succeeds", async () => {
@@ -534,6 +564,7 @@ class FakeDirectLlm implements DirectLlm {
         "\n" +
         file("meta.json", JSON.stringify({ title: "t", slug: "pipeline-e2e" })),
       edit: file("article.md", ARTICLE + "\n<!-- EDIT SUMMARY: no changes needed -->\n"),
+      hdcp: file("article.md", ARTICLE + "\n<!-- EDIT SUMMARY: no changes needed -->\n") + "\n" + file("hdcp.json", HDCP_LOG),
       schema: file("schema.json", JSON.stringify(SCHEMA)),
       design: file(
         "header.json",
@@ -574,12 +605,13 @@ function directCfg(): WorkerConfig {
       outline: "claude-sonnet-5",
       write: "claude-sonnet-5",
       edit: "claude-sonnet-5",
+      hdcp: "claude-opus-5-5",
       schema: "claude-sonnet-5",
       design: "claude-sonnet-5",
     },
     direct: {
       ...cfg.direct,
-      routes: { outline: "direct", write: "direct", edit: "direct", schema: "direct", design: "direct" },
+      routes: { outline: "direct", write: "direct", edit: "direct", hdcp: "direct", schema: "direct", design: "direct" },
     },
   };
 }
@@ -603,7 +635,7 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
     await runPipeline(makeDeps(invoker, { cfg: directCfg(), direct }), claimed!);
 
     expect(invoker.calls.map((c) => c.phase)).toEqual(["Researcher"]);
-    expect(llm.calls.map((c) => c.phase)).toEqual(["outline", "write", "edit", "schema", "design"]);
+    expect(llm.calls.map((c) => c.phase)).toEqual(["outline", "write", "edit", "hdcp", "schema", "design"]);
 
     // Inputs inlined; stable reference material sits behind the cache breakpoint.
     const outlineReq = llm.calls[0]!.req;
@@ -644,11 +676,14 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
       ["outline", "direct"],
       ["write", "direct"],
       ["edit", "direct"],
+      ["hdcp", "direct"],
       ["schema", "direct"],
       ["design", "direct"],
     ]);
-    // 1000 in × $2 + 2000 cache-read × $0.2 + 500 out × $10, per million.
-    for (const p of results.slice(1)) expect(p.usage?.costUsd).toBeCloseTo(0.0074, 6);
+    // 1000 in × $2 + 2000 cache-read × $0.2 + 500 out × $10, per million (Sonnet phases;
+    // HDCP runs on Opus 5.5 and is priced as such).
+    for (const p of results.slice(1).filter((r) => r.phase !== "hdcp")) expect(p.usage?.costUsd).toBeCloseTo(0.0074, 6);
+    expect(results.find((r) => r.phase === "hdcp")?.usage?.costUsd).toBeGreaterThan(0);
   }, 120_000);
 
   it("retries a direct phase with gate feedback without stacking json-ld fences", async () => {

@@ -101,6 +101,11 @@ describe("Framer export bundle (D52)", () => {
     expect(files.get("README.md")!.toString()).toContain(`"how to prioritize and reduce identity exposure" → ${url}`);
   });
 
+  it("refuses while HDCP editor flags remain in the article", () => {
+    const md = MD.replace("Intro with an", "Intro [NEEDS SOURCE: 2026 figure] with an");
+    expect(() => buildFramerBundle(article({ artifacts: { article: md } }), company)).toThrow(/editor flag/);
+  });
+
   it("refuses drafts and unsigned vendor pages", () => {
     expect(() => buildFramerBundle(article({ stage: "write" }), company)).toThrow(ExportRefusedError);
     expect(() => buildFramerBundle(article(), company, { signoffRequired: true })).toThrow(/sign-off/);

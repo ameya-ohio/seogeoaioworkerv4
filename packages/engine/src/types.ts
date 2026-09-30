@@ -12,6 +12,8 @@ export const WORK_STAGES = [
   "outline",
   "write",
   "edit",
+  // HDCP (agents/hdcp.md): editorial rewrite after the Editor, before Schema.
+  "hdcp",
   "schema",
   "design",
 ] as const;
@@ -41,6 +43,8 @@ export function nextStage(stage: Stage): Stage | null {
     case "write":
       return "edit";
     case "edit":
+      return "hdcp";
+    case "hdcp":
       return "schema";
     case "schema":
       return "design";
@@ -150,6 +154,36 @@ export interface ArticleArtifacts {
  * (a formats.json slug) sets the body, search intent is what the SERP
  * expects, and funnel sets the CTA and how much the company appears.
  */
+/** The HDCP agent's log (agents/hdcp.md → Log Format), as stored on the article. */
+export interface HdcpFinding {
+  code: string;
+  severity: "high" | "medium" | "low";
+  location: string;
+  excerpt: string;
+  diagnosis: string;
+  planned_fix: string;
+}
+
+export interface HdcpLog {
+  ranAt: Date;
+  model: string;
+  summary: string;
+  findings: HdcpFinding[];
+  cuts: { content: string; reason: string }[];
+  flags: string[];
+  verification: {
+    findings_before: { high: number; medium: number; low: number };
+    findings_after: { high: number; medium: number; low: number };
+    fact_diff_passed?: boolean;
+    coverage_diff_passed?: boolean;
+    link_diff_passed?: boolean;
+    notes?: string;
+  };
+  editorNotes: string;
+  /** The rest of the raw log (inventory, version…), kept verbatim. */
+  raw?: Record<string, unknown>;
+}
+
 export interface ArticleFacets {
   pageRole: PageRole;
   searchIntent: SearchIntent;
@@ -223,6 +257,8 @@ export interface ArticleDoc {
   canonicalUrl?: string;
   /** D46: the page's ancestors and itself, for breadcrumbs (pillar → hub → page). */
   trail?: { name: string; path: string }[];
+  /** HDCP (agents/hdcp.md): the diagnosis, cuts, flags and self-verification of the last run. */
+  hdcp?: HdcpLog;
   /** D53: internal links in the body as of the last edit — the site-wide anchor registry. */
   internalLinks?: { url: string; anchor: string }[];
   /** D52: the page confirmed live on the site (Framer export target). */

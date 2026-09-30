@@ -187,6 +187,14 @@ export async function persistPhaseOutputs(
       }
       return;
     }
+    case "hdcp": {
+      const md = await readIfExists(join(dir, "article.md"));
+      if (md) {
+        const { frontmatter } = parseArticle(md);
+        await saveArtifacts(db, id, { article: md }, { frontmatter });
+      }
+      return;
+    }
     case "schema": {
       const md = await readIfExists(join(dir, "article.md"));
       const schema = parseJsonSafe(await readIfExists(join(dir, "schema.json")));

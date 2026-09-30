@@ -30,6 +30,7 @@ import {
   type ScriptReport,
   type Storage,
   type WorkStage,
+  parseHdcpLog,
   parseOutlineFacets,
   extractMarkdownLinks,
   type FormatRegistry,
@@ -92,6 +93,10 @@ async function loadGateFiles(
   if (articleMd !== undefined) files.article = articleMd;
   const schemaJson = await read("schema.json");
   if (schemaJson !== undefined) files.schemaJson = schemaJson;
+  if (phase === "hdcp") {
+    const hdcpJson = await read("hdcp.json");
+    if (hdcpJson !== undefined) files.hdcpJson = hdcpJson;
+  }
   if (phase === "design") files.headerPngExists = existsSync(join(dir, "header.png"));
   if (outputs.report) files.report = outputs.report;
   if (outputs.citationReport) files.citationReport = outputs.citationReport;
@@ -118,7 +123,7 @@ async function runCodeStep(
   const { cfg, db } = deps;
   // The worker owns the facet and canonical_url frontmatter keys (D45–D46):
   // stamp them before anything reads the article.
-  if (rules && (phase === "write" || phase === "edit" || phase === "schema")) {
+  if (rules && (phase === "write" || phase === "edit" || phase === "hdcp" || phase === "schema")) {
     if (await stampArticleFrontmatter(cfg, article, rules)) {
       deps.log(`[${article.slug}/${phase}] stamped facet/canonical frontmatter`);
     }
@@ -247,6 +252,49 @@ async function runTechnicalReview(deps: PipelineDeps, article: ArticleDoc): Prom
   return review.issues.map(formatIssue);
 }
 
+/**
+ * HDCP inputs: what the pipeline already knows about the draft, so the
+ * agent starts from it (operator decision #4) — the technical review's
+ * findings and the edit-stage audit's failures and warnings.
+ */
+async function materializeHdcpInputs(cfg: WorkerConfig, article: ArticleDoc): Promise<void> {
+  const tr = article.technicalReview;
+  const checks = (article.audit?.checks ?? []).filter((c) => c.level !== "pass");
+  const lines = [
+    `# What the pipeline already knows about this draft`,
+    ``,
+    `## Technical review (before the Editor)`,
+    ``,
+    ...(tr && !tr.skipped && tr.issues.length
+      ? tr.issues.map((i) => `- ${i.kind}: "${i.quote}" — ${i.problem}${i.fix ? ` Fix: ${i.fix}` : ""}`)
+      : [tr?.skipped ? `_skipped: ${tr.skipped}_` : `_no findings_`]),
+    ``,
+    `## Latest audit (edit stage): failures and warnings`,
+    ``,
+    ...(checks.length ? checks.map((c) => `- ${c.level.toUpperCase()}: ${c.message}`) : [`_clean_`]),
+    ``,
+  ];
+  await writeFile(join(articleDir(cfg, article), "hdcp-inputs.md"), lines.join("\n"), "utf-8");
+}
+
+/** Store the HDCP log on the article and put each finding in the run log. */
+async function recordHdcp(deps: PipelineDeps, article: ArticleDoc, hdcpJson: string | undefined): Promise<void> {
+  const { log } = parseHdcpLog(hdcpJson, deps.cfg.models.hdcp);
+  if (!log || !article._id) return;
+  await deps.db.articles.updateOne({ _id: article._id }, { $set: { hdcp: log, updatedAt: new Date() } });
+  const v = log.verification;
+  deps.log(
+    `[${article.slug}/hdcp] ${log.findings.length} finding(s); before H${v.findings_before.high}/M${v.findings_before.medium}/L${v.findings_before.low}` +
+      ` → after H${v.findings_after.high}/M${v.findings_after.medium}/L${v.findings_after.low}` +
+      `; fact diff ${v.fact_diff_passed ?? "?"}, coverage ${v.coverage_diff_passed ?? "?"}, links ${v.link_diff_passed ?? "?"}` +
+      `; ${log.cuts.length} cut(s), ${log.flags.length} flag(s)`,
+  );
+  for (const f of log.findings) {
+    deps.log(`[${article.slug}/hdcp]   - ${f.code} ${f.severity} @ ${f.location}: "${f.excerpt}" — ${f.diagnosis.slice(0, 160)}`);
+  }
+  for (const flag of log.flags) deps.log(`[${article.slug}/hdcp]   flag: ${flag.slice(0, 200)}`);
+}
+
 export interface PhaseOutcome {
   gate: GateResult;
   attempts: number;
@@ -275,6 +323,7 @@ async function executePhase(
   // chose for a page that had none reach the Writer.
   const page = await pageRulesFor(db, cfg, article);
   await materializePageSpec(cfg, article, page.rules, page.inventory);
+  if (phase === "hdcp") await materializeHdcpInputs(cfg, article);
 
   // Edit pre-audit: run the edit gate's own checks on the incoming draft so
   // attempt 1 starts with the exact problems a retry would have been given.
@@ -397,6 +446,7 @@ async function executePhase(
         data: { phase, attempt },
       });
       await persistPhaseOutputs(deps.db, cfg, deps.storage, article, phase);
+      if (phase === "hdcp") await recordHdcp(deps, article, files.hdcpJson);
       if (phase === "outline" && files.outline) {
         // Which case study (or incident, or none) the article is anchored on.
         const anchor = /^##\s+Real-World Anchor\s*\n+([^\n]+)/im.exec(files.outline)?.[1]?.trim();

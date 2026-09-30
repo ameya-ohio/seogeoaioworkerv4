@@ -40,6 +40,8 @@ export interface GateFiles {
   page?: PageRules;
   /** Set when the article has no facets: the outline must supply them (validated here). */
   facetRegistry?: FormatRegistry;
+  /** HDCP: the agent's hdcp.json log (raw text). */
+  hdcpJson?: string;
 }
 
 function result(problems: string[]): GateResult {
@@ -315,6 +317,98 @@ export function editGate(files: GateFiles): GateResult {
   return result(problems);
 }
 
+/**
+ * Parse an hdcp.json log. Returns the log or the problems that make it
+ * unusable. The agent's own verification is the check (operator decision,
+ * 2026-09-29): no second audit runs after HDCP.
+ */
+export function parseHdcpLog(
+  text: string | undefined,
+  model = "",
+): { log?: import("./types.js").HdcpLog; problems: string[] } {
+  if (!text?.trim()) return { problems: ["hdcp.json missing — return the log as well as the article"] };
+  let raw: Record<string, unknown>;
+  try {
+    raw = JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return { problems: ["hdcp.json is not valid JSON"] };
+  }
+  const problems: string[] = [];
+  const v = (raw["verification"] ?? {}) as Record<string, unknown>;
+  const counts = (x: unknown) => {
+    const o = (x ?? {}) as Record<string, unknown>;
+    return { high: Number(o["high"] ?? NaN), medium: Number(o["medium"] ?? 0), low: Number(o["low"] ?? 0) };
+  };
+  const before = counts(v["findings_before"]);
+  const after = counts(v["findings_after"]);
+  if (typeof raw["summary"] !== "string" || !String(raw["summary"]).trim()) problems.push("hdcp.json: `summary` missing");
+  if (!Array.isArray(raw["findings"])) problems.push("hdcp.json: `findings` must be an array");
+  if (!Number.isFinite(after.high)) problems.push("hdcp.json: `verification.findings_after.high` missing");
+  if (problems.length) return { problems };
+  const str = (x: unknown) => (typeof x === "string" ? x : "");
+  const findings = (raw["findings"] as Record<string, unknown>[]).map((f) => ({
+    code: str(f["code"]),
+    severity: (["high", "medium", "low"].includes(str(f["severity"])) ? str(f["severity"]) : "low") as "high" | "medium" | "low",
+    location: str(f["location"]),
+    excerpt: str(f["excerpt"]),
+    diagnosis: str(f["diagnosis"]),
+    planned_fix: str(f["planned_fix"]),
+  }));
+  const { summary: _s, findings: _f, cuts, flags, verification: _v, editor_notes, ...rest } = raw;
+  return {
+    problems,
+    log: {
+      ranAt: new Date(),
+      model,
+      summary: str(raw["summary"]),
+      findings,
+      cuts: Array.isArray(cuts)
+        ? (cuts as Record<string, unknown>[]).map((c) => ({ content: str(c["content"]), reason: str(c["reason"]) }))
+        : [],
+      flags: Array.isArray(flags) ? (flags as unknown[]).map(String) : [],
+      verification: {
+        findings_before: { high: Number.isFinite(before.high) ? before.high : 0, medium: before.medium, low: before.low },
+        findings_after: after,
+        ...(typeof v["fact_diff_passed"] === "boolean" ? { fact_diff_passed: v["fact_diff_passed"] as boolean } : {}),
+        ...(typeof v["coverage_diff_passed"] === "boolean" ? { coverage_diff_passed: v["coverage_diff_passed"] as boolean } : {}),
+        ...(typeof v["link_diff_passed"] === "boolean" ? { link_diff_passed: v["link_diff_passed"] as boolean } : {}),
+        ...(str(v["notes"]) ? { notes: str(v["notes"]) } : {}),
+      },
+      editorNotes: str(editor_notes),
+      raw: rest,
+    },
+  };
+}
+
+/**
+ * HDCP gate: the output exists and is sound, and the agent's OWN
+ * verification reports no High-severity finding left. Deliberately no audit
+ * re-run (operator decision): the model's verification is the check.
+ */
+export function hdcpGate(files: GateFiles): GateResult {
+  const problems: string[] = [];
+  const raw = files.article ?? "";
+  if (countWords(raw) < 50) {
+    problems.push("article.md missing or empty after HDCP");
+    return result(problems);
+  }
+  const { frontmatter, body } = parseArticle(raw);
+  for (const key of ["title", "slug"] as const) {
+    if (String(frontmatter[key] ?? "").trim() === "") problems.push(`HDCP dropped frontmatter: ${key}`);
+  }
+  if (countHeadings(cleanBody(body), 1) !== 1) problems.push("HDCP output must keep exactly one H1");
+  const { log, problems: logProblems } = parseHdcpLog(files.hdcpJson);
+  problems.push(...logProblems);
+  if (log && log.verification.findings_after.high > 0) {
+    const open = log.findings.filter((f) => f.severity === "high").map((f) => `${f.code} ${f.location}: ${f.diagnosis}`);
+    problems.push(
+      `your own verification reports ${log.verification.findings_after.high} High-severity finding(s) still in the rewrite — revise again (Phase 4)` +
+        (open.length ? `: ${open.slice(0, 6).join("; ")}` : ""),
+    );
+  }
+  return result(problems);
+}
+
 export function schemaGate(files: GateFiles): GateResult {
   const problems: string[] = [];
   if (!files.schemaJson) {
@@ -357,6 +451,7 @@ export const GATES: Record<WorkStage, (files: GateFiles) => GateResult> = {
   outline: outlineGate,
   write: writeGate,
   edit: editGate,
+  hdcp: hdcpGate,
   schema: schemaGate,
   design: designGate,
 };

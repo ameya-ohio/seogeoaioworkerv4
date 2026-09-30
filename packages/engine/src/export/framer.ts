@@ -34,6 +34,11 @@ export function framerExportProblems(article: ArticleDoc, opts: { signoffRequire
     problems.push(`Only an article in review can be exported (stage: ${article.stage}).`);
   }
   if (!article.artifacts.article) problems.push("The article has no article.md yet.");
+  // HDCP flags are for an editor to resolve before the page ships.
+  const flags = (article.artifacts.article ?? "").match(/\[(?:NEEDS SOURCE|HUMAN INPUT|VERIFY):[^\]]*\]/g) ?? [];
+  if (flags.length) {
+    problems.push(`Resolve ${flags.length} editor flag(s) in the article first: ${flags.slice(0, 3).join(" ")}`);
+  }
   if (opts.signoffRequired && !article.signoff) {
     problems.push("This format needs a human sign-off before export (D51) — sign it off in Review first.");
   }

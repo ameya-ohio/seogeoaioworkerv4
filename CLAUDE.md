@@ -94,6 +94,14 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
 - **Output:** Updated `articles/YYYY-MM-DD-slug/article.md` + edit summary as `<!-- EDIT SUMMARY: ... -->`.
 - **Gate:** Zero banned phrases; all checklist items pass or have a documented justified exception; meta description 140–160 chars; title 50–60 chars; primary keyword present in first 100 words.
 
+### Phase 4.5 — HDCP (Human Driven Content Protocol)
+
+- **Sub-agent spec:** `agents/hdcp.md` (Opus 5.5)
+- **Inputs:** `page.md`, the edited `article.md` (the fact boundary), `research-notes.md` (context only), and what's already known about the draft: the technical review findings and the latest audit's failures and warnings (the worker writes these to `hdcp-inputs.md`).
+- **Action:** inventory, diagnose, log, rewrite, verify, per the spec. It fixes structure first (duplicated evidence, definition drift, a buried case study, table integrity), then evidence, accuracy, SEO template, authenticity, and sentence level. It never adds a fact.
+- **Output:** the rewritten `article.md` and `hdcp.json` (the diagnosis log, cuts, flags, self-verification, editor notes). `[NEEDS SOURCE]`, `[HUMAN INPUT]` and `[VERIFY]` flags stay inline, and the export refuses while any remain.
+- **Gate:** both files present, the log parses, and the agent's own `verification.findings_after.high` is 0. The model's verification is the check; the edit gate does not run again.
+
 ### Phase 5 — Schema Builder
 
 - **Sub-agent spec:** `agents/schema-builder.md`

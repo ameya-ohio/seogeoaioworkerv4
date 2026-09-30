@@ -12,7 +12,7 @@ import type { WorkStage } from "@blogagent/engine";
  */
 export type PhaseRoute = "agent" | "direct";
 export type DirectPhase = Exclude<WorkStage, "research">;
-export const DIRECT_PHASES: readonly DirectPhase[] = ["outline", "write", "edit", "schema", "design"];
+export const DIRECT_PHASES: readonly DirectPhase[] = ["outline", "write", "edit", "hdcp", "schema", "design"];
 export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
 const EFFORTS: readonly Effort[] = ["low", "medium", "high", "xhigh", "max"];
 
@@ -122,6 +122,8 @@ function phaseModels(): Record<WorkStage, string> {
     outline: get("outline"),
     write: get("write"),
     edit: get("edit"),
+    // HDCP is an editorial-judgment rewrite: Opus 5.5 unless overridden.
+    hdcp: process.env["PHASE_MODEL_HDCP"] ?? "claude-opus-5-5",
     schema: get("schema"),
     design: get("design"),
   };
@@ -166,6 +168,7 @@ export function loadWorkerConfig(): WorkerConfig {
       outline: intEnv("PHASE_MAX_TURNS_OUTLINE", 40),
       write: intEnv("PHASE_MAX_TURNS_WRITE", 60),
       edit: intEnv("PHASE_MAX_TURNS_EDIT", 80),
+      hdcp: intEnv("PHASE_MAX_TURNS_HDCP", 80),
       schema: intEnv("PHASE_MAX_TURNS_SCHEMA", 60),
       design: intEnv("PHASE_MAX_TURNS_DESIGN", 40),
     },

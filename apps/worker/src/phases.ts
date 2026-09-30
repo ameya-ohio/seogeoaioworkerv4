@@ -182,6 +182,28 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           feedback(ctx),
         ].join("\n"),
     },
+    hdcp: {
+      phase: "hdcp",
+      title: "HDCP",
+      specFile: "agents/hdcp.md",
+      allowedTools: FILE_TOOLS,
+      buildPrompt: (ctx) =>
+        [
+          header(ctx, 4.5, "HDCP"),
+          ``,
+          `Inputs to read first:`,
+          `- articles/${ctx.article.folder}/page.md (facets, CTA, format guide, internal link inventory)`,
+          `- articles/${ctx.article.folder}/hdcp-inputs.md (technical review + audit findings — start from these)`,
+          `- articles/${ctx.article.folder}/article.md (the edited draft — the fact boundary)`,
+          `- articles/${ctx.article.folder}/research-notes.md (context only; never bring a fact in from it)`,
+          `- standards/quality-bar.md and context/sales/proof-points.md`,
+          ``,
+          `Run the protocol end to end, following "How this runs in the pipeline" in your spec. Rewrite`,
+          `articles/${ctx.article.folder}/article.md in place (frontmatter unchanged) and write the log to`,
+          `articles/${ctx.article.folder}/hdcp.json.`,
+          feedback(ctx),
+        ].join("\n"),
+    },
     schema: {
       phase: "schema",
       title: "Schema Builder",
@@ -227,4 +249,4 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
   };
 }
 
-export const PHASE_ORDER: WorkStage[] = ["research", "outline", "write", "edit", "schema", "design"];
+export const PHASE_ORDER: WorkStage[] = ["research", "outline", "write", "edit", "hdcp", "schema", "design"];

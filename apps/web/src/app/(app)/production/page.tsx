@@ -25,6 +25,7 @@ const BOARD_STAGES: Stage[] = [
   "outline",
   "write",
   "edit",
+  "hdcp",
   "schema",
   "design",
   "failed",

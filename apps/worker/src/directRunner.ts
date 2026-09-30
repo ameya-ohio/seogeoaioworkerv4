@@ -373,6 +373,27 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
         ].join("\n"),
         outputs: ["article.md"],
       };
+    case "hdcp":
+      return {
+        reference: [
+          ...(await readAll(cfg, ["standards/quality-bar.md", "standards/banned-phrases.txt"])),
+          ...(await readDir(cfg, "context/author-style")),
+          ...(await proofPoints(cfg)),
+        ],
+        inputs: await readAll(cfg, [
+          inFolder("page.md"),
+          inFolder("hdcp-inputs.md"),
+          inFolder("article.md"),
+          inFolder("research-notes.md"),
+        ]),
+        task: [
+          `Run the Human Driven Content Protocol on ${inFolder("article.md")}: inventory, diagnose, log, rewrite, verify.`,
+          `Follow "How this runs in the pipeline" in your spec, including the operator's amendments.`,
+          `${inFolder("hdcp-inputs.md")} holds the technical review and audit findings; start from them.`,
+          `Return the complete rewritten article.md (frontmatter unchanged) and hdcp.json (the Log Format, with editor_notes).`,
+        ].join("\n"),
+        outputs: ["article.md", "hdcp.json"],
+      };
     case "schema":
       return {
         reference: await readAll(cfg, [

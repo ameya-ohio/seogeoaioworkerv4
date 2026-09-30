@@ -45,6 +45,24 @@ export interface ReviewArticle {
   } | null;
   /** Everything handed to the Editor before its first attempt. */
   editPreAudit: string[] | null;
+  /** HDCP (agents/hdcp.md): diagnosis, cuts, flags and self-verification. */
+  hdcp: {
+    ranAt: string;
+    model: string;
+    summary: string;
+    findings: { code: string; severity: string; location: string; excerpt: string; diagnosis: string; planned_fix: string }[];
+    cuts: { content: string; reason: string }[];
+    flags: string[];
+    verification: {
+      findings_before: { high: number; medium: number; low: number };
+      findings_after: { high: number; medium: number; low: number };
+      fact_diff_passed?: boolean;
+      coverage_diff_passed?: boolean;
+      link_diff_passed?: boolean;
+      notes?: string;
+    };
+    editorNotes: string;
+  } | null;
   /** HubSpot post for this article (roadmap Phase 5), once sent. */
   hubspot: { postId: string; url: string | null; state: string; syncedAt: string | null } | null;
   hubspotConfig: { configured: boolean; tokenEnv: string };
@@ -69,7 +87,7 @@ export interface ReviewArticle {
   runs: UiRun[];
 }
 
-const PHASES = ["research", "outline", "write", "edit", "schema", "design"];
+const PHASES = ["research", "outline", "write", "edit", "hdcp", "schema", "design"];
 
 /** Body only: frontmatter, json-ld fence, and HTML comments stripped. */
 function previewBody(markdown: string): string {
@@ -79,7 +97,7 @@ function previewBody(markdown: string): string {
     .replace(/<!--[\s\S]*?-->/g, "");
 }
 
-type SideTab = "preview" | "facets" | "research" | "outline" | "draft" | "audit" | "review" | "header" | "runs";
+type SideTab = "preview" | "facets" | "research" | "outline" | "draft" | "audit" | "review" | "hdcp" | "header" | "runs";
 
 export function ReviewEditor({ article }: { article: ReviewArticle }) {
   const router = useRouter();
@@ -124,6 +142,7 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
     { key: "draft", label: "First draft", disabled: !article.draft },
     { key: "audit", label: "Audit", disabled: !article.audit && !article.citations },
     { key: "review", label: "Tech review", disabled: !article.technicalReview && !article.editPreAudit },
+    { key: "hdcp", label: "HDCP", disabled: !article.hdcp },
     { key: "header", label: "Header", disabled: !article.hasHeader },
     { key: "runs", label: "Runs", disabled: article.runs.length === 0 },
   ];
@@ -361,6 +380,7 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
               />
             )}
             {tab === "runs" && <RunHistory runs={article.runs} />}
+            {tab === "hdcp" && <HdcpPanel hdcp={article.hdcp} markdown={content} />}
             {tab === "facets" && (
               <FacetsPanel
                 article={article}
@@ -597,6 +617,127 @@ function FacetsPanel({
             <dt className="text-slate-500">Schema</dt>
             <dd className="text-slate-700">{article.rules.schema.join(", ")}</dd>
           </dl>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const SEVERITY_STYLE: Record<string, string> = {
+  high: "bg-red-50 text-red-700",
+  medium: "bg-amber-50 text-amber-700",
+  low: "bg-slate-100 text-slate-600",
+};
+
+const HDCP_GROUP: Record<string, string> = {
+  A: "Structure",
+  B: "Evidence",
+  C: "Sentence level",
+  D: "SEO template",
+  E: "Authenticity",
+  F: "Accuracy",
+};
+
+function HdcpPanel({ hdcp, markdown }: { hdcp: ReviewArticle["hdcp"]; markdown: string }) {
+  if (!hdcp) return <p className="text-xs text-slate-500">HDCP hasn't run on this article.</p>;
+  const current = normalizeQuote(markdown);
+  const openFlags = markdown.match(/\[(?:NEEDS SOURCE|HUMAN INPUT|VERIFY):[^\]]*\]/g) ?? [];
+  const v = hdcp.verification;
+  const counts = (c: { high: number; medium: number; low: number }) => `H${c.high} · M${c.medium} · L${c.low}`;
+  const diff = (label: string, ok?: boolean) =>
+    ok === undefined ? null : (
+      <span className={cls("rounded px-1.5 py-0.5", ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700")}>
+        {label} {ok ? "passed" : "failed"}
+      </span>
+    );
+  const groups = [...new Set(hdcp.findings.map((f) => f.code.charAt(0)))].sort();
+  return (
+    <div className="space-y-5 text-xs">
+      <div>
+        <p className="mb-1 font-semibold uppercase tracking-wide text-slate-400">Diagnosis</p>
+        <p className="mb-2 text-slate-500">
+          {hdcp.model} · {new Date(hdcp.ranAt).toLocaleString()}
+        </p>
+        <p className="text-sm text-slate-700">{hdcp.summary}</p>
+      </div>
+      <div className="rounded-md border border-slate-200 p-3">
+        <p className="mb-2 font-semibold uppercase tracking-wide text-slate-400">Self-verification</p>
+        <p className="mb-2 text-slate-700">
+          Findings before <span className="font-mono">{counts(v.findings_before)}</span> → after{" "}
+          <span className="font-mono">{counts(v.findings_after)}</span>
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {diff("fact diff", v.fact_diff_passed)}
+          {diff("coverage", v.coverage_diff_passed)}
+          {diff("links", v.link_diff_passed)}
+        </div>
+        {v.notes && <p className="mt-2 text-slate-500">{v.notes}</p>}
+      </div>
+      {(hdcp.editorNotes || openFlags.length > 0) && (
+        <div className="rounded-md border border-amber-200 bg-amber-50/50 p-3">
+          <p className="mb-1 font-semibold uppercase tracking-wide text-amber-700">For the editor</p>
+          {hdcp.editorNotes && <p className="whitespace-pre-line text-slate-700">{hdcp.editorNotes}</p>}
+          {openFlags.length > 0 && (
+            <>
+              <p className="mt-2 font-medium text-amber-800">
+                {openFlags.length} flag(s) still in the article — the export is blocked until they're resolved:
+              </p>
+              <ul className="mt-1 list-disc pl-4 text-slate-700">
+                {openFlags.map((f, i) => (
+                  <li key={i} className="font-mono">{f}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+      {groups.map((g) => (
+        <div key={g}>
+          <p className="mb-2 font-semibold uppercase tracking-wide text-slate-400">
+            {HDCP_GROUP[g] ?? g} ({hdcp.findings.filter((f) => f.code.startsWith(g)).length})
+          </p>
+          <ul className="space-y-2">
+            {hdcp.findings
+              .filter((f) => f.code.startsWith(g))
+              .map((f, i) => {
+                const open = f.excerpt ? current.includes(normalizeQuote(f.excerpt)) : false;
+                return (
+                  <li key={i} className="rounded-md border border-slate-200 p-3">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5">
+                        <span className="font-mono font-semibold text-slate-700">{f.code}</span>
+                        <span className={cls("rounded-full px-1.5 py-0.5", SEVERITY_STYLE[f.severity] ?? SEVERITY_STYLE["low"])}>
+                          {f.severity}
+                        </span>
+                        <span className="text-slate-500">{f.location}</span>
+                      </span>
+                      {f.excerpt && (
+                        <span className={cls("font-medium", open ? "text-amber-700" : "text-emerald-700")}>
+                          {open ? "still in article" : "changed"}
+                        </span>
+                      )}
+                    </div>
+                    {f.excerpt && (
+                      <blockquote className="mb-1 border-l-2 border-slate-300 pl-2 italic text-slate-600">{f.excerpt}</blockquote>
+                    )}
+                    <p className="text-slate-700">{f.diagnosis}</p>
+                    <p className="mt-1 text-slate-500">Fix: {f.planned_fix}</p>
+                  </li>
+                );
+              })}
+          </ul>
+        </div>
+      ))}
+      {hdcp.cuts.length > 0 && (
+        <div>
+          <p className="mb-2 font-semibold uppercase tracking-wide text-slate-400">Cut ({hdcp.cuts.length})</p>
+          <ul className="space-y-1">
+            {hdcp.cuts.map((c, i) => (
+              <li key={i} className="text-slate-700">
+                <span className="text-slate-500">{c.reason}:</span> {c.content}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

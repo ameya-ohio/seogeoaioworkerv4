@@ -68,6 +68,18 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
         }
       : null,
     editPreAudit: doc.editPreAudit?.items ?? null,
+    hdcp: doc.hdcp
+      ? {
+          ranAt: new Date(doc.hdcp.ranAt).toISOString(),
+          model: doc.hdcp.model,
+          summary: doc.hdcp.summary,
+          findings: doc.hdcp.findings,
+          cuts: doc.hdcp.cuts,
+          flags: doc.hdcp.flags,
+          verification: doc.hdcp.verification,
+          editorNotes: doc.hdcp.editorNotes,
+        }
+      : null,
     hubspot: doc.hubspot?.postId
       ? {
           postId: doc.hubspot.postId,
