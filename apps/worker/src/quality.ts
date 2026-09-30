@@ -30,8 +30,10 @@ export interface CitationVerifier {
   /**
    * Edit gate: every external URL cited in the body must be a source that
    * survived research-stage verification. Deterministic — no fetching.
+   * `exempt` holds links the page is required to carry (its funnel CTA),
+   * which are never citations.
    */
-  verifyArticleBody(body: string, research: CitationReport | undefined): CitationReport;
+  verifyArticleBody(body: string, research: CitationReport | undefined, exempt?: string[]): CitationReport;
 }
 
 export interface LinkCheckContext {
@@ -170,11 +172,15 @@ export class LiveCitationVerifier implements CitationVerifier {
     "schema.org",
   ];
 
-  verifyArticleBody(body: string, research: CitationReport | undefined): CitationReport {
+  verifyArticleBody(body: string, research: CitationReport | undefined, exempt: string[] = []): CitationReport {
     const verified = new Set(research?.verifiedUrls ?? []);
     const normalize = (u: string) => u.replace(/^https?:\/\/(www\.)?/, "").replace(/\/+$/, "");
     const verifiedNorm = new Set([...verified].map(normalize));
+    // The funnel CTA (D50) is required by the edit gate and may live off-site
+    // (a PDF on the CMS's asset host): it's the page's own link, not a citation.
+    const exemptNorm = new Set(exempt.map(normalize));
     const urls = extractExternalUrls(articleProse(body), this.internalHosts).filter((u) => {
+      if (exemptNorm.has(normalize(u))) return false;
       try {
         const host = new URL(u).hostname.replace(/^www\./, "");
         return !LiveCitationVerifier.PLUMBING_HOSTS.some(

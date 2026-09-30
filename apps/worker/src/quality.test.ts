@@ -123,6 +123,17 @@ Per [IBM](https://ibm.example.com/report), costs rose.
   });
 });
 
+describe("verifyArticleBody CTA exemption (D50)", () => {
+  it("never flags the page's own funnel CTA, even when it lives off-site", async () => {
+    const verifier = new LiveCitationVerifier(new FakeJudge(), "fake", ["saporo.io"], fakeFetcher);
+    const body = `Per [new](https://never-checked.example.com/x), things.
+
+[Download the overview](https://framerusercontent.com/assets/overview.pdf)`;
+    const check = verifier.verifyArticleBody(body, undefined, ["https://framerusercontent.com/assets/overview.pdf"]);
+    expect(check.results.map((r) => r.url)).toEqual(["https://never-checked.example.com/x"]);
+  });
+});
+
 describe("LiveLinkChecker (D35)", () => {
   let mongod: MongoMemoryServer;
   let db: EngineDb;

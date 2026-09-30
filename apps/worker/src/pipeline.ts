@@ -208,7 +208,11 @@ async function runCodeStep(
     const body = await readIf("article.md");
     // Body citations check deterministically against the research-verified
     // set; internal links resolve against inventory + the live site.
-    const citationReport = deps.citationVerifier.verifyArticleBody(body, article.citationChecks);
+    const citationReport = deps.citationVerifier.verifyArticleBody(
+      body,
+      article.citationChecks,
+      rules?.cta?.url ? [rules.cta.url] : [],
+    );
     const linkReport = await recordLinks(deps, article, body, inventory);
     return { report, citationReport, linkReport };
   }
