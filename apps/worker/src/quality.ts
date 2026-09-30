@@ -11,7 +11,11 @@ import {
   type EngineDb,
   type LinkCheckResult,
   type LinkReport,
+  type LinkTarget,
+  anchorKey,
+  extractMarkdownLinks,
 } from "@blogagent/engine";
+import type { ObjectId } from "mongodb";
 import type { LlmClient } from "./llm.js";
 
 /**
@@ -30,8 +34,15 @@ export interface CitationVerifier {
   verifyArticleBody(body: string, research: CitationReport | undefined): CitationReport;
 }
 
+export interface LinkCheckContext {
+  /** The article being checked — excluded from the site-wide anchor registry. */
+  articleId?: ObjectId;
+  /** D53: the pages it may link to, with what each covers (relevance judge). */
+  inventory?: LinkTarget[];
+}
+
 export interface LinkChecker {
-  check(body: string): Promise<LinkReport>;
+  check(body: string, ctx?: LinkCheckContext): Promise<LinkReport>;
 }
 
 /**
@@ -276,9 +287,89 @@ export class LiveCitationVerifier implements CitationVerifier {
 }
 
 /**
- * D35: internal links resolve against the articles collection (published
+ * D53: does the sentence leading into each internal link promise what the
+ * destination delivers? One cheap call per article, all links at once. A
+ * judge failure (unparseable reply, API error) never counts against the
+ * article — the verifier-parse lesson from Session 15.
+ */
+export interface LinkJudgement {
+  fits: boolean;
+  note?: string;
+  better?: string;
+}
+
+export interface LinkRelevanceJudge {
+  judge(
+    links: { anchor: string; sentence: string; target: LinkTarget }[],
+    inventory: LinkTarget[],
+  ): Promise<LinkJudgement[] | null>;
+}
+
+export class LlmLinkRelevanceJudge implements LinkRelevanceJudge {
+  constructor(
+    private readonly llm: LlmClient,
+    private readonly model: string,
+    private readonly log: (msg: string) => void = () => {},
+  ) {}
+
+  async judge(
+    links: { anchor: string; sentence: string; target: LinkTarget }[],
+    inventory: LinkTarget[],
+  ): Promise<LinkJudgement[] | null> {
+    if (links.length === 0) return [];
+    try {
+      const res = await this.llm.complete({
+        model: this.model,
+        maxTokens: 1500,
+        prompt: [
+          `You check internal links in a B2B article. For each link, decide whether the sentence`,
+          `leading into it promises what the destination page actually covers. A link fails when a`,
+          `reader who follows it would get something different from what the sentence set up (e.g.`,
+          `the sentence is about ranking or prioritizing findings, and the page is about removing them).`,
+          ``,
+          `PAGES ON THE SITE (url — what it covers):`,
+          ...inventory.map((p) => `- ${p.url} — ${p.title}: ${p.covers}`),
+          ``,
+          `LINKS:`,
+          ...links.map((l, i) => `${i}: anchor "${l.anchor}" → ${l.target.url}\n   sentence: ${l.sentence}`),
+          ``,
+          `Reply with JSON only: [{"index": 0, "fits": true|false, "note": "<one line when false>",`,
+          ` "better": "<url from the list that fits the sentence, when false and one exists>"}]`,
+        ].join("\n"),
+      });
+      const parsed = extractJson(res.text);
+      const list = Array.isArray(parsed)
+        ? parsed
+        : parsed && typeof parsed === "object"
+          ? (Object.values(parsed as Record<string, unknown>).find(Array.isArray) as unknown[] | undefined)
+          : undefined;
+      if (!list) {
+        this.log(`[links] relevance judge reply unparseable (${res.text.length} chars) — links not judged`);
+        return null;
+      }
+      return links.map((_, i) => {
+        const e = list.find((x) => x && typeof x === "object" && (x as Record<string, unknown>)["index"] === i) as
+          | Record<string, unknown>
+          | undefined;
+        if (!e) return { fits: true };
+        const note = typeof e["note"] === "string" ? (e["note"] as string).slice(0, 200) : undefined;
+        const better = typeof e["better"] === "string" ? (e["better"] as string) : undefined;
+        return { fits: e["fits"] !== false, ...(note ? { note } : {}), ...(better ? { better } : {}) };
+      });
+    } catch (err) {
+      this.log(`[links] relevance judge failed (${err instanceof Error ? err.message : String(err)}) — links not judged`);
+      return null;
+    }
+  }
+}
+
+/**
+ * D35/D53: internal links resolve against the articles collection (published
  * HubSpot URL, marked-live URL, slug, or reserved /learn/ path) or a live
- * HTTP check for other site pages.
+ * HTTP check. A same-plan page that isn't live yet is DEFERRED — a real link
+ * in the draft that the export renders as text until the page is live. An
+ * anchor already pointing at a different page anywhere on the site fails, and
+ * so does a link whose lead-in doesn't match what the destination covers.
  */
 export class LiveLinkChecker implements LinkChecker {
   constructor(
@@ -286,54 +377,106 @@ export class LiveLinkChecker implements LinkChecker {
     private readonly companyId: string,
     private readonly internalHosts: string[],
     private readonly fetchPage: PageFetcher = defaultPageFetcher,
+    private readonly judge?: LinkRelevanceJudge,
   ) {}
 
-  async check(body: string): Promise<LinkReport> {
-    const urls = extractInternalLinks(articleProse(body), this.internalHosts);
+  async check(body: string, ctx: LinkCheckContext = {}): Promise<LinkReport> {
+    const prose = articleProse(body);
+    const urls = extractInternalLinks(prose, this.internalHosts);
+    const anchors = new Map<string, string>();
+    for (const l of extractMarkdownLinks(prose)) if (!anchors.has(l.url)) anchors.set(l.url, l.anchor);
     const results: LinkCheckResult[] = [];
     for (const url of urls) {
-      const slug = url.split("/").filter(Boolean).pop() ?? "";
-      // D46: /learn/ pages end in a short segment, not the article slug, so
-      // match the reserved path too (with or without the trailing slash).
-      let pathname = "";
-      try {
-        pathname = new URL(url).pathname;
-      } catch {
-        pathname = "";
-      }
-      const paths = pathname ? [pathname.endsWith("/") ? pathname : `${pathname}/`, pathname.replace(/\/+$/, "")] : [];
-      const known = await this.db.articles.findOne({
-        companyId: this.companyId,
-        $or: [
-          { "hubspot.url": url },
-          { "live.url": url },
-          { slug, stage: "published" },
-          ...(paths.length ? [{ path: { $in: paths }, stage: "published" as const }] : []),
-        ],
-      });
-      if (known) {
-        results.push({ url, status: "ok", note: "resolves to a published article" });
-        continue;
-      }
-      const draft = await this.db.articles.findOne({
-        companyId: this.companyId,
-        $or: [{ slug }, ...(paths.length ? [{ path: { $in: paths } }] : [])],
-      });
-      if (draft) {
-        results.push({
-          url,
-          status: "missing",
-          note: `article "${draft.slug}" exists but is not published (stage: ${draft.stage}) — pending link`,
-        });
-        continue;
-      }
-      const live = await this.fetchPage(url);
-      results.push(
-        live.ok
-          ? { url, status: "ok", note: "live page" }
-          : { url, status: "missing", note: live.note ?? "not found" },
-      );
+      const anchor = anchors.get(url);
+      results.push({ ...(await this.resolve(url)), ...(anchor ? { anchor } : {}) });
     }
+    await this.flagAnchorConflicts(results, ctx);
+    await this.judgeRelevance(prose, results, ctx);
     return buildLinkReport(results);
+  }
+
+  private async resolve(url: string): Promise<LinkCheckResult> {
+    const slug = url.split("/").filter(Boolean).pop() ?? "";
+    // D46: /learn/ pages end in a short segment, not the article slug, so
+    // match the reserved path too (with or without the trailing slash).
+    let pathname = "";
+    try {
+      pathname = new URL(url).pathname;
+    } catch {
+      pathname = "";
+    }
+    const paths = pathname ? [pathname.endsWith("/") ? pathname : `${pathname}/`, pathname.replace(/\/+$/, "")] : [];
+    const known = await this.db.articles.findOne({
+      companyId: this.companyId,
+      $or: [
+        { "hubspot.url": url },
+        { "live.url": url },
+        { slug, stage: "published" },
+        ...(paths.length ? [{ path: { $in: paths }, stage: "published" as const }] : []),
+      ],
+    });
+    if (known) return { url, status: "ok", note: "resolves to a published article" };
+    const draft = await this.db.articles.findOne({
+      companyId: this.companyId,
+      $or: [{ slug }, ...(paths.length ? [{ path: { $in: paths } }] : [])],
+    });
+    if (draft?.path && paths.includes(draft.path)) {
+      return { url, status: "deferred", note: `"${draft.slug}" is in production (stage: ${draft.stage}) — linked now, shown as text in the export until it's live` };
+    }
+    if (paths.length) {
+      const planned = await this.db.planItems.findOne({ companyId: this.companyId, path: { $in: paths } });
+      if (planned) {
+        return { url, status: "deferred", note: `planned page ${planned.externalId} — linked now, shown as text in the export until it's live` };
+      }
+    }
+    if (draft) {
+      return { url, status: "missing", note: `article "${slug}" exists but is not published (stage: ${draft.stage}) — pending link` };
+    }
+    const live = await this.fetchPage(url);
+    return live.ok ? { url, status: "ok", note: "live page" } : { url, status: "missing", note: live.note ?? "not found" };
+  }
+
+  /** One anchor, one destination — across every article on the site. */
+  private async flagAnchorConflicts(results: LinkCheckResult[], ctx: LinkCheckContext): Promise<void> {
+    const withAnchor = results.filter((r) => r.anchor && r.status !== "missing");
+    if (withAnchor.length === 0) return;
+    const others = await this.db.articles
+      .find({
+        companyId: this.companyId,
+        "internalLinks.0": { $exists: true },
+        ...(ctx.articleId ? { _id: { $ne: ctx.articleId } } : {}),
+      })
+      .project<{ slug: string; internalLinks: { url: string; anchor: string }[] }>({ slug: 1, internalLinks: 1 })
+      .toArray();
+    const byAnchor = new Map<string, { url: string; slug: string }>();
+    for (const a of others) for (const l of a.internalLinks) byAnchor.set(anchorKey(l.anchor), { url: l.url, slug: a.slug });
+    for (const r of withAnchor) {
+      const hit = byAnchor.get(anchorKey(r.anchor as string));
+      if (hit && hit.url.replace(/\/+$/, "") !== r.url.replace(/\/+$/, "")) {
+        r.status = "anchor_conflict";
+        r.note = `"${hit.slug}" uses it for ${hit.url}`;
+      }
+    }
+  }
+
+  private async judgeRelevance(prose: string, results: LinkCheckResult[], ctx: LinkCheckContext): Promise<void> {
+    const inventory = ctx.inventory ?? [];
+    if (!this.judge || inventory.length === 0) return;
+    const norm = (u: string) => u.replace(/\/+$/, "");
+    const byUrl = new Map(inventory.map((t) => [norm(t.url), t]));
+    const links = extractMarkdownLinks(prose)
+      .map((l) => ({ ...l, target: byUrl.get(norm(l.url)) }))
+      .filter((l): l is typeof l & { target: LinkTarget } => Boolean(l.target));
+    const verdicts = await this.judge.judge(links, inventory);
+    if (!verdicts) return;
+    verdicts.forEach((v, i) => {
+      const l = links[i];
+      if (!l || v.fits) return;
+      const r = results.find((x) => norm(x.url) === norm(l.url) && (x.status === "ok" || x.status === "deferred"));
+      if (!r) return;
+      r.status = "off_target";
+      r.anchor = l.anchor;
+      r.note = `${v.note ?? "the lead-in doesn't match what this page covers"}${v.better ? `; a better target: ${v.better}` : ""}`;
+    });
   }
 }

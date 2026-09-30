@@ -2,6 +2,9 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  buildLinkInventory,
+  renderLinkInventory,
+  type LinkTarget,
   CTA_SETTINGS_KEY,
   facetFrontmatter,
   formatTemplatePath,
@@ -66,7 +69,7 @@ export async function pageRulesFor(
   cfg: WorkerConfig,
   article: ArticleDoc,
   formats?: FormatRegistry,
-): Promise<{ rules: PageRules; formats: FormatRegistry }> {
+): Promise<{ rules: PageRules; formats: FormatRegistry; inventory: LinkTarget[] }> {
   const reg = formats ?? loadFormatRegistry(cfg.repoRoot);
   const canonicalUrl = await canonicalFor(db, article);
   const breadcrumbs = await breadcrumbsFor(db, article);
@@ -76,17 +79,27 @@ export async function pageRulesFor(
     ...(canonicalUrl ? { canonicalUrl } : {}),
     ...(breadcrumbs ? { breadcrumbs } : {}),
   });
-  return { rules, formats: reg };
+  const company = await db.companies.findOne({ companyId: article.companyId });
+  const site = (company?.config ?? {}) as Record<string, Record<string, unknown> | undefined>;
+  const siteBase = String(site["site"]?.["base_url"] ?? site["company"]?.["url"] ?? "");
+  const inventory = siteBase ? await buildLinkInventory(db, article, siteBase) : [];
+  return { rules, formats: reg, inventory };
 }
 
-export async function materializePageSpec(cfg: WorkerConfig, article: ArticleDoc, rules: PageRules): Promise<void> {
+export async function materializePageSpec(
+  cfg: WorkerConfig,
+  article: ArticleDoc,
+  rules: PageRules,
+  inventory: LinkTarget[] = [],
+): Promise<void> {
   const dir = articleDir(cfg, article);
   await mkdir(dir, { recursive: true });
   const templatePath = formatTemplatePath(cfg.repoRoot, rules.format.slug);
   const guide = existsSync(templatePath)
     ? await readFile(templatePath, "utf-8")
     : "_No format guide yet — follow the rules above and the Writer spec._";
-  await writeFile(join(dir, "page.md"), renderPageSpec(rules, guide), "utf-8");
+  const links = renderLinkInventory(inventory);
+  await writeFile(join(dir, "page.md"), renderPageSpec(rules, guide) + (links ? `\n${links}` : ""), "utf-8");
 }
 
 /**

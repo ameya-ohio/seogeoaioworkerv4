@@ -31,7 +31,9 @@ import {
   type Storage,
   type WorkStage,
   parseOutlineFacets,
+  extractMarkdownLinks,
   type FormatRegistry,
+  type LinkTarget,
   type PageRules,
 } from "@blogagent/engine";
 import { materializePageSpec, pageRulesFor, stampArticleFrontmatter } from "./pageSpec.js";
@@ -39,7 +41,7 @@ import type { AgentInvoker, AgentRunOutcome } from "./agentRunner.js";
 import type { WorkerConfig } from "./config.js";
 import type { DirectPhaseRunner } from "./directRunner.js";
 import { PHASE_ORDER, phaseDefs, type PhaseContext } from "./phases.js";
-import type { CitationVerifier, LinkChecker } from "./quality.js";
+import { articleProse, type CitationVerifier, type LinkChecker } from "./quality.js";
 import { formatIssue, type TechReviewer } from "./techReview.js";
 import {
   articleDir,
@@ -111,6 +113,7 @@ async function runCodeStep(
   article: ArticleDoc,
   phase: WorkStage,
   rules?: PageRules,
+  inventory: LinkTarget[] = [],
 ): Promise<CodeStepOutputs> {
   const { cfg, db } = deps;
   // The worker owns the facet and canonical_url frontmatter keys (D45–D46):
@@ -178,11 +181,20 @@ async function runCodeStep(
     // Body citations check deterministically against the research-verified
     // set; internal links resolve against inventory + the live site.
     const citationReport = deps.citationVerifier.verifyArticleBody(body, article.citationChecks);
-    const linkReport = await deps.linkChecker.check(body);
+    const linkReport = await deps.linkChecker.check(body, {
+      ...(article._id ? { articleId: article._id } : {}),
+      inventory,
+    });
+    // D53: this article's anchors join the site-wide registry, so the next
+    // article can't reuse one for a different page.
+    const hosts = new Set(linkReport.results.map((r) => r.url));
+    const internalLinks = extractMarkdownLinks(articleProse(body))
+      .filter((l) => hosts.has(l.url))
+      .map((l) => ({ url: l.url, anchor: l.anchor }));
     if (article._id) {
       await db.articles.updateOne(
         { _id: article._id },
-        { $set: { linkChecks: linkReport, updatedAt: new Date() } },
+        { $set: { linkChecks: linkReport, internalLinks, updatedAt: new Date() } },
       );
     }
     return { report, citationReport, linkReport };
@@ -262,13 +274,13 @@ async function executePhase(
   // page.md (D45–D50) is rebuilt for every phase, so facets the Strategist
   // chose for a page that had none reach the Writer.
   const page = await pageRulesFor(db, cfg, article);
-  await materializePageSpec(cfg, article, page.rules);
+  await materializePageSpec(cfg, article, page.rules, page.inventory);
 
   // Edit pre-audit: run the edit gate's own checks on the incoming draft so
   // attempt 1 starts with the exact problems a retry would have been given.
   let preAudit: string[] | undefined;
   if (phase === "edit") {
-    const preOutputs = await runCodeStep(deps, article, phase, page.rules);
+    const preOutputs = await runCodeStep(deps, article, phase, page.rules, page.inventory);
     const pre = GATES.edit(await loadGateFiles(cfg, article, phase, preOutputs, page));
     // Style WARNs (rhythm, lists of three, signposts) don't fail the gate,
     // but they're the same class of problem — hand them over as advisory.
@@ -351,7 +363,7 @@ async function executePhase(
       throw new Error(`${phase}: ${err}`);
     }
 
-    const outputs = await runCodeStep(deps, article, phase, page.rules);
+    const outputs = await runCodeStep(deps, article, phase, page.rules, page.inventory);
     const files = await loadGateFiles(cfg, article, phase, outputs, page);
     gate = GATES[phase](files);
     await saveGateResult(db, articleId, phase, gate);

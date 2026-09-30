@@ -88,6 +88,19 @@ describe("Framer export bundle (D52)", () => {
     expect(files.get("page.md")!.toString()).not.toContain("title:");
   });
 
+  it("renders deferred links as their anchor text and lists them in the README (D53)", () => {
+    const url = "https://www.saporo.io/learn/identity-exposure-management/identity-exposure/how-to-reduce/";
+    const md = MD.replace("Intro with an", `Close the gap with [how to prioritize and reduce identity exposure](${url}). Intro with an`);
+    const b = buildFramerBundle(article({ artifacts: { article: md } }), company, {
+      deferredLinks: [{ url, anchor: "how to prioritize and reduce identity exposure" }],
+    });
+    const files = unzip(b.zip);
+    const body = files.get("body.html")!.toString();
+    expect(body).toContain("Close the gap with how to prioritize and reduce identity exposure.");
+    expect(body).not.toContain(url);
+    expect(files.get("README.md")!.toString()).toContain(`"how to prioritize and reduce identity exposure" → ${url}`);
+  });
+
   it("refuses drafts and unsigned vendor pages", () => {
     expect(() => buildFramerBundle(article({ stage: "write" }), company)).toThrow(ExportRefusedError);
     expect(() => buildFramerBundle(article(), company, { signoffRequired: true })).toThrow(/sign-off/);

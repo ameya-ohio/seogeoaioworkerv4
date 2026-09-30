@@ -1,7 +1,7 @@
 import { buildFramerBundle, ExportRefusedError } from "@blogagent/engine";
 import { isAuthed } from "@/lib/auth";
 import { getCompany, getDb, getFormats, getStorage } from "@/lib/db";
-import { formatBySlug } from "@blogagent/engine";
+import { formatBySlug, stillDeferredLinks } from "@blogagent/engine";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +27,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     const bundle = buildFramerBundle(article, company, {
       ...(headerPng ? { headerPng } : {}),
       signoffRequired: format.signoff,
+      deferredLinks: await stillDeferredLinks(db, article),
     });
     await db.articles.updateOne({ _id: article._id }, { $set: { exportedAt: new Date(), updatedAt: new Date() } });
     return new Response(new Uint8Array(bundle.zip), {

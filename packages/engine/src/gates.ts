@@ -155,6 +155,14 @@ export function outlineGate(files: GateFiles): GateResult {
   if (files.facetRegistry) {
     problems.push(...parseOutlineFacets(outline, files.facetRegistry).problems);
   }
+  // D53: each internal-link target at most once per page.
+  const planned = (sectionBody(outline, "Internal Links").match(/https?:\/\/[^\s|)]+/g) ?? []).map((u) =>
+    u.replace(/\/+$/, ""),
+  );
+  const repeated = [...new Set(planned.filter((u, i) => planned.indexOf(u) !== i))];
+  if (repeated.length) {
+    problems.push(`Internal Links plans the same target more than once: ${repeated.join(", ")} — link each page once`);
+  }
   const h2Count = (outline.match(/^###\s+H2:/gim) ?? []).length;
   if (h2Count < 4) {
     problems.push(`Full Outline has ${h2Count} H2 section(s); need >= 4`);
@@ -291,7 +299,15 @@ export function editGate(files: GateFiles): GateResult {
     for (const r of lr.results) {
       if (r.status === "missing") {
         problems.push(
-          `internal link does not resolve: ${r.url}${r.note ? ` (${r.note})` : ""} — remove the hyperlink and keep a plain-text mention`,
+          `internal link does not resolve: ${r.url}${r.note ? ` (${r.note})` : ""} — link a page from page.md's link inventory, or drop the link`,
+        );
+      } else if (r.status === "off_target") {
+        problems.push(
+          `internal link off target: "${r.anchor ?? ""}" → ${r.url}${r.note ? ` — ${r.note}` : ""}. The sentence before a link must match what the destination delivers (D53)`,
+        );
+      } else if (r.status === "anchor_conflict") {
+        problems.push(
+          `anchor text "${r.anchor ?? ""}" already points at a different page on the site${r.note ? ` (${r.note})` : ""} — one anchor, one destination (D53)`,
         );
       }
     }

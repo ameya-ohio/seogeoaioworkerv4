@@ -43,11 +43,23 @@ export function framerExportProblems(article: ArticleDoc, opts: { signoffRequire
 export function buildFramerBundle(
   article: ArticleDoc,
   company: CompanyConfig,
-  opts: { headerPng?: Buffer; signoffRequired?: boolean } = {},
+  opts: {
+    headerPng?: Buffer;
+    signoffRequired?: boolean;
+    /** D53: internal links whose page isn't live yet — rendered as their anchor text. */
+    deferredLinks?: { url: string; anchor?: string }[];
+  } = {},
 ): FramerBundle {
   const problems = framerExportProblems(article, { signoffRequired: opts.signoffRequired === true });
   if (problems.length) throw new ExportRefusedError(problems.join(" "));
-  const md = article.artifacts.article as string;
+  const deferred = opts.deferredLinks ?? [];
+  const deferredUrls = new Set(deferred.map((d) => d.url.replace(/\/+$/, "")));
+  // A link to a page that isn't live would 404 on the site: keep the anchor
+  // text in the sentence, drop the hyperlink, and list it in the README.
+  const md = (article.artifacts.article as string).replace(
+    /\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,
+    (m, anchor: string, url: string) => (deferredUrls.has(url.replace(/\/+$/, "")) ? anchor : m),
+  );
   const { frontmatter, body } = parseArticle(md);
   const fm = (k: string) => String(frontmatter[k] ?? "").trim();
   const base = String(cfgGet(company, "site.base_url", cfgGet(company, "company.url", "")) ?? "").replace(/\/+$/, "");
@@ -87,7 +99,7 @@ export function buildFramerBundle(
     .filter(Boolean)
     .join("\n");
 
-  const pending = article.pendingLinks ?? [];
+  const pending = deferred.length ? [] : (article.pendingLinks ?? []);
   const readme = [
     `# ${title}`,
     ``,
@@ -108,6 +120,17 @@ export function buildFramerBundle(
     `5. Hero image: header.png, alt text from meta.json.`,
     `6. Publish, then press **Mark live** in the Review screen — it checks the URL responds.`,
     ``,
+    ...(deferred.length
+      ? [
+          `## Links to switch on when these pages go live`,
+          ``,
+          `They're written into the article with their anchors; the export shows them as plain text so the`,
+          `live page has no 404s. When a target is live, re-download this package (or link the anchor by hand):`,
+          ``,
+          ...deferred.map((d) => `- "${d.anchor ?? d.url}" → ${d.url}`),
+          ``,
+        ]
+      : []),
     ...(pending.length
       ? [
           `## Links to add once these pages are live`,

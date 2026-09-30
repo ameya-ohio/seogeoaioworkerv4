@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cfgGet, formatBySlug } from "@blogagent/engine";
+import { articlesWaitingOn, cfgGet, formatBySlug } from "@blogagent/engine";
 import { requireAuth } from "../auth";
 import { getCompany, getDb, getFormats } from "../db";
 
@@ -68,7 +68,15 @@ export async function markArticleLive(slug: string, rawUrl?: string): Promise<Pu
     await db.planItems.updateOne({ _id: article.planItemId }, { $set: { publishedUrl: url, updatedAt: now } });
   }
   revalidate(slug);
-  return { message: `Live at ${url} (HTTP ${status}).` };
+  // D53: other articles link here as a deferred link — their packages can now carry it.
+  const waiting = await articlesWaitingOn(db, article.companyId, url);
+  return {
+    message:
+      `Live at ${url} (HTTP ${status}).` +
+      (waiting.length
+        ? ` ${waiting.length} article(s) link here and can now be re-downloaded with the link on: ${waiting.map((w) => w.slug).join(", ")}.`
+        : ""),
+  };
 }
 
 /** D51: record the human sign-off a vendor-format page needs before export. */

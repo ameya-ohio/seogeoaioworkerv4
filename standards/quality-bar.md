@@ -454,6 +454,38 @@ Banned outright. Acceptable only for genuine acronyms (LLM, RAG, CRM, GTM). Neve
 
 ---
 
+## Internal linking (D53)
+
+Internal links carry readers and search engines to the next page. An anchor that reads like a footnote, or a lead-in that promises something the destination doesn't deliver, wastes both.
+
+- **Describe the destination.** Someone reading only the anchor should know what the linked page is about.
+- **Write anchors into the sentence.** Don't append "see X" at the end.
+- **Keep anchors roughly 2–7 words.** Link the meaningful phrase, not the whole sentence.
+- **Vary the wording across the site.** Use the target's primary phrase sometimes, and natural variants or partial matches other times.
+- **Never use the same anchor text for two different pages.** It muddies which page is relevant for that phrase.
+- **Link each target once per page,** at the point where it's most relevant.
+- **Make the surrounding text agree with the destination.** Search engines read the context around a link, and readers who get something unexpected leave.
+- **No generic anchors** ("here", "this article", "learn more"), and **no site-structure jargon** ("the hub page", "pillar page"). Readers don't know what a hub is, so describe what the page covers.
+
+**Before:**
+> For how these weaknesses accumulate specifically across Active Directory, Entra ID, and AWS, see What Causes Identity Exposure in Hybrid Environments and the hub page, What is Identity Exposure.
+>
+> If you already have exposure data but no way to rank it, or a risk framework with no exposure feed underneath it, that gap is the one to close next. See How to Reduce Identity Exposure.
+>
+> For the remediation side of that work, see How to Reduce Identity Exposure.
+
+**After:**
+> These weaknesses build up differently across Active Directory, Entra ID, and AWS, and [what causes identity exposure in hybrid environments](…) breaks down each one. If you're newer to the concept, start with [what identity exposure is](…).
+>
+> If you already have exposure data but no way to rank it, or a risk framework with no exposure feed underneath it, that's the gap to close next. Here's [how to prioritize and reduce identity exposure](…).
+>
+> (The third link is removed: it repeated the same target with the same anchor.)
+
+**How it's enforced:**
+- **Page-level checks** (`scripts/link_checks.py`) FAIL on footnote links, generic anchors, jargon, relative internal URLs, a target linked twice, and one anchor for two pages. They WARN on anchor length and on an anchor that is the target's full title (unless that title is also the page's query).
+- **The worker's link checker** FAILs an anchor already used for a different page anywhere on the site, and a link whose lead-in a relevance judge finds off target. The judge suggests a better page from the inventory.
+- **Planned pages** in the inventory are linked with their reserved `/learn/` URL. They count as deferred, not missing, and the Framer export renders them as text until each target is live.
+
 ## Company numbers (D51)
 
 The company's own figures are the most defensible claims an article can make, and the easiest to discredit when they float free of a method. Cite them only from `context/sales/proof-points.md` entries marked `Citable: yes`, with the methodology line attached. `scripts/seo_audit.py` FAILs a sentence that names the company with a number whose entry is marked `no`, and WARNs on a company number that isn't in the table at all (fine for a case-study figure; a product claim needs an entry).

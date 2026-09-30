@@ -33,6 +33,9 @@ Reports per-check PASS / WARN / FAIL on:
   - the format's required elements (scripts/format_checks.py): numbered steps
     for How-to, a comparison table high on the page, checklist items, stats
     bullets with number + year, metrics formulas, limitations lines (FAIL/WARN)
+  - internal links (scripts/link_checks.py, D53): 'see [X]' footnotes, generic
+    anchors, site-structure jargon, relative links, a target linked twice, one
+    anchor for two pages (FAIL); anchor length, full-title anchors (WARN)
   - schema.json file present
 """
 from __future__ import annotations
@@ -47,6 +50,7 @@ from competitor_checks import load_competitors, parse_jsonld, run_all as run_com
 from formats import article_type_slug, load_registry  # noqa: E402
 from format_checks import run_all as run_format_checks  # noqa: E402
 from proof_points import load_proof_points, run_all as run_proof_point_checks  # noqa: E402
+from link_checks import load_page_md, run_all as run_link_checks  # noqa: E402
 from style_checks import format_finding, run_all as run_style_checks  # noqa: E402
 
 # Single source: standards/banned-phrases.txt + config/company.yaml
@@ -207,6 +211,22 @@ def strip_jsonld_fences(body: str) -> str:
 
 def strip_html_comments(body: str) -> str:
     return re.sub(r"<!--[\s\S]*?-->", "", body)
+
+
+def _internal_hosts() -> list[str]:
+    """The company's own hosts, from company.yaml (domain, site, blog)."""
+    hosts: set[str] = set()
+    cfg = _CONFIG if isinstance(_CONFIG, dict) else {}
+    for raw in (
+        (cfg.get("company") or {}).get("domain", ""),
+        (cfg.get("company") or {}).get("url", ""),
+        (cfg.get("site") or {}).get("base_url", ""),
+        (cfg.get("blog") or {}).get("base_url", ""),
+    ):
+        m = re.match(r"(?:https?://)?([^/]+)", str(raw or "").strip())
+        if m and m.group(1):
+            hosts.add(m.group(1).lower().removeprefix("www."))
+    return sorted(hosts)
 
 
 _QUERY_SHAPED = re.compile(r"\b(?:vs\.?|versus)\b|^(?:how to|what is|what are|best|top|why)\b", re.I)
@@ -421,6 +441,14 @@ def audit(folder: Path) -> int:
             (a.fail if f.level == "fail" else a.warn)(format_finding(f))
         if not any(f.level == "fail" for f in fmt_findings):
             a.ok(f"Format: {fmt_slug} structure checks passed.")
+
+    # internal links (D53): page-local best practice; the worker adds site-wide
+    # anchor collisions and the relevance judge
+    link_findings = run_link_checks(body_clean, _internal_hosts(), load_page_md(folder))
+    for f in link_findings:
+        (a.fail if f.level == "fail" else a.warn)(format_finding(f))
+    if not any(f.level == "fail" for f in link_findings):
+        a.ok("Links: internal anchors written into the prose, each target once.")
 
     # the company's own numbers must come from context/sales/proof-points.md (D51)
     company_name = str((_CONFIG.get("company") or {}).get("name", "")) if isinstance(_CONFIG, dict) else ""

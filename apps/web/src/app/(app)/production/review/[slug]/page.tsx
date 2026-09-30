@@ -53,8 +53,8 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
       : null,
     links: doc.linkChecks
       ? doc.linkChecks.results.map((r) => ({
-          level: r.status === "ok" ? ("pass" as const) : ("fail" as const),
-          message: `${r.url}${r.note ? ` — ${r.note}` : ""}`,
+          level: r.status === "ok" ? ("pass" as const) : r.status === "deferred" ? ("warn" as const) : ("fail" as const),
+          message: `${r.anchor ? `"${r.anchor}" → ` : ""}${r.url}${r.status !== "ok" ? ` [${r.status}]` : ""}${r.note ? ` — ${r.note}` : ""}`,
         }))
       : null,
     technicalReview: doc.technicalReview

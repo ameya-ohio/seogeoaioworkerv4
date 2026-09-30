@@ -332,6 +332,6 @@ describe("parseScriptOutput + editGate", () => {
     expect(g.ok).toBe(false);
     expect(g.problems.join(" ")).toContain("unverified.example.com");
     expect(g.problems.join(" ")).toContain("not-published-yet");
-    expect(g.problems.join(" ")).toMatch(/plain-text mention/);
+    expect(g.problems.join(" ")).toMatch(/link inventory/);
   });
 });

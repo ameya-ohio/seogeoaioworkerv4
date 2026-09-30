@@ -223,6 +223,8 @@ export interface ArticleDoc {
   canonicalUrl?: string;
   /** D46: the page's ancestors and itself, for breadcrumbs (pillar → hub → page). */
   trail?: { name: string; path: string }[];
+  /** D53: internal links in the body as of the last edit — the site-wide anchor registry. */
+  internalLinks?: { url: string; anchor: string }[];
   /** D52: the page confirmed live on the site (Framer export target). */
   live?: { url: string; verifiedAt: Date; status: number };
   /** D51: human sign-off for formats that require it, before export. */

@@ -9,6 +9,8 @@ import { readWorkbook } from "./plan/xlsx.js";
 import { suggestMapping } from "./plan/mapping.js";
 import { analyzePlan, type PlanAnalysis } from "./plan/import.js";
 import { testFormats } from "./__testutil__/formats.js";
+import { buildLinkInventory, extractMarkdownLinks, renderLinkInventory, stillDeferredLinks } from "./links/inventory.js";
+import { outlineGate } from "./gates.js";
 import {
   commitPlan,
   createPlan,
@@ -231,6 +233,46 @@ describe("enqueuePlanItem", () => {
     const fresh = await getPlanItem(db, item?._id as ObjectId);
     expect(fresh?.status).toBe("in_progress");
     expect(fresh?.articleId?.toHexString()).toBe(article._id?.toHexString());
+  });
+});
+
+describe("internal-link inventory (D53)", () => {
+  it("lists parent, grandparent and siblings with their URLs, what they cover, and status", async () => {
+    const plan = await seedPlan();
+    const items = await listPlanItems(db, { planId: plan._id as ObjectId, limit: 100 });
+    const spoke = items.find((i) => i.externalId === "P01-S01-A02");
+    const { article } = await enqueuePlanItem(db, { companyId: COMPANY, planItemId: spoke?._id as ObjectId });
+    const inv = await buildLinkInventory(db, article, "https://www.acme.test");
+    const titles = inv.map((t) => t.title);
+    expect(titles).toContain("What is Widget Exposure"); // parent
+    expect(titles).toContain("Widget Security: The Complete Guide"); // grandparent
+    expect(titles).toContain("Why Widget Exposure Grows in Hybrid & Cloud Estates"); // sibling
+    expect(titles).not.toContain(spoke?.title); // never itself
+    for (const t of inv) {
+      expect(t.url.startsWith("https://www.acme.test/learn/")).toBe(true);
+      expect(t.covers.length).toBeGreaterThan(10);
+      expect(t.status).toBe("planned");
+    }
+    const md = renderLinkInventory(inv);
+    expect(md).toContain("at most once");
+    expect(md).not.toMatch(/Hub:|Sibling spoke/);
+  });
+
+  it("finds each link's sentence and resolves still-deferred links", async () => {
+    const links = extractMarkdownLinks(
+      "Intro sentence. These weaknesses build up differently, and [what causes it](https://x.test/a/) breaks each one down. Next.",
+    );
+    expect(links[0]).toMatchObject({ anchor: "what causes it", url: "https://x.test/a/" });
+    expect(links[0]?.sentence).toBe("These weaknesses build up differently, and what causes it breaks each one down.");
+    const art = { companyId: COMPANY, linkChecks: { ranAt: new Date(), missingCount: 0, results: [{ url: "https://x.test/learn/p/q/", status: "deferred" as const, anchor: "q" }] } };
+    expect(await stillDeferredLinks(db, art)).toEqual([{ url: "https://x.test/learn/p/q/", anchor: "q" }]);
+  });
+});
+
+describe("outline gate: internal links (D53)", () => {
+  it("fails a target planned twice", () => {
+    const outline = `# S\n\n${"word ".repeat(50)}\n\n## Internal Links\n| Target URL | Section | Need | Anchor |\n|---|---|---|---|\n| https://x.test/a/ | One | n | a |\n| https://x.test/a | Two | n | b |\n`;
+    expect(outlineGate({ outline }).problems.join(" ")).toContain("more than once");
   });
 });
 

@@ -127,6 +127,17 @@ Build the worked example on exactly what the outline's **Real-World Anchor** nam
 
 Never invent a scenario: no "picture a…", "imagine a…", "suppose…", "let's say…". The edit gate fails them.
 
+## Internal links
+
+Link from page.md's **link inventory** (D53), following the Strategist's `## Internal Links` plan and `standards/quality-bar.md` → *Internal linking*:
+
+- Write the link into the sentence, where it tells the reader what they get: "…and [what causes identity exposure in hybrid environments](url) breaks down each one." Never "See [Title]." or "For more, see…".
+- Use a descriptive 2–7 word anchor. Never "here", "this article" or "learn more".
+- Never name the site structure ("the hub page", "pillar page"). Describe what the page covers.
+- Link each target once, where it's most relevant. Give two different pages two different anchors.
+- The lead-in must match what the target **covers**. A sentence about ranking findings links to the page on measuring or prioritizing them, not to the page on removing them.
+- Use the full URL exactly as the inventory lists it. Planned pages are linked now.
+
 ## Company numbers
 
 Cite a company figure (attack paths found, reduction percentages, deployment time, integration counts) only from `context/sales/proof-points.md`, and only an entry marked `Citable: yes`. Attach its methodology line the way the table states it ("5.9M+ attack paths identified across customer environments (Saporo platform data, 2026)"). The audit fails a company number marked `no`. Figures from a case study you're anchored on are fine; they come from that file.

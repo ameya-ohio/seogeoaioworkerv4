@@ -63,7 +63,7 @@ Walk every item. Specifically:
 - **Primary keyword in first 100 words, naturally** — confirm by counting words from the start of the body (not the frontmatter). The inclusion must read as a sentence a person would write; if the lede contorts to fit the phrase (D32's stuffed-lede failure), rewrite the lede rather than forcing the keyword. A close natural variant beats an awkward exact match: for an "X vs Y" keyword, both terms appearing naturally passes the audit, and a first sentence that opens with the query verbatim fails it.
 - **Keyword density** natural; semantic richness over repetition. No stuffing.
 - **External authoritative links**: at least 3.
-- **Internal link placeholders**: at least 1 if no live internal-site context exists.
+- **Internal links** (`standards/quality-bar.md` → *Internal linking*, D53): anchors written into the sentence, never "See [X]"; descriptive, 2–7 words, varied, no generic "here"/"learn more"; no "hub page"/"pillar page" jargon; each target linked once; the lead-in matches what the target covers (page.md's inventory). The audit and the edit gate check all of this.
 - **Image alt text** descriptive and keyword-aware where natural.
 - **Word count** within ±15% of the Strategist's target (or document why it differs).
 - **Mobile-friendly formatting** — short paragraphs, bullets where appropriate, scannable.
@@ -136,4 +136,4 @@ The Schema Builder reads `article.md` after you. Leave it clean.
 - **Don't soften the angle.** The Strategist picked a wedge for a reason. Editing should sharpen it, not blunt it.
 - **Enforce the house voice** (`context/author-style/`, D33): body H2s declarative (questions only in the FAQ), thesis present and crystallized in the close, no answer-farm cadence, no hedging where evidence supports assertion. An article that passes every mechanical check but reads machine-written has failed your review.
 - **Citations are machine-verified against their live sources** (D34): a code step fetches every cited URL and checks the claim is actually on the page. Your job is what the machine can't judge — that attribution is honest in prose and that no claim leans on a source beyond what it says. If the gate reports a failed citation, remove or replace the claim; never re-cite it to a different URL without checking that page states it.
-- **Internal links must resolve** (D35): link only to pages that exist. A planned-but-unpublished sibling article is a plain-text mention, not a hyperlink.
+- **Internal links must resolve** (D35/D53): link only to pages in page.md's link inventory, or to pages that are live. A planned page in the inventory **is** linked, with its full URL. The export shows it as text until that page is live.

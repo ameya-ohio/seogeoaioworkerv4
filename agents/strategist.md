@@ -90,9 +90,15 @@ Pick the strongest "questions people are asking" from research, as many as page.
 - Add net-new information beyond what the body already covers — never a question one of your H2 sections already answers
 - Not be another page's target query (brief.md lists the siblings' queries). If readers ask it here anyway, plan a one- or two-sentence answer that points to that page
 
-### 8. Internal-link opportunities
+### 8. Internal links
 
-If you know of related pages on the company's site (from `context/marketing/` or general site map), list them. Otherwise, list **placeholders** describing the kind of internal link that should go where (e.g. "internal link to: 'AI worker for finance ops' page in the AI-First section").
+Plan the links from page.md's **link inventory** (D53); `standards/quality-bar.md` → *Internal linking* has the rules. For each link:
+- the target (its URL from the inventory);
+- the section it goes in, at the point the reader needs it;
+- the reader need it serves, which must match what the inventory says the target **covers**;
+- a 2–7 word anchor that says what the reader gets.
+
+Vary the anchors: use the target's query or a natural variant, and don't reuse an anchor the inventory lists as already used. Each target appears **at most once**, and the outline gate fails a duplicate. Link down to every child page when this is a pillar or hub. When the inventory is empty (no plan item), list only pages you know are live.
 
 ### 9. External authoritative citations
 
@@ -207,8 +213,10 @@ Write to `articles/YYYY-MM-DD-slug/outline.md` using this structure:
 2. [Question 2]
 [within page.md's FAQ range — leave the section empty when the format carries none]
 
-## Internal Link Opportunities
-- [URL or placeholder description] — [where in the article]
+## Internal Links
+| Target URL | Section | Reader need (matches what the page covers) | Anchor |
+|---|---|---|---|
+| [URL from page.md's link inventory] | [section] | [why the reader wants it here] | [2–7 word descriptive anchor] |
 
 ## External Citations to Use
 1. [Citation #N from research-notes.md] — [used in section "..."]

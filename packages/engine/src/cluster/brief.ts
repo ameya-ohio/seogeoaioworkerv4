@@ -72,10 +72,11 @@ export function renderBriefMarkdown(brief: Omit<SpokeBrief, "markdown">): string
     `## Internal links`,
     ``,
   );
-  // A pillar page has nothing above it, so an empty "Hub:" line would read as
-  // a missing value rather than as "there is no parent".
-  if (brief.internalLinks.hub) lines.push(`- Hub: ${brief.internalLinks.hub}`);
-  lines.push(...brief.internalLinks.siblings.map((s) => `- Sibling spoke: ${s}`));
+  // D53: no site-structure labels ("hub", "spoke") — the Writer repeated them
+  // to readers. page.md's link inventory has each page's URL and what it covers.
+  lines.push(`Pages this one should connect to (URLs and what each covers are in page.md's link inventory):`, ``);
+  if (brief.internalLinks.hub) lines.push(`- ${brief.internalLinks.hub} (the broader topic this page sits under)`);
+  lines.push(...brief.internalLinks.siblings.map((s) => `- ${s}`));
   lines.push(``);
 
   if (brief.siblingQueries && brief.siblingQueries.length > 0) {
@@ -97,8 +98,8 @@ export function renderBriefMarkdown(brief: Omit<SpokeBrief, "markdown">): string
       ``,
       `This is a PILLAR GUIDE (D47): a complete guide in its own right. Group the`,
       `pages below into sub-themes; each sub-theme section answers its question`,
-      `completely, then points down to the child page. Mention a child in plain`,
-      `text until it exists; a link to an unpublished page fails the edit gate (D35).`,
+      `completely, then links down to the child page with a descriptive anchor, using`,
+      `the URL from page.md's link inventory (planned pages are linked now, D53).`,
       ``,
       ...children.map((c) => `- ${c}`),
       ``,
@@ -108,9 +109,9 @@ export function renderBriefMarkdown(brief: Omit<SpokeBrief, "markdown">): string
       `## Pages this routing page must link down to`,
       ``,
       `This is a ROUTING page. Each page below must get a 2-3 sentence answer in`,
-      `the body, in this order, and a pointer onward — never a full treatment`,
-      `(that belongs on the child page). Mention a child in plain text until it`,
-      `exists; a link to an unpublished page fails the edit gate (D35).`,
+      `the body, in this order, and a link onward — never a full treatment`,
+      `(that belongs on the child page). Link each with a descriptive anchor using the`,
+      `URL from page.md's link inventory (planned pages are linked now, D53).`,
       ``,
       ...children.map((c) => `- ${c}`),
       ``,

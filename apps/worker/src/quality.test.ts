@@ -196,8 +196,53 @@ describe("LiveLinkChecker (D35)", () => {
     );
     const statusFor = (u: string) => report.results.find((r) => r.url.includes(u));
     expect(statusFor("vs-identity-risk")?.status).toBe("ok");
-    expect(statusFor("how-to-measure")?.status).toBe("missing");
+    // D53: a same-plan page in production is linked now and shown as text in the export.
+    expect(statusFor("how-to-measure")?.status).toBe("deferred");
     expect(statusFor("how-to-measure")?.note).toContain("how-to-measure-identity-exposure");
+    expect(report.missingCount).toBe(0);
+  });
+
+  it("defers planned plan pages, flags site-wide anchor conflicts, and applies the relevance judge (D53)", async () => {
+    await db.planItems.insertOne({
+      companyId: "testco",
+      externalId: "P01-S01-A07",
+      path: "/learn/identity-exposure-management/identity-exposure/how-to-reduce/",
+    } as never);
+    const other = await createArticle(db, { companyId: "testco", slug: "other", folder: "2026-09-29-other", topic: "t5" });
+    await db.articles.updateOne(
+      { _id: other._id as ObjectId },
+      { $set: { internalLinks: [{ url: "https://www.saporo.io/learn/x/", anchor: "reduce identity exposure" }] } },
+    );
+    const target = {
+      url: "https://www.saporo.io/learn/identity-exposure-management/identity-exposure/how-to-reduce/",
+      path: "/learn/identity-exposure-management/identity-exposure/how-to-reduce/",
+      title: "How to Reduce Identity Exposure",
+      query: "how to reduce identity exposure",
+      covers: "How-to Guide. Remediation steps",
+      status: "planned" as const,
+      anchorsUsed: [],
+    };
+    const offTarget = {
+      judge: async () => [{ fits: false, note: "the sentence is about ranking findings", better: "https://www.saporo.io/learn/m/" }],
+    };
+    const body = `If you have exposure data but no way to rank it, start with [how to shrink the exposure](${target.url}).`;
+    const judged = await new LiveLinkChecker(db, "testco", ["saporo.io"], async () => ({ ok: false }), offTarget).check(body, {
+      inventory: [target],
+    });
+    expect(judged.results[0]?.status).toBe("off_target");
+    expect(judged.results[0]?.note).toContain("better target");
+    // A judge that can't answer never fails the article.
+    const silent = { judge: async () => null };
+    const tolerant = await new LiveLinkChecker(db, "testco", ["saporo.io"], async () => ({ ok: false }), silent).check(body, {
+      inventory: [target],
+    });
+    expect(tolerant.results[0]?.status).toBe("deferred");
+    // Another article already uses this anchor for a different page.
+    const clash = await new LiveLinkChecker(db, "testco", ["saporo.io"], async () => ({ ok: false })).check(
+      `Here is [reduce identity exposure](${target.url}) in practice.`,
+    );
+    expect(clash.results[0]?.status).toBe("anchor_conflict");
+    expect(clash.missingCount).toBe(1);
   });
 
   it("ignores the article's own canonical_url, comments, and the json-ld fence", async () => {
