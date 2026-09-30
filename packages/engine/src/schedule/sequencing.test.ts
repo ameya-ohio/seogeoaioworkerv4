@@ -90,40 +90,54 @@ describe("computeSequence", () => {
     expect(new Set(ordered.map((o) => o.key)).size).toBe(items.length);
   });
 
-  it("never orders a child before its parent", () => {
+  it("never orders a parent before any of its children", () => {
     const items = samplePlan();
     const { ordered } = computeSequence(items);
     expect(findOrderViolations(items, ordered)).toEqual([]);
   });
 
-  it("promotes a P2 hub so its P1 BOFU child is not blocked, and reports it", () => {
+  it("places a hub right after its last cluster article, and reports the deferral", () => {
     const items = samplePlan();
-    const { ordered, promotions } = computeSequence(items);
+    const { ordered, deferrals } = computeSequence(items);
     const pos = new Map(ordered.map((o) => [o.key, o.sequence]));
-
-    // The conflict case: hub is P2 (wave 3), its child is P1 BOFU (wave 1).
-    expect(pos.get("P01-S02-H")).toBeLessThan(pos.get("P01-S02-A1") as number);
-    const promo = promotions.find((p) => p.parentKey === "P01-S02-H");
-    expect(promo).toBeDefined();
-    expect(promo?.childKey).toBe("P01-S02-A1");
-    expect(promo?.toIndex).toBeLessThan(promo?.fromIndex as number);
+    expect(pos.get("P01-S01-H")).toBe((pos.get("P01-S01-A2") as number) + 1);
+    const d = deferrals.find((x) => x.parentKey === "P01-S01-H");
+    expect(d?.childKey).toBe("P01-S01-A2");
+    expect(d?.toIndex).toBeGreaterThan(d?.fromIndex as number);
   });
 
-  it("leads with the pillar pages and P1 hubs", () => {
+  it("keeps a P1 BOFU article first — structure never delays a child", () => {
     const { ordered } = computeSequence(samplePlan());
-    expect(ordered.slice(0, 3).map((o) => o.key)).toEqual(["P01", "P01-S01-H", "P02"]);
+    expect(ordered[0]?.key).toBe("P01-S02-A1");
+    // ...and its P2 hub follows immediately, since it has no other child.
+    expect(ordered[1]?.key).toBe("P01-S02-H");
   });
 
-  it("reports no promotion when priority and structure already agree", () => {
+  it("puts each pillar page after every hub in its pillar", () => {
+    const items = samplePlan();
+    const { ordered } = computeSequence(items);
+    const pos = new Map(ordered.map((o) => [o.key, o.sequence]));
+    for (const i of items) {
+      if (i.pillarId === "P01" && i.key !== "P01") {
+        expect(pos.get(i.key)).toBeLessThan(pos.get("P01") as number);
+      }
+    }
+  });
+
+  it("reports no deferral when priority and structure already agree", () => {
     row = 0;
     const items = [
-      mk("P01", "pillar", 1),
+      mk("A", "cluster", 1, { parentKey: "H", subtopicId: "S01", funnel: "bofu" }),
       mk("H", "hub", 1, { parentKey: "P01", subtopicId: "S01" }),
-      mk("A", "cluster", 3, { parentKey: "H", subtopicId: "S01" }),
+      mk("P01", "pillar", 1),
     ];
-    const { promotions, ordered } = computeSequence(items);
-    expect(promotions).toEqual([]);
-    expect(ordered.map((o) => o.key)).toEqual(["P01", "H", "A"]);
+    // Clusters rank after hubs by priority (roleRank), so H is deferred past A.
+    const { deferrals, ordered } = computeSequence(items);
+    expect(ordered.map((o) => o.key)).toEqual(["A", "H", "P01"]);
+    expect(deferrals.map((d) => d.parentKey).sort()).toEqual(["H", "P01"]);
+    row = 0;
+    const flat = [mk("X", "cluster", 1), mk("Y", "cluster", 2)];
+    expect(computeSequence(flat).deferrals).toEqual([]);
   });
 
   it("is stable: recomputing the same input gives the same order", () => {

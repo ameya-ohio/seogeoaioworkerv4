@@ -45,16 +45,28 @@ export function framerExportProblems(article: ArticleDoc, opts: { signoffRequire
   return problems;
 }
 
+export interface FramerOptions {
+  headerPng?: Buffer;
+  signoffRequired?: boolean;
+  /** D53: internal links whose page isn't live yet — rendered as their anchor text. */
+  deferredLinks?: { url: string; anchor?: string }[];
+}
+
 export function buildFramerBundle(
   article: ArticleDoc,
   company: CompanyConfig,
-  opts: {
-    headerPng?: Buffer;
-    signoffRequired?: boolean;
-    /** D53: internal links whose page isn't live yet — rendered as their anchor text. */
-    deferredLinks?: { url: string; anchor?: string }[];
-  } = {},
+  opts: FramerOptions = {},
 ): FramerBundle {
+  const { filename, files } = framerFiles(article, company, opts);
+  return { filename, zip: zip(files), files: files.map((f) => f.name) };
+}
+
+/** The bundle's files, unzipped — a release packs several articles' into one zip. */
+export function framerFiles(
+  article: ArticleDoc,
+  company: CompanyConfig,
+  opts: FramerOptions = {},
+): { filename: string; files: { name: string; data: Buffer | string }[] } {
   const problems = framerExportProblems(article, { signoffRequired: opts.signoffRequired === true });
   if (problems.length) throw new ExportRefusedError(problems.join(" "));
   const deferred = opts.deferredLinks ?? [];
@@ -156,9 +168,5 @@ export function buildFramerBundle(
     { name: "README.md", data: readme },
   ];
   if (opts.headerPng) files.push({ name: "header.png", data: opts.headerPng });
-  return {
-    filename: `${article.slug}-framer.zip`,
-    zip: zip(files),
-    files: files.map((f) => f.name),
-  };
+  return { filename: `${article.slug}-framer.zip`, files };
 }

@@ -35,7 +35,7 @@ function describe(outcome: TickOutcome): string {
     case "throttled":
       return `fire held by ${outcome.binding ?? "a limit"} — slot skipped, not owed`;
     case "nothing_ready":
-      return "nothing ready — every candidate is waiting on a parent";
+      return "nothing ready — every candidate is waiting on the pages under it";
     case "paused":
       return `PAUSED — ${outcome.detail ?? "see the plan board"}`;
     case "completed":

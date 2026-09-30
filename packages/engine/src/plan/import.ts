@@ -1,5 +1,5 @@
 import type { SpokeBrief } from "../cluster/types.js";
-import { computeSequence, type Promotion, type SequenceInput } from "../schedule/sequencing.js";
+import { computeSequence, type Deferral, type SequenceInput } from "../schedule/sequencing.js";
 import type { ParsedWorkbook } from "./xlsx.js";
 import {
   collectNotes,
@@ -96,7 +96,7 @@ export interface PlanAnalysis {
   notes?: string;
   items: DraftPlanItem[];
   /** Where the structural rule overrode the plan's own priority ordering. */
-  promotions: Promotion[];
+  deferrals: Deferral[];
 }
 function countBy<T extends string | number>(values: T[]): Record<string, number> {
   const out: Record<string, number> = {};
@@ -123,7 +123,7 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
       taxonomy: { pillars: [], subtopics: [] },
       concepts: [],
       items: [],
-      promotions: [],
+      deferrals: [],
     };
   }
   const pillars = extractPillars(workbook, mapping.sheet);
@@ -278,7 +278,7 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
       tier: sub?.tier ?? null,
     };
   });
-  const { ordered, promotions, violations } = computeSequence(sequenceInputs);
+  const { ordered, deferrals, violations } = computeSequence(sequenceInputs);
   const sequenceByKey = new Map(ordered.map((o) => [o.key, o.sequence]));
   for (const v of violations) orphanRows.push({ externalId: "(plan)", reason: v });
   // ── items ───────────────────────────────────────────────────────────────
@@ -361,7 +361,7 @@ export function analyzePlan(input: PlanAnalysisInput): PlanAnalysis {
     taxonomy: { pillars, subtopics },
     concepts,
     items,
-    promotions,
+    deferrals,
   };
   const notes = collectNotes(workbook);
   if (notes) analysis.notes = notes;

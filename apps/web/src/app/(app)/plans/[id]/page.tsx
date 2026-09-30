@@ -6,12 +6,16 @@ import {
   assignColumns,
   getPlan,
   getSchedule,
+  articlesToReexport,
+  describeWaiting,
+  listReleases,
+  itemKey,
   latestPlanEvents,
   listPlanItems,
+  loadPlanGraph,
   planCounts,
   previewCaveat,
   previewSchedule,
-  type PlanItemStatus,
 } from "@blogagent/engine";
 import { getCompany, getDb, getFormats } from "@/lib/db";
 import {
@@ -27,6 +31,7 @@ import { PlanMapper, type MapperField, type UnresolvedValue } from "@/components
 import { PlanReport } from "@/components/plan-report";
 import { PlanSchedule } from "@/components/plan-schedule";
 import { PlanItemsTable } from "@/components/plan-items";
+import { PlanReleases, type UiRelease } from "@/components/plan-releases";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +39,8 @@ const TABS = [
   { key: "board", label: "Board" },
   { key: "schedule", label: "Cadence" },
   { key: "items", label: "Articles" },
+  { key: "releases", label: "Releases" },
 ];
-
-const ITEMS_PER_PAGE = 100;
 
 export default async function PlanPage({
   params,
@@ -137,7 +141,8 @@ export default async function PlanPage({
           counts.total - (counts.byStatus.done ?? 0) - (counts.byStatus.skipped ?? 0)
         } />
       )}
-      {tab === "items" && <ItemsTab planId={planId} sp={sp} />}
+      {tab === "items" && <ItemsTab planId={planId} id={id} sp={sp} schedule={uiSchedule} />}
+      {tab === "releases" && <ReleasesTab planId={planId} id={id} />}
     </>
   );
 }
@@ -163,16 +168,24 @@ async function BoardTab({
     .toArray();
 
   // What each blocked item is holding up is the number that makes an operator
-  // act, so compute it rather than just listing the failures.
+  // act. Plans build bottom-up, so a stuck page holds up the pages ABOVE it:
+  // its hub and its pillar page. A quarantined page holds nothing (its parent
+  // goes ahead without it).
   const subtreeSizes = new Map<string, number>();
   for (const b of blocked) {
-    if (!b._id) continue;
-    const direct = await db.planItems.countDocuments({ planId, parentItemId: b._id });
-    let total = direct;
-    if (b.pageRole === "pillar") {
-      total = await db.planItems.countDocuments({ planId, pillarId: b.pillarId, _id: { $ne: b._id } });
+    if (!b._id || b.status === "quarantined") continue;
+    let above = 0;
+    let parentId = b.parentItemId;
+    while (parentId) {
+      const parent = await db.planItems.findOne(
+        { _id: parentId },
+        { projection: { parentItemId: 1, status: 1 } },
+      );
+      if (!parent) break;
+      if (parent.status === "planned" || parent.status === "failed") above++;
+      parentId = parent.parentItemId;
     }
-    subtreeSizes.set(b._id.toHexString(), total);
+    subtreeSizes.set(b._id.toHexString(), above);
   }
 
   const events = await latestPlanEvents(db, planId, 25);
@@ -181,6 +194,13 @@ async function BoardTab({
     .sort({ sequence: 1 })
     .toArray();
   const awaitingReview = await db.articles.countDocuments({ companyId, stage: "review" });
+
+  const plan = await db.plans.findOne({ _id: planId }, { projection: { buildHold: 1 } });
+  const building = await db.planItems.countDocuments({
+    planId,
+    buildQueuedAt: { $exists: true },
+    status: { $in: ["planned", "failed"] },
+  });
 
   const done = counts.byStatus.done ?? 0;
   const pct = counts.total > 0 ? Math.round((done / counts.total) * 100) : 0;
@@ -198,7 +218,11 @@ async function BoardTab({
           <Stat label="Blocked" value={blocked.length} tone={blocked.length ? "warn" : undefined} />
           <Stat label="Skipped" value={counts.byStatus.skipped ?? 0} />
           <Stat label="Awaiting your review" value={awaitingReview} />
+          <Stat label="Queued for build" value={building} />
         </div>
+        {plan?.buildHold && (
+          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">{plan.buildHold}</p>
+        )}
       </Card>
 
       <div className="grid gap-5 lg:grid-cols-2">
@@ -206,7 +230,7 @@ async function BoardTab({
           {inProduction.length === 0 ? (
             <EmptyState
               title="Nothing in flight."
-              hint="Set a cadence, or send articles by hand from the Articles tab."
+              hint="Build a subtopic from the Articles tab, or set a cadence."
             />
           ) : (
             <ul className="space-y-1.5 text-sm">
@@ -255,7 +279,7 @@ async function BoardTab({
             <Link href={`/plans/${id}?tab=items`} className="text-accent hover:underline">
               Articles tab
             </Link>
-            . A blocked page never stalls the cadence — the next ready article goes instead.
+            . A blocked page never stalls the plan — the next ready article goes instead.
           </p>
         </Card>
       </div>
@@ -328,6 +352,7 @@ async function ScheduleTab({
           failureCount: i.failureCount,
           retryAfter: i.retryAfter,
           dependencyOverride: i.dependencyOverride,
+          held: Boolean(i.held),
         })),
         new Date(),
         10,
@@ -371,110 +396,79 @@ async function ScheduleTab({
 
 async function ItemsTab({
   planId,
+  id,
   sp,
+  schedule,
 }: {
   planId: ObjectId;
+  id: string;
   sp: Record<string, string | string[] | undefined>;
+  schedule: ReturnType<typeof toUiSchedule> | null;
 }) {
   const db = await getDb();
-  const page = typeof sp.page === "string" ? Math.max(1, Number.parseInt(sp.page, 10) || 1) : 1;
-  const status = typeof sp.status === "string" ? sp.status : undefined;
-  const pillarId = typeof sp.pillar === "string" ? sp.pillar : undefined;
-
-  const docs = await listPlanItems(db, {
-    planId,
-    limit: ITEMS_PER_PAGE,
-    skip: (page - 1) * ITEMS_PER_PAGE,
-    ...(status ? { status: [status as PlanItemStatus] } : {}),
-    ...(pillarId ? { pillarId } : {}),
-  });
-
-  const articleIds = docs.map((d) => d.articleId).filter(Boolean);
+  // The whole plan, once: filtering and sorting happen in the browser, so
+  // every combination of column filters is instant.
+  const graph = await loadPlanGraph(db, planId);
+  const articleIds = graph.items.map((d) => d.articleId).filter(Boolean) as ObjectId[];
   const articles = articleIds.length
     ? await db.articles
-        .find({ _id: { $in: articleIds as ObjectId[] } })
+        .find({ _id: { $in: articleIds } })
         .project<{ _id: ObjectId; slug: string }>({ slug: 1 })
         .toArray()
     : [];
   const slugById = new Map(articles.map((a) => [a._id.toHexString(), a.slug]));
+  const requireApproval = schedule?.requireApproval ?? false;
 
-  const total = await db.planItems.countDocuments({
-    planId,
-    ...(status ? { status: status as PlanItemStatus } : {}),
-    ...(pillarId ? { pillarId } : {}),
+  const rows = graph.items.map((d) => {
+    const articleKey = d.articleId?.toHexString();
+    return toUiPlanItemRow(d, articleKey ? slugById.get(articleKey) : undefined, {
+      waiting: describeWaiting(graph, d, requireApproval),
+      hasChildren: (graph.childrenOf.get(itemKey(d))?.length ?? 0) > 0,
+      articleStage: articleKey ? graph.stageOf.get(articleKey) ?? null : null,
+    });
   });
-  const pages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
 
-  const pillars = await db.planItems.distinct("pillarId", { planId });
-  const base = (next: Record<string, string | undefined>) => {
-    const p = new URLSearchParams({ tab: "items" });
-    const merged = { status, pillar: pillarId, page: String(page), ...next };
-    for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v);
-    return `?${p.toString()}`;
-  };
+  // Carry the filter state through a server render (e.g. after an action).
+  const query = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) {
+    for (const one of Array.isArray(v) ? v : v ? [v] : []) query.append(k, one);
+  }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Link href={base({ status: undefined, page: "1" })} className={chip(!status)}>
-          all
-        </Link>
-        {["planned", "in_progress", "done", "failed", "quarantined", "skipped", "slug_conflict"].map(
-          (s) => (
-            <Link key={s} href={base({ status: s, page: "1" })} className={chip(status === s)}>
-              {s.replace(/_/g, " ")}
-            </Link>
-          ),
-        )}
-        {pillars.length > 1 && (
-          <span className="ml-2 flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-slate-400">pillar:</span>
-            <Link href={base({ pillar: undefined, page: "1" })} className={chip(!pillarId)}>
-              any
-            </Link>
-            {pillars.slice(0, 20).map((p) => (
-              <Link key={String(p)} href={base({ pillar: String(p), page: "1" })} className={chip(pillarId === p)}>
-                {String(p)}
-              </Link>
-            ))}
-          </span>
-        )}
-      </div>
-
-      {docs.length === 0 ? (
-        <EmptyState title="No articles match this filter." />
-      ) : (
-        <PlanItemsTable
-          rows={docs.map((d) =>
-            toUiPlanItemRow(d, d.articleId ? slugById.get(d.articleId.toHexString()) : undefined),
-          )}
-        />
-      )}
-
-      {pages > 1 && (
-        <div className="flex items-center gap-2 text-sm">
-          {page > 1 && (
-            <Link href={base({ page: String(page - 1) })} className="text-accent hover:underline">
-              ← previous
-            </Link>
-          )}
-          <span className="text-slate-500">
-            page {page} of {pages} · {total} articles
-          </span>
-          {page < pages && (
-            <Link href={base({ page: String(page + 1) })} className="text-accent hover:underline">
-              next →
-            </Link>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  if (rows.length === 0) return <EmptyState title="This plan has no articles." />;
+  return <PlanItemsTable planId={id} rows={rows} initialQuery={query.toString()} />;
 }
 
-function chip(active: boolean): string {
-  return cls(
-    "rounded-full px-2.5 py-1 text-xs",
-    active ? "bg-accent text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200",
-  );
+// ── releases ──────────────────────────────────────────────────────────────
+
+async function ReleasesTab({ planId, id }: { planId: ObjectId; id: string }) {
+  const db = await getDb();
+  const [units, reexport] = await Promise.all([
+    listReleases(db, planId),
+    articlesToReexport(db, getCompany().companyId, planId),
+  ]);
+  const releases: UiRelease[] = units.map((u) => ({
+    key: u.key,
+    kind: u.kind,
+    pillarId: u.pillarId,
+    pillarName: u.pillarName,
+    subtopicName: u.subtopicName,
+    title: u.title,
+    state: u.state,
+    counts: u.counts,
+    excluded: u.excluded,
+    members: u.members.map((m) => ({
+      externalId: m.externalId,
+      title: m.title,
+      role: m.role,
+      slug: m.slug,
+      path: m.path,
+      stage: m.stage,
+      live: m.live,
+      liveUrl: m.liveUrl,
+      exportedAt: m.exportedAt ? m.exportedAt.toISOString() : null,
+      blocking: m.blocking,
+      hasArticle: Boolean(m.articleId),
+    })),
+  }));
+  return <PlanReleases planId={id} releases={releases} reexport={reexport} />;
 }

@@ -185,9 +185,9 @@ export function PlanSchedule({
             onChange={(e) => setRequireApproval(e.target.checked)} disabled={pending}
           />
           <span>
-            Wait for my approval of a parent page before producing its children.
+            Wait for my approval of the pages under a hub or pillar page before producing it.
             <span className="block text-xs text-slate-500">
-              Off by default — otherwise the whole plan waits behind your approval of the pillar pages.
+              Off by default — otherwise every hub waits until you’ve approved all its articles. Releases need approval either way.
             </span>
           </span>
         </label>

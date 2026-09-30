@@ -240,12 +240,17 @@ articles/             One subfolder per article (YYYY-MM-DD-slug)
 Content plans      An operator-authored spreadsheet (a pillar map, a content
                    calendar) imported as `plans` + `plan_items`: every row
                    becomes a planned article with a reserved slug, a synthesized
-                   spoke brief, and a production `sequence` that puts a pillar
-                   page before its hubs and a hub before its articles. A
-                   per-plan cadence then produces them unattended, stopping at
-                   `review`. Worker CLI: `plan-import`, `plan-status`,
-                   `plan-items`, `plan-enrich`, `schedule-create`,
-                   `schedule-resume`, `schedule-preview`, `schedule-tick`.
+                   spoke brief, and a production `sequence` that builds
+                   bottom-up (D56): a subtopic's cluster articles before its
+                   hub, a pillar's hubs before the pillar page. The operator
+                   queues a subtopic or pillar for build from the Articles tab
+                   (or a per-plan cadence produces them unattended), stopping at
+                   `review`; each subtopic then goes live as one release (hub +
+                   articles together) from the Releases tab. Worker CLI:
+                   `plan-import`, `plan-status`, `plan-items`, `plan-enrich`,
+                   `plan-resequence`, `build-queue`, `build-sweep`,
+                   `schedule-create`, `schedule-resume`, `schedule-preview`,
+                   `schedule-tick`.
 
 packages/engine/      TypeScript engine library for headless mode (Mongo
                       data layer, pipeline stages, code-enforced gates,

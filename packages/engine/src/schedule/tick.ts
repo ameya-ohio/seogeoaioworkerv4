@@ -25,7 +25,8 @@ import {
   occurrencesBetween,
   startOfLocalWeek,
 } from "./calendar.js";
-import { isReady, isProducedStage, retryBackoffMs, type ReadinessItem } from "./readiness.js";
+import { loadPlanGraph } from "./graph.js";
+import { isReady, isProducedStage, retryBackoffMs } from "./readiness.js";
 import type { ScheduleDoc } from "./types.js";
 
 /**
@@ -37,7 +38,7 @@ import type { ScheduleDoc } from "./types.js";
  * no "did fire #37 already run?" bookkeeping to get wrong.
  *
  * Ordering is resolved here rather than in claimRun: the tick only ever
- * enqueues items whose parents are already produced, in sequence order, so
+ * enqueues items whose children are already produced, in sequence order, so
  * the article queue's plain FIFO is already a valid execution order. That is
  * why RunDoc needs no priority or dependency fields.
  */
@@ -89,18 +90,6 @@ function scopeFilter(scope: PlanScope): Record<string, unknown> {
   if (scope.roles?.length) f.pageRole = { $in: scope.roles };
   if (scope.tiers?.length) f.priority = { $in: scope.tiers };
   return f;
-}
-
-function readinessOf(item: PlanItemDoc, articleStage?: Stage): ReadinessItem {
-  return {
-    key: item._id?.toHexString() ?? item.externalId,
-    status: item.status,
-    failureCount: item.failureCount,
-    retryAfter: item.retryAfter,
-    dependencyOverride: item.dependencyOverride,
-    parentKey: item.parentItemId?.toHexString() ?? null,
-    articleStage,
-  };
 }
 
 /**
@@ -389,16 +378,7 @@ async function tickBody(
     .sort({ sequence: 1 })
     .toArray();
 
-  const parentCache = new Map<string, PlanItemDoc | null>();
-  const articleStageCache = new Map<string, Stage | undefined>();
-  const stageOf = async (item: PlanItemDoc | null): Promise<Stage | undefined> => {
-    if (!item?.articleId) return undefined;
-    const key = item.articleId.toHexString();
-    if (articleStageCache.has(key)) return articleStageCache.get(key);
-    const a = await db.articles.findOne({ _id: item.articleId }, { projection: { stage: 1 } });
-    articleStageCache.set(key, a?.stage);
-    return a?.stage;
-  };
+  const graph = await loadPlanGraph(db, planId);
 
   const enqueuedThisTick = new Set<string>();
   const blockedReported = new Set<string>();
@@ -408,36 +388,20 @@ async function tickBody(
     const itemId = item._id;
     if (!itemId) continue;
 
-    let parent: PlanItemDoc | null = null;
-    if (item.parentItemId) {
-      const key = item.parentItemId.toHexString();
-      if (parentCache.has(key)) parent = parentCache.get(key) ?? null;
-      else {
-        parent = await db.planItems.findOne({ _id: item.parentItemId });
-        parentCache.set(key, parent);
-      }
-    }
-
-    const ready = isReady(
-      readinessOf(item),
-      parent ? readinessOf(parent, await stageOf(parent)) : null,
-      enqueuedThisTick,
-      {
-        requireApproval: schedule.requireApproval,
-        itemMaxAttempts: limits.itemMaxAttempts,
-        now,
-      },
-    );
+    const ready = isReady(graph.readiness(item), graph.children(item), enqueuedThisTick, {
+      requireApproval: schedule.requireApproval,
+      itemMaxAttempts: limits.itemMaxAttempts,
+      now,
+    });
 
     if (!ready.ready) {
       // Skip to the next candidate — never stall the cadence on one blocked
-      // subtree. One failed pillar page costs its children, not the schedule.
-      if (ready.reason === "parent_blocked" && !blockedReported.has(item.externalId)) {
+      // page. A stuck cluster article costs its hub, not the schedule.
+      if (ready.reason === "children_blocked" && !blockedReported.has(item.externalId)) {
         blockedReported.add(item.externalId);
         await emitPlanEvent(db, {
           companyId, planId, planItemId: itemId, type: "item.blocked",
-          message: `"${item.title}" is blocked: its parent page needs attention`,
-          data: { parentItemId: item.parentItemId?.toHexString() },
+          message: `"${item.title}" is blocked: a page under it needs attention`,
         });
       }
       if (ready.reason === "attempts_exhausted" && item.status === "failed") {
@@ -472,83 +436,33 @@ async function tickBody(
       continue;
     }
 
-    // Per-item compare-and-set: this is the idempotency guarantee. A second
-    // tick racing here simply loses and moves on.
-    const claimed = await db.planItems.findOneAndUpdate(
-      { _id: itemId, status: item.status },
-      { $set: { status: "enqueued", enqueuedAt: now, fireSeq, updatedAt: now } },
-      { returnDocument: "after" },
-    );
-    if (!claimed) continue;
-
-    try {
-      const { article } = await enqueuePlanItem(db, {
-        companyId,
-        planItemId: itemId,
-        ...(deps.maxRunAttempts !== undefined ? { maxAttempts: deps.maxRunAttempts } : {}),
-        eventData: {
-          planId: planId.toHexString(),
-          planItemId: itemId.toHexString(),
-          sequence: item.sequence,
-          fireSeq,
-        },
+    const res = await claimAndEnqueue(db, {
+      companyId,
+      planId,
+      item,
+      now,
+      fireSeq,
+      ...(deps.maxRunAttempts !== undefined ? { maxRunAttempts: deps.maxRunAttempts } : {}),
+    });
+    if (res === "lost") continue;
+    if (res === "slug_conflict") {
+      // The fire still owes an article, so the next candidate gets the slot.
+      outcome.skipped.push({
+        planItemId: itemId.toHexString(),
+        slug: item.slug,
+        reason: "slug_conflict",
       });
-      enqueuedThisTick.add(itemId.toHexString());
-      budget--;
+      continue;
+    }
+    enqueuedThisTick.add(itemId.toHexString());
+    budget--;
+    if (res === "enqueued") {
       outcome.enqueued.push({
         planItemId: itemId.toHexString(),
         slug: item.slug,
         sequence: item.sequence,
         title: item.title,
       });
-      await emitPlanEvent(db, {
-        companyId, planId, planItemId: itemId, type: "schedule.enqueued",
-        message: `Queued #${item.sequence} "${item.title}"`,
-        data: { slug: item.slug, sequence: item.sequence, articleId: article._id?.toHexString() },
-      });
-    } catch (err) {
-      if (err instanceof SlugTakenError) {
-        const existing = await getArticleBySlug(db, companyId, item.slug);
-        if (existing?.planItemId && existing.planItemId.equals(itemId)) {
-          // A previous tick crashed between the CAS and the enqueue: adopt the
-          // article it already created. It counts against the budget.
-          await db.planItems.updateOne(
-            { _id: itemId },
-            { $set: { status: "in_progress", articleId: existing._id, updatedAt: now } },
-          );
-          budget--;
-          enqueuedThisTick.add(itemId.toHexString());
-          continue;
-        }
-        // Never auto-suffix a slug: two near-identical URLs is a canonical
-        // mess. Park the item and keep the budget — the fire still owes an
-        // article, so the next candidate gets the slot.
-        await db.planItems.updateOne(
-          { _id: itemId },
-          {
-            $set: {
-              status: "slug_conflict",
-              ...(existing?._id ? { conflictWith: existing._id } : {}),
-              lastError: err.message,
-              updatedAt: now,
-            },
-          },
-        );
-        await emitPlanEvent(db, {
-          companyId, planId, planItemId: itemId, type: "item.slug_conflict",
-          message: `"${item.slug}" is already taken by another article — resolve it in the plan`,
-          data: { slug: item.slug },
-        });
-        outcome.skipped.push({
-          planItemId: itemId.toHexString(),
-          slug: item.slug,
-          reason: "slug_conflict",
-        });
-        continue;
-      }
-      // Unexpected: release the claim so the item is retried, then rethrow.
-      await db.planItems.updateOne({ _id: itemId }, { $set: { status: item.status, updatedAt: now } });
-      throw err;
     }
   }
 
@@ -565,6 +479,107 @@ async function tickBody(
   }
   return finish("enqueued");
 }
+
+/**
+ * Claim one ready plan item and turn it into an article. Shared by the
+ * cadence tick and the build sweep, so both park a slug conflict and adopt a
+ * crashed enqueue the same way.
+ *
+ * - "enqueued": a new article run was queued.
+ * - "adopted": a previous claim crashed after creating the article; adopted.
+ *   It counts against the caller's budget.
+ * - "slug_conflict": the slug belongs to another article; the item is parked.
+ * - "lost": another tick claimed it first.
+ */
+export async function claimAndEnqueue(
+  db: EngineDb,
+  p: {
+    companyId: string;
+    planId: ObjectId;
+    item: PlanItemDoc;
+    now: Date;
+    fireSeq?: number;
+    maxRunAttempts?: number;
+    eventType?: "schedule.enqueued" | "build.enqueued";
+  },
+): Promise<"enqueued" | "adopted" | "slug_conflict" | "lost"> {
+  const { companyId, planId, item, now } = p;
+  const itemId = item._id as ObjectId;
+
+  // Per-item compare-and-set: this is the idempotency guarantee. A second
+  // tick racing here simply loses and moves on.
+  const claimed = await db.planItems.findOneAndUpdate(
+    { _id: itemId, status: item.status },
+    {
+      $set: {
+        status: "enqueued",
+        enqueuedAt: now,
+        ...(p.fireSeq !== undefined ? { fireSeq: p.fireSeq } : {}),
+        updatedAt: now,
+      },
+    },
+    { returnDocument: "after" },
+  );
+  if (!claimed) return "lost";
+
+  try {
+    const { article } = await enqueuePlanItem(db, {
+      companyId,
+      planItemId: itemId,
+      ...(p.maxRunAttempts !== undefined ? { maxAttempts: p.maxRunAttempts } : {}),
+      eventData: {
+        planId: planId.toHexString(),
+        planItemId: itemId.toHexString(),
+        sequence: item.sequence,
+        ...(p.fireSeq !== undefined ? { fireSeq: p.fireSeq } : {}),
+      },
+    });
+    await emitPlanEvent(db, {
+      companyId, planId, planItemId: itemId, type: p.eventType ?? "schedule.enqueued",
+      message: `Queued #${item.sequence} "${item.title}"`,
+      data: { slug: item.slug, sequence: item.sequence, articleId: article._id?.toHexString() },
+    });
+    return "enqueued";
+  } catch (err) {
+    if (err instanceof SlugTakenError) {
+      const existing = await getArticleBySlug(db, companyId, item.slug);
+      if (existing?.planItemId && existing.planItemId.equals(itemId)) {
+        // A previous tick crashed between the CAS and the enqueue: adopt the
+        // article it already created.
+        await db.planItems.updateOne(
+          { _id: itemId },
+          { $set: { status: "in_progress", articleId: existing._id, updatedAt: now } },
+        );
+        return "adopted";
+      }
+      // Never auto-suffix a slug: two near-identical URLs is a canonical
+      // mess. Park the item.
+      await db.planItems.updateOne(
+        { _id: itemId },
+        {
+          $set: {
+            status: "slug_conflict",
+            ...(existing?._id ? { conflictWith: existing._id } : {}),
+            lastError: err.message,
+            updatedAt: now,
+          },
+        },
+      );
+      await emitPlanEvent(db, {
+        companyId, planId, planItemId: itemId, type: "item.slug_conflict",
+        message: `"${item.slug}" is already taken by another article — resolve it in the plan`,
+        data: { slug: item.slug },
+      });
+      return "slug_conflict";
+    }
+    // Unexpected: release the claim so the item is retried, then rethrow.
+    await db.planItems.updateOne({ _id: itemId }, { $set: { status: item.status, updatedAt: now } });
+    throw err;
+  }
+}
+
+/** Consecutive-failure count, exported for the build sweep's brake. */
+export { consecutiveFailures };
 
 /** Work stages an article passes through while a plan item is in progress. */
 export const IN_PROGRESS_STAGES: readonly Stage[] = ["queued", ...WORK_STAGES];

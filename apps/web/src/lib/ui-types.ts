@@ -477,6 +477,15 @@ export interface UiPlanItemRow {
   /** D51: why the scheduler won't produce it on its own. */
   held: { kind: string; reason: string } | null;
   publishedUrl: string | null;
+  pillarId: string;
+  subtopicId: string | null;
+  /** Queued for a bottom-up build (Articles tab → Build). */
+  buildQueued: boolean;
+  /** "waiting on 4 of 9 cluster articles", or null. */
+  waiting: string | null;
+  /** True for a hub or pillar page with pages under it. */
+  hasChildren: boolean;
+  articleStage: string | null;
 }
 
 export interface UiPlanItemDetail extends UiPlanItemRow {
@@ -571,7 +580,11 @@ export function toUiPlanSummary(
   };
 }
 
-export function toUiPlanItemRow(doc: PlanItemDoc, articleSlug?: string): UiPlanItemRow {
+export function toUiPlanItemRow(
+  doc: PlanItemDoc,
+  articleSlug?: string,
+  extra: { waiting?: string | null; hasChildren?: boolean; articleStage?: string | null } = {},
+): UiPlanItemRow {
   return {
     id: doc._id?.toHexString() ?? "",
     externalId: doc.externalId,
@@ -597,6 +610,12 @@ export function toUiPlanItemRow(doc: PlanItemDoc, articleSlug?: string): UiPlanI
     path: doc.path ?? null,
     held: doc.held ? { kind: doc.held.kind, reason: doc.held.reason } : null,
     publishedUrl: doc.publishedUrl ?? null,
+    pillarId: doc.pillarId,
+    subtopicId: doc.subtopicId,
+    buildQueued: Boolean(doc.buildQueuedAt),
+    waiting: extra.waiting ?? null,
+    hasChildren: extra.hasChildren ?? false,
+    articleStage: extra.articleStage ?? null,
   };
 }
 

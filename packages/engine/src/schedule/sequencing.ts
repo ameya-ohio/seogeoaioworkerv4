@@ -9,15 +9,14 @@ import type { FunnelStage, PageRole, PriorityTier } from "../plan/types.js";
  *     pillar pages and P1 hubs first, then P1 BOFU, then the rest of P1, then
  *     the remaining hubs, then P2 grouped by pillar, then P3.
  *
- *  2. The STRUCTURAL rule, which overrides it: a pillar page before its hubs,
- *     a hub before its cluster articles. Without this, an article links up to
- *     a page that does not exist yet and the edit gate strips the link (D35).
+ *  2. The STRUCTURAL rule, which overrides it: bottom-up. A subtopic's
+ *     cluster articles before its hub, a pillar's hubs before the pillar page
+ *     (see ./readiness.ts for why).
  *
- * The two genuinely conflict — a P1 BOFU article can sit under a P2 hub — so
- * the parent is PROMOTED to just before its earliest child, and every
- * promotion is reported. An operator who sees their priority ordering changed
- * should be able to see exactly where and why, rather than discovering it as
- * mystery ordering weeks into a cadence.
+ * The two conflict constantly — the priority rule leads with pillar pages and
+ * P1 hubs — so a parent is DEFERRED to just after its last child, and every
+ * deferral is reported. Children keep their own priority order, so a P1 BOFU
+ * article is never delayed to suit the structure.
  */
 
 export interface SequenceInput {
@@ -45,18 +44,19 @@ export interface SequenceKey {
   rowIndex: number;
 }
 
-export interface Promotion {
+export interface Deferral {
   parentKey: string;
+  /** The child it now follows: the last of its children to be produced. */
   childKey: string;
   /** Position the parent would have had on priority alone. */
   fromIndex: number;
-  /** Position it was moved to so it precedes its child. */
+  /** Position it was moved to so it follows all its children. */
   toIndex: number;
 }
 
 export interface SequenceResult {
   ordered: { key: string; sequence: number }[];
-  promotions: Promotion[];
+  deferrals: Deferral[];
   /** Unresolvable structure: a missing parent, or a cycle. */
   violations: string[];
 }
@@ -134,10 +134,10 @@ export function compareSequence(a: SequenceKey, b: SequenceKey): number {
 /**
  * Order the plan.
  *
- * Priority order is computed first, then the list is re-emitted so that every
- * item's ancestors precede it — emitting an ancestor early rather than pushing
- * the child late, because the child is the high-priority item and delaying it
- * would defeat the priority rule it earned.
+ * A topological sort with the priority order as its tiebreak: at every step,
+ * emit the highest-priority item whose children are all emitted. A child is
+ * never pushed back to suit its parent; a parent simply becomes available the
+ * moment its last child is placed, and its wave-0 priority then puts it next.
  */
 export function computeSequence(items: SequenceInput[]): SequenceResult {
   const violations: string[] = [];
@@ -154,56 +154,68 @@ export function computeSequence(items: SequenceInput[]): SequenceResult {
   const subtopicOrder = subtopicOrderOf(items);
   const keys = new Map<string, SequenceKey>();
   for (const [k, i] of byKey) keys.set(k, sequenceKey(i, pillarOrder, subtopicOrder));
+  const cmp = (a: SequenceInput, b: SequenceInput) =>
+    compareSequence(keys.get(a.key) as SequenceKey, keys.get(b.key) as SequenceKey);
 
-  const sorted = [...byKey.values()].sort((a, b) =>
-    compareSequence(
-      keys.get(a.key) as SequenceKey,
-      keys.get(b.key) as SequenceKey,
-    ),
-  );
+  const sorted = [...byKey.values()].sort(cmp);
   const priorityIndex = new Map(sorted.map((i, idx) => [i.key, idx]));
+
+  // Unplaced children per parent.
+  const pending = new Map<string, number>();
+  for (const i of sorted) {
+    const parentKey = i.parentKey ?? null;
+    if (!parentKey) continue;
+    if (!byKey.has(parentKey)) {
+      violations.push(`"${i.key}" names a parent "${parentKey}" that is not in the plan`);
+      continue;
+    }
+    pending.set(parentKey, (pending.get(parentKey) ?? 0) + 1);
+  }
 
   const emitted = new Set<string>();
   const ordered: string[] = [];
-  const promotions: Promotion[] = [];
+  const deferrals: Deferral[] = [];
+  let available = sorted.filter((i) => !pending.get(i.key));
 
-  /** Emit every unemitted ancestor of `item`, nearest-last, then the item. */
-  const emit = (item: SequenceInput, stack: string[]): void => {
-    if (emitted.has(item.key)) return;
-    if (stack.includes(item.key)) {
-      violations.push(`dependency cycle: ${[...stack, item.key].join(" -> ")}`);
-      return;
-    }
-    const parentKey = item.parentKey ?? null;
-    if (parentKey) {
-      const parent = byKey.get(parentKey);
-      if (!parent) {
-        violations.push(`"${item.key}" names a parent "${parentKey}" that is not in the plan`);
-      } else if (!emitted.has(parentKey)) {
-        emit(parent, [...stack, item.key]);
-        // The parent came out before its own priority position: record it, so
-        // the operator can see where structure overrode priority.
-        const from = priorityIndex.get(parentKey);
-        const to = ordered.indexOf(parentKey);
-        if (
-          from !== undefined &&
-          to !== -1 &&
-          from > (priorityIndex.get(item.key) ?? Number.MAX_SAFE_INTEGER)
-        ) {
-          promotions.push({ parentKey, childKey: item.key, fromIndex: from, toIndex: to });
-        }
-      }
-    }
-    if (emitted.has(item.key)) return;
+  const place = (item: SequenceInput) => {
     emitted.add(item.key);
     ordered.push(item.key);
+    const parentKey = item.parentKey ?? null;
+    if (!parentKey || !byKey.has(parentKey)) return;
+    const left = (pending.get(parentKey) ?? 0) - 1;
+    pending.set(parentKey, left);
+    if (left === 0) {
+      const parent = byKey.get(parentKey) as SequenceInput;
+      available.push(parent);
+      available.sort(cmp);
+      // Placed after this child — record when that is later than priority alone.
+      const from = priorityIndex.get(parentKey) ?? 0;
+      if (from < (priorityIndex.get(item.key) ?? 0)) {
+        deferrals.push({ parentKey, childKey: item.key, fromIndex: from, toIndex: ordered.length });
+      }
+    }
   };
 
-  for (const item of sorted) emit(item, []);
+  while (available.length > 0) {
+    const next = available.shift() as SequenceInput;
+    if (emitted.has(next.key)) continue;
+    place(next);
+  }
+
+  // Whatever is left sits on a cycle: report it and append in priority order
+  // so every row still gets a sequence number.
+  const stuck = sorted.filter((i) => !emitted.has(i.key));
+  if (stuck.length > 0) {
+    violations.push(`dependency cycle: ${stuck.map((i) => i.key).join(" -> ")}`);
+    for (const i of stuck) {
+      emitted.add(i.key);
+      ordered.push(i.key);
+    }
+  }
 
   return {
     ordered: ordered.map((key, idx) => ({ key, sequence: idx })),
-    promotions,
+    deferrals,
     violations,
   };
 }
@@ -220,8 +232,8 @@ export function findOrderViolations(
     const mine = pos.get(i.key);
     const parent = pos.get(i.parentKey);
     if (mine === undefined || parent === undefined) continue;
-    if (parent > mine) {
-      problems.push(`"${i.key}" (#${mine}) is ordered before its parent "${i.parentKey}" (#${parent})`);
+    if (parent < mine) {
+      problems.push(`"${i.key}" (#${mine}) is ordered after its parent "${i.parentKey}" (#${parent})`);
     }
   }
   return problems;

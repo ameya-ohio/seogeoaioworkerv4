@@ -79,10 +79,11 @@ describe("analyzePlan", () => {
     );
   });
 
-  it("leads with the pillar pages", () => {
+  it("builds bottom-up: leads with a cluster article, ends with a pillar page", () => {
     const { items } = analyze();
-    const first = [...items].sort((a, b) => a.sequence - b.sequence)[0];
-    expect(first?.pageRole).toBe("pillar");
+    const ordered = [...items].sort((a, b) => a.sequence - b.sequence);
+    expect(ordered[0]?.pageRole).toBe("cluster");
+    expect(ordered[ordered.length - 1]?.pageRole).toBe("pillar");
   });
 
   it("resolves each item's parent: spoke -> hub -> pillar", () => {

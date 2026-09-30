@@ -125,6 +125,8 @@ export async function ensureIndexes(h: EngineDb): Promise<void> {
       { key: { planId: 1, enrichment: 1 } },
       { key: { planId: 1, parentItemId: 1 } },
       { key: { articleId: 1 } },
+      // The build sweep's "which plans have queued work" query.
+      { key: { companyId: 1, buildQueuedAt: 1, status: 1 } },
     ]),
     h.planEvents.createIndexes([{ key: { planId: 1, seq: 1 }, unique: true }]),
     h.schedules.createIndexes([

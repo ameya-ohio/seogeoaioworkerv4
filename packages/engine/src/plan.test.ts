@@ -23,6 +23,11 @@ import {
 } from "./dal/plans.js";
 import { createSchedule, getSchedule, claimScheduleTick, resumeSchedule } from "./dal/schedules.js";
 import { reconcilePlanItems, runScheduleTick } from "./schedule/tick.js";
+import { cancelBuild, queueBuild, resequencePlan, runBuildSweep } from "./schedule/build.js";
+import { describeWaiting, loadPlanGraph } from "./schedule/graph.js";
+import { articlesToReexport, buildReleaseBundle, getRelease, listReleases, ReleaseNotReadyError } from "./export/release.js";
+import { unzip } from "./plan/zip.js";
+import type { CompanyConfig } from "./companyConfig.js";
 import { setStage } from "./dal/articles.js";
 import type { PlanDoc } from "./plan/types.js";
 
@@ -112,13 +117,13 @@ describe("commitPlan", () => {
     expect(fresh?.itemCount).toBe(9);
   });
 
-  it("returns items in sequence order, parents before children", async () => {
+  it("returns items in sequence order, children before parents", async () => {
     const plan = await seedPlan();
     const items = await listPlanItems(db, { planId: plan._id as ObjectId, limit: 100 });
     const pos = new Map(items.map((i) => [i._id?.toHexString(), i.sequence]));
     for (const i of items) {
       if (!i.parentItemId) continue;
-      expect(pos.get(i.parentItemId.toHexString())).toBeLessThan(i.sequence);
+      expect(pos.get(i.parentItemId.toHexString())).toBeGreaterThan(i.sequence);
     }
   });
 
@@ -381,34 +386,42 @@ describe("runScheduleTick", () => {
     expect((await tick()).status).toBe("no_work");
   });
 
-  it("enqueues the first item in sequence order — a pillar page", async () => {
+  it("enqueues the first ready item in sequence order", async () => {
     const plan = await seedPlan();
     await activeSchedule(plan._id as ObjectId);
     const out = await tick();
     expect(out.status).toBe("enqueued");
     expect(out.enqueued).toHaveLength(1);
-    expect(out.enqueued[0]?.sequence).toBe(0);
+    // #0 is a held sign-off article, so #1 goes: the hub over it, which has
+    // no other child and so waits on nothing.
+    expect(out.enqueued[0]?.sequence).toBe(1);
     const item = await db.planItems.findOne({ _id: new ObjectId(out.enqueued[0]?.planItemId) });
-    expect(item?.pageRole).toBe("pillar");
+    expect(item?.pageRole).toBe("hub");
   });
 
-  it("never enqueues a child before its parent is produced", async () => {
+  it("never enqueues a parent before its children are produced", async () => {
     const plan = await seedPlan();
     const planId = plan._id as ObjectId;
     await activeSchedule(planId, { cadence: { timezone: "UTC", daysOfWeek: [0,1,2,3,4,5,6], timeOfDay: "00:00", batchSize: 9 } });
 
     const out = await tick();
-    // Only the two pillar pages have no parent, so only they can go first.
+    expect(out.enqueued.length).toBeGreaterThan(0);
+    for (const e of out.enqueued) {
+      const id = new ObjectId(e.planItemId);
+      const kids = await db.planItems.find({ parentItemId: id }).toArray();
+      // Any child still waiting to be built would have held this item back.
+      const unbuilt = kids.filter((k) => k.status === "planned" && !k.held);
+      expect(unbuilt).toEqual([]);
+    }
     const roles = await Promise.all(
       out.enqueued.map(async (e) =>
         (await db.planItems.findOne({ _id: new ObjectId(e.planItemId) }))?.pageRole,
       ),
     );
-    expect(roles.every((r) => r === "pillar")).toBe(true);
-    expect(out.enqueued).toHaveLength(2);
+    expect(roles).not.toContain("pillar");
   });
 
-  it("releases children once the parent reaches review", async () => {
+  it("releases the hub once its cluster articles reach review", async () => {
     const plan = await seedPlan();
     const planId = plan._id as ObjectId;
     await activeSchedule(planId, { cadence: { timezone: "UTC", daysOfWeek: [0,1,2,3,4,5,6], timeOfDay: "00:00", batchSize: 9 } });
@@ -502,7 +515,8 @@ describe("runScheduleTick", () => {
   it("records a slug conflict instead of mutating the slug", async () => {
     const plan = await seedPlan();
     const planId = plan._id as ObjectId;
-    const first = (await listPlanItems(db, { planId, limit: 1 }))[0];
+    // The first item the tick will try: sequence order, skipping held items.
+    const first = (await listPlanItems(db, { planId, limit: 100 })).find((i) => !i.held);
     // An unrelated article already owns the slug.
     await db.articles.insertOne({
       companyId: COMPANY,
@@ -530,5 +544,236 @@ describe("runScheduleTick", () => {
     const events = await db.planEvents.find({ type: "schedule.tick" }).toArray();
     expect(events).toHaveLength(1);
     expect(events[0]?.data?.nextFireAt).toBeDefined();
+  });
+});
+
+describe("builds — bottom-up, by subtopic", () => {
+  const idOf = async (planId: ObjectId, externalId: string) =>
+    ((await db.planItems.findOne({ planId, externalId }))?._id as ObjectId).toHexString();
+  const sweep = (planId: ObjectId) => runBuildSweep({ db, companyId: COMPANY, planId });
+  const toReview = async () => {
+    for (const a of await db.articles.find({ stage: { $ne: "review" } }).toArray()) {
+      await setStage(db, a._id as ObjectId, "review");
+    }
+  };
+  const externalIds = async (keys: string[]) =>
+    (await db.planItems.find({ _id: { $in: keys.map((k) => new ObjectId(k)) } }).toArray())
+      .map((i) => i.externalId)
+      .sort();
+
+  it("expands one selected article to its whole subtopic, its hub and its pillar page", async () => {
+    const plan = await seedPlan();
+    const planId = plan._id as ObjectId;
+    const summary = await queueBuild(db, { companyId: COMPANY, planId, keys: [await idOf(planId, "P01-S01-A02")] });
+    expect(await externalIds(summary.toQueue)).toEqual(["P01", "P01-S01-A01", "P01-S01-A02", "P01-S01-A03"]);
+    expect(summary.subtopics).toHaveLength(1);
+    expect(summary.subtopics[0]).toMatchObject({ clusters: 2, hub: true });
+    expect(summary.pillarPages.map((p) => p.pillarId)).toEqual(["P01"]);
+    expect(await db.planItems.countDocuments({ planId, buildQueuedAt: { $exists: true } })).toBe(4);
+  });
+
+  it("builds the cluster articles first, then the hub, then the pillar once every hub is built", async () => {
+    const plan = await seedPlan();
+    const planId = plan._id as ObjectId;
+    await queueBuild(db, { companyId: COMPANY, planId, keys: [await idOf(planId, "P01-S01-A02")] });
+
+    let out = await sweep(planId);
+    expect(out[0]?.enqueued.map((e) => e.slug).length).toBe(2);
+    const first = await db.planItems.find({ planId, status: "in_progress" }).toArray();
+    expect(first.map((i) => i.pageRole)).toEqual(["cluster", "cluster"]);
+
+    await toReview();
+    out = await sweep(planId);
+    const hub = await db.planItems.findOne({ planId, externalId: "P01-S01-A01" });
+    expect(hub?.status).toBe("in_progress");
+    expect(out[0]?.enqueued).toHaveLength(1);
+
+    // The pillar still waits: the S02 hub has not been built.
+    await toReview();
+    out = await sweep(planId);
+    expect(out[0]?.enqueued ?? []).toHaveLength(0);
+    const graph = await loadPlanGraph(db, planId);
+    const pillar = graph.items.find((i) => i.externalId === "P01");
+    expect(describeWaiting(graph, pillar!)).toBe("waiting on 1 of 2 hub pages");
+
+    // Building S02 (whose only article is a held sign-off) frees the pillar.
+    await queueBuild(db, { companyId: COMPANY, planId, keys: [await idOf(planId, "P01-S02-A01")] });
+    await sweep(planId);
+    await toReview();
+    await sweep(planId);
+    expect((await db.planItems.findOne({ planId, externalId: "P01" }))?.status).toBe("in_progress");
+  });
+
+  it("resequences a plan committed with top-down numbers", async () => {
+    const plan = await seedPlan();
+    const planId = plan._id as ObjectId;
+    const items = await db.planItems.find({ planId }).toArray();
+    const original = new Map(items.map((i) => [i.externalId, i.sequence]));
+    // Simulate an old import: reverse the order.
+    for (const i of items) {
+      await db.planItems.updateOne({ _id: i._id }, { $set: { sequence: items.length - 1 - i.sequence } });
+    }
+    const dry = await resequencePlan(db, planId);
+    expect(dry.changed).toBeGreaterThan(0);
+    expect(await db.planItems.countDocuments({ planId, sequence: original.get("P01") as number })).toBe(1);
+    const res = await resequencePlan(db, planId, { write: true });
+    expect(res.violations).toEqual([]);
+    for (const i of await db.planItems.find({ planId }).toArray()) {
+      expect(i.sequence).toBe(original.get(i.externalId));
+    }
+    expect((await resequencePlan(db, planId)).changed).toBe(0);
+  });
+
+  it("never produces anything that was not queued", async () => {
+    const plan = await seedPlan();
+    const planId = plan._id as ObjectId;
+    expect(await runBuildSweep({ db, companyId: COMPANY })).toEqual([]);
+    expect(await db.articles.countDocuments({})).toBe(0);
+  });
+
+  it("cancels what has not started and leaves running work alone", async () => {
+    const plan = await seedPlan();
+    const planId = plan._id as ObjectId;
+    const key = await idOf(planId, "P01-S01-A02");
+    await queueBuild(db, { companyId: COMPANY, planId, keys: [key] });
+    await sweep(planId);
+    const cancelled = await cancelBuild(db, { companyId: COMPANY, planId, keys: [key] });
+    expect(cancelled).toBe(2); // the hub and the pillar page; both clusters are running
+    expect(await db.planItems.countDocuments({ planId, status: "in_progress" })).toBe(2);
+  });
+
+  it("holds the build after a run of failures, and says so on the plan", async () => {
+    const plan = await seedPlan();
+    const planId = plan._id as ObjectId;
+    await queueBuild(db, { companyId: COMPANY, planId, keys: [await idOf(planId, "P01-S01-A02")] });
+    await db.planItems.updateMany(
+      { planId, externalId: { $in: ["P02", "P02-S01-A01", "P02-S01-A02"] } },
+      { $set: { status: "failed", failureCount: 1, updatedAt: new Date() } },
+    );
+    const out = await sweep(planId);
+    expect(out[0]?.held).toContain("3 articles failed in a row");
+    expect((await db.plans.findOne({ _id: planId }))?.buildHold).toBeDefined();
+    expect(await db.articles.countDocuments({})).toBe(0);
+  });
+});
+
+describe("releases — a subtopic goes live as one unit", () => {
+  const company: CompanyConfig = {
+    path: "/x/company.yaml",
+    brandAssetsDir: "/x",
+    companyId: COMPANY,
+    companyName: "Acme",
+    raw: { site: { base_url: "https://acme.test" } },
+  };
+  const SITE = "https://acme.test";
+
+  /** Build S01 of P01 to review: two cluster articles, then the hub. */
+  async function builtSubtopic(): Promise<ObjectId> {
+    const plan = await seedPlan();
+    const planId = plan._id as ObjectId;
+    const a02 = await db.planItems.findOne({ planId, externalId: "P01-S01-A02" });
+    await queueBuild(db, { companyId: COMPANY, planId, keys: [a02?._id?.toHexString() as string] });
+    for (let i = 0; i < 3; i++) {
+      await runBuildSweep({ db, companyId: COMPANY, planId });
+      for (const a of await db.articles.find({ stage: "queued" }).toArray()) {
+        await setStage(db, a._id as ObjectId, "review");
+      }
+    }
+    // Give every article a body that links to the rest of its release and up to the pillar.
+    const items = await db.planItems.find({ planId }).toArray();
+    const pathOf = (ext: string) => items.find((i) => i.externalId === ext)?.path as string;
+    const inRelease = ["P01-S01-A01", "P01-S01-A02", "P01-S01-A03"];
+    for (const ext of inRelease) {
+      const item = items.find((i) => i.externalId === ext);
+      const others = inRelease.filter((e) => e !== ext);
+      const links = [...others.map((e) => ({ url: `${SITE}${pathOf(e)}`, anchor: `about ${e}` })), { url: `${SITE}${pathOf("P01")}`, anchor: "the pillar" }];
+      const body = links.map((l) => `See [${l.anchor}](${l.url}).`).join("\n\n");
+      await db.articles.updateOne(
+        { _id: item?.articleId },
+        {
+          $set: {
+            path: pathOf(ext),
+            "artifacts.article": `---\ntitle: "${item?.title}"\ncanonical_url: "${SITE}${pathOf(ext)}"\n---\n\n# ${item?.title}\n\n${body}\n`,
+            linkChecks: { ranAt: new Date(), missingCount: 0, results: links.map((l) => ({ ...l, status: "deferred" as const })) },
+          },
+        },
+      );
+    }
+    return planId;
+  }
+
+  it("groups a subtopic's hub and articles, hub first, and tracks its state", async () => {
+    const planId = await builtSubtopic();
+    const unit = await getRelease(db, planId, "P01/P01-S01");
+    expect(unit?.kind).toBe("subtopic");
+    expect(unit?.members.map((m) => m.externalId)).toEqual(["P01-S01-A01", "P01-S01-A02", "P01-S01-A03"]);
+    expect(unit?.state).toBe("in_review");
+    expect(unit?.members.every((m) => m.blocking === "awaiting approval")).toBe(true);
+
+    const releases = await listReleases(db, planId);
+    const pillar = releases.find((r) => r.key === "P01/pillar");
+    expect(pillar?.state).toBe("planned");
+    // A pillar's release comes after its subtopics'.
+    expect(releases.indexOf(pillar!)).toBeGreaterThan(releases.findIndex((r) => r.key === "P01/P01-S01"));
+    // The held sign-off article is left out of its release, with the reason.
+    const s02 = releases.find((r) => r.key === "P01/P01-S02");
+    expect(s02?.excluded.map((e) => e.externalId)).toEqual(["P01-S02-A02"]);
+  });
+
+  it("refuses to export until every page is approved", async () => {
+    const planId = await builtSubtopic();
+    const unit = (await getRelease(db, planId, "P01/P01-S01"))!;
+    await expect(buildReleaseBundle(db, company, unit)).rejects.toThrow(ReleaseNotReadyError);
+    // Approving two of three is not enough.
+    const [first, second] = unit.members;
+    for (const m of [first, second]) await setStage(db, new ObjectId(m!.articleId!), "approved");
+    await expect(buildReleaseBundle(db, company, (await getRelease(db, planId, "P01/P01-S01"))!)).rejects.toThrow(/awaiting approval/);
+  });
+
+  it("packs every page with links inside the release on and links out of it deferred", async () => {
+    const planId = await builtSubtopic();
+    for (const a of await db.articles.find({}).toArray()) await setStage(db, a._id as ObjectId, "approved");
+    const unit = (await getRelease(db, planId, "P01/P01-S01"))!;
+    expect(unit.state).toBe("ready");
+    const bundle = await buildReleaseBundle(db, company, unit);
+    const files = unzip(bundle.zip);
+    expect(bundle.pages).toHaveLength(3);
+    expect(bundle.pages[0]).toMatch(/^01-/);
+    const readme = files.get("README.md")?.toString() ?? "";
+    expect(readme).toContain("go live together");
+    expect(readme).toContain("the pillar");
+
+    const hubBody = files.get(`${bundle.pages[0]}/body.html`)?.toString() ?? "";
+    const items = await db.planItems.find({ planId }).toArray();
+    const a02 = items.find((i) => i.externalId === "P01-S01-A02")?.path as string;
+    const pillarPath = items.find((i) => i.externalId === "P01")?.path as string;
+    expect(hubBody).toContain(`href="${SITE}${a02}"`); // inside the release: a real link
+    expect(hubBody).not.toContain(`href="${SITE}${pillarPath}"`); // outside: plain text
+    expect(hubBody).toContain("the pillar");
+  });
+
+  it("names live pages that need re-exporting once a target they link to goes live", async () => {
+    const planId = await builtSubtopic();
+    const items = await db.planItems.find({ planId }).toArray();
+    const past = new Date(Date.now() - 60_000);
+    for (const ext of ["P01-S01-A01", "P01-S01-A02", "P01-S01-A03"]) {
+      const item = items.find((i) => i.externalId === ext);
+      await db.articles.updateOne(
+        { _id: item?.articleId },
+        { $set: { stage: "published", exportedAt: past, live: { url: `${SITE}${item?.path}`, verifiedAt: past, status: 200 } } },
+      );
+    }
+    expect((await getRelease(db, planId, "P01/P01-S01"))?.state).toBe("live");
+    // Exported before its siblings went live? No — they went live at the same moment as the export.
+    // Now the pillar page goes live: every S01 page links to it and needs a re-export.
+    const pillar = items.find((i) => i.externalId === "P01");
+    await db.articles.insertOne({
+      companyId: COMPANY, slug: "pillar-live", folder: "x", topic: "pillar", stage: "published",
+      stageHistory: [], artifacts: {}, path: pillar?.path as string,
+      live: { url: `${SITE}${pillar?.path}`, verifiedAt: new Date(), status: 200 },
+      createdAt: new Date(), updatedAt: new Date(),
+    });
+    const stale = await articlesToReexport(db, COMPANY, planId);
+    expect(stale.map((s) => s.links).sort()).toEqual([3, 3, 3]);
   });
 });

@@ -32,14 +32,14 @@ const item = (key: string, over: Partial<PreviewItem> = {}): PreviewItem => ({
   ...over,
 });
 
-/** Pillar -> hub -> two articles. */
+/** Two articles -> hub -> pillar, in bottom-up sequence order. */
 function chain(): PreviewItem[] {
   seq = 0;
   return [
-    item("P01", { role: "pillar", parentKey: null }),
-    item("HUB", { role: "hub", parentKey: "P01" }),
     item("A1", { parentKey: "HUB" }),
     item("A2", { parentKey: "HUB" }),
+    item("HUB", { role: "hub", parentKey: "P01" }),
+    item("P01", { role: "pillar", parentKey: null }),
   ];
 }
 
@@ -55,14 +55,14 @@ describe("previewSchedule", () => {
       "2026-09-30 07:00",
       "2026-10-01 07:00",
     ]);
-    expect(entries.flatMap((e) => e.items.map((i) => i.key))).toEqual(["P01", "HUB", "A1", "A2"]);
+    expect(entries.flatMap((e) => e.items.map((i) => i.key))).toEqual(["A1", "A2", "HUB", "P01"]);
   });
 
-  it("never projects a child before its parent", () => {
+  it("never projects a parent before its children", () => {
     const entries = previewSchedule(chain(), FROM, 4, opts());
     const order = entries.flatMap((e) => e.items.map((i) => i.key));
-    expect(order.indexOf("HUB")).toBeGreaterThan(order.indexOf("P01"));
-    expect(order.indexOf("A1")).toBeGreaterThan(order.indexOf("HUB"));
+    expect(order.indexOf("HUB")).toBeGreaterThan(order.indexOf("A2"));
+    expect(order.indexOf("P01")).toBeGreaterThan(order.indexOf("HUB"));
   });
 
   it("stops at the requested article count", () => {
@@ -70,11 +70,18 @@ describe("previewSchedule", () => {
     expect(entries.flatMap((e) => e.items)).toHaveLength(2);
   });
 
-  it("annotates a fire that could not fill its batch because of parent gating", () => {
-    // batchSize 3, but the chain only ever frees one item per fire.
+  it("annotates a fire that could not fill its batch because of child gating", () => {
+    // batchSize 3: both articles go, but the hub must wait for them.
     const entries = previewSchedule(chain(), FROM, 4, opts({ cadence: { ...cadence, batchSize: 3 } }));
-    expect(entries[0]?.items).toHaveLength(1);
-    expect(entries[0]?.note).toContain("waiting on a parent");
+    expect(entries[0]?.items.map((i) => i.key)).toEqual(["A1", "A2"]);
+    expect(entries[0]?.note).toContain("waiting on the pages under them");
+  });
+
+  it("never projects a held item", () => {
+    seq = 0;
+    const items = [item("A", { held: true }), item("B")].map((i) => ({ ...i, parentKey: null }));
+    const entries = previewSchedule(items, FROM, 1, opts());
+    expect(entries[0]?.items.map((i) => i.key)).toEqual(["B"]);
   });
 
   it("fills a batch when siblings are independent", () => {
@@ -111,21 +118,21 @@ describe("previewSchedule", () => {
     expect(entries.every((e) => !e.note?.startsWith("throttled"))).toBe(true);
   });
 
-  it("treats an already-produced parent as satisfied", () => {
+  it("treats already-produced children as satisfied", () => {
     seq = 0;
     const items = [
-      item("HUB", { role: "hub", parentKey: null, status: "done", articleStage: "review" }),
-      item("A1", { parentKey: "HUB" }),
+      item("A1", { parentKey: "HUB", status: "done", articleStage: "review" }),
+      item("HUB", { role: "hub", parentKey: null }),
     ];
     const entries = previewSchedule(items, FROM, 1, opts());
-    expect(entries[0]?.items.map((i) => i.key)).toEqual(["A1"]);
+    expect(entries[0]?.items.map((i) => i.key)).toEqual(["HUB"]);
   });
 
-  it("holds a child when requireApproval is on and the parent only reached review", () => {
+  it("holds a hub when requireApproval is on and its children only reached review", () => {
     seq = 0;
     const items = [
-      item("HUB", { role: "hub", parentKey: null, status: "done", articleStage: "review" }),
-      item("A1", { parentKey: "HUB" }),
+      item("A1", { parentKey: "HUB", status: "done", articleStage: "review" }),
+      item("HUB", { role: "hub", parentKey: null }),
     ];
     const entries = previewSchedule(items, FROM, 1, opts({ requireApproval: true }));
     expect(entries.every((e) => e.items.length === 0)).toBe(true);

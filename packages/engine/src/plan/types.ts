@@ -201,6 +201,8 @@ export interface PlanDoc {
 
   /** Set at commit: how many plan_items were created. */
   itemCount?: number;
+  /** Why the build sweep is not queuing this plan's builds, while it isn't. */
+  buildHold?: string;
   usage: PlanUsage;
   error?: string;
   createdAt: Date;
@@ -208,9 +210,9 @@ export interface PlanDoc {
 }
 
 /**
- * Plan item lifecycle. Note there is deliberately no "blocked" state: being
- * blocked by an unfinished parent is DERIVED per tick by isReady(), so a
- * subtree unblocks automatically the moment its parent completes.
+ * Plan item lifecycle. Note there is deliberately no "blocked" state: waiting
+ * on unfinished children is DERIVED per tick by isReady(), so a hub unblocks
+ * automatically the moment its last cluster article is produced.
  */
 export const PLAN_ITEM_STATUSES = [
   "planned",
@@ -311,8 +313,13 @@ export interface PlanItemDoc {
   failureCount: number;
   retryAfter?: Date;
   lastError?: string;
-  /** Operator escape: produce this item even though its parent is unfinished. */
+  /** Operator escape: produce this item without waiting for its children. */
   dependencyOverride?: boolean;
+  /**
+   * Set when the operator queued this item's subtopic or pillar for build.
+   * The build sweep produces queued items bottom-up, without a cadence.
+   */
+  buildQueuedAt?: Date;
   /** Set when the parent was skipped, so the brief drops the parent mention. */
   parentSkipped?: boolean;
   /** Set with status "slug_conflict": the article already holding the slug. */
@@ -350,7 +357,15 @@ export type PlanEventType =
   | "item.quarantined"
   | "item.skipped"
   | "item.slug_conflict"
-  | "plan.completed";
+  | "plan.completed"
+  // builds (operator-queued subtopics and pillars)
+  | "build.queued"
+  | "build.cancelled"
+  | "build.enqueued"
+  | "build.held"
+  // releases (a subtopic or pillar going live as one unit)
+  | "release.exported"
+  | "release.live";
 
 export interface PlanEventDoc {
   _id?: ObjectId;

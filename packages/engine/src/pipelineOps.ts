@@ -140,8 +140,9 @@ export async function enqueueArticlePipeline(
         }
         trail = chain;
       }
-      // A routing page also links DOWN to its children; all of them are
-      // planned pages, so they are plain mentions until they exist (D35).
+      // A routing page also links DOWN to its children. Plans build bottom-up
+      // (D56), so by now they are usually produced; the D53 link inventory
+      // carries their real status.
       pendingLinks = [
         item.brief.internalLinks.hub,
         ...item.brief.internalLinks.siblings,

@@ -5,7 +5,13 @@ import { redirect } from "next/navigation";
 import { ObjectId } from "mongodb";
 import {
   analyzePlan,
+  cancelBuild,
   cfgGet,
+  loadPlanGraph,
+  planCostUsd,
+  queueBuild,
+  runBuildSweep,
+  summarizeBuild,
   contextFileChecker,
   PlanItemHeldError,
   commitPlan,
@@ -367,7 +373,7 @@ export async function overrideItemDependency(
   revalidatePlan(item.planId.toHexString());
   return {
     message: override
-      ? "This article will be produced without waiting for its parent page."
+      ? "This page will be produced without waiting for the pages under it."
       : "Dependency restored.",
   };
 }
@@ -412,6 +418,116 @@ export async function sendPlanItemsToPipeline(ids: string[]): Promise<SendPlanRe
   }
   revalidatePlan(planId);
   return result;
+}
+
+// ── builds ────────────────────────────────────────────────────────────────
+
+/** From the acceptance run (Session 26): one article to review for about $2.50. */
+const FALLBACK_COST_PER_ARTICLE = 2.5;
+
+export interface UiBuildSummary {
+  subtopics: { pillarName: string; subtopicName: string | null; clusters: number; hub: boolean }[];
+  pillarPages: string[];
+  toQueue: number;
+  byRole: { pillar: number; hub: number; cluster: number };
+  alreadyProduced: number;
+  inProgress: number;
+  alreadyQueued: number;
+  held: number;
+  costPerArticle: number;
+  estimatedCostUsd: number;
+  /** True when the per-article cost comes from this plan's own articles. */
+  costFromPlan: boolean;
+  error?: string;
+}
+
+async function costPerArticle(planId: ObjectId): Promise<{ value: number; fromPlan: boolean }> {
+  const db = await getDb();
+  const produced = await db.articles.countDocuments({
+    planId,
+    stage: { $in: ["review", "approved", "publishing", "published"] },
+  });
+  if (produced === 0) return { value: FALLBACK_COST_PER_ARTICLE, fromPlan: false };
+  const spent = await planCostUsd(db, planId);
+  return spent > 0
+    ? { value: spent / produced, fromPlan: true }
+    : { value: FALLBACK_COST_PER_ARTICLE, fromPlan: false };
+}
+
+function emptyBuildSummary(error: string): UiBuildSummary {
+  return {
+    subtopics: [], pillarPages: [], toQueue: 0, byRole: { pillar: 0, hub: 0, cluster: 0 },
+    alreadyProduced: 0, inProgress: 0, alreadyQueued: 0, held: 0,
+    costPerArticle: 0, estimatedCostUsd: 0, costFromPlan: false, error,
+  };
+}
+
+/** What "Build" would do with this selection — shown before anything is queued. */
+export async function previewBuildAction(planId: string, ids: string[]): Promise<UiBuildSummary> {
+  await requireAuth();
+  if (!ObjectId.isValid(planId)) return emptyBuildSummary("bad plan id");
+  const db = await getDb();
+  const id = new ObjectId(planId);
+  const graph = await loadPlanGraph(db, id);
+  const s = summarizeBuild(graph, ids);
+  const cost = await costPerArticle(id);
+  return {
+    subtopics: s.subtopics.map((x) => ({
+      pillarName: x.pillarName,
+      subtopicName: x.subtopicName,
+      clusters: x.clusters,
+      hub: x.hub,
+    })),
+    pillarPages: s.pillarPages.map((p) => p.title),
+    toQueue: s.toQueue.length,
+    byRole: s.byRole,
+    alreadyProduced: s.alreadyProduced,
+    inProgress: s.inProgress,
+    alreadyQueued: s.alreadyQueued,
+    held: s.held,
+    costPerArticle: cost.value,
+    estimatedCostUsd: cost.value * s.toQueue.length,
+    costFromPlan: cost.fromPlan,
+  };
+}
+
+/**
+ * Queue the selection's subtopics for bottom-up build, then run one sweep so
+ * the cluster articles start now rather than at the worker's next poll.
+ */
+export async function queueBuildAction(planId: string, ids: string[]): Promise<PlanActionState> {
+  await requireAuth();
+  if (!ObjectId.isValid(planId)) return { error: "bad plan id" };
+  const db = await getDb();
+  const companyId = getCompany().companyId;
+  const id = new ObjectId(planId);
+  const summary = await queueBuild(db, { companyId, planId: id, keys: ids });
+  if (summary.toQueue.length === 0) {
+    revalidatePlan(planId);
+    return { message: "Nothing new to build: everything selected is already produced, running or queued." };
+  }
+  const [sweep] = await runBuildSweep({
+    db,
+    companyId,
+    planId: id,
+    contextFileExists: await contextFileChecker(db, companyId, repoRoot()),
+  });
+  revalidatePlan(planId);
+  const started = sweep?.enqueued.length ?? 0;
+  return {
+    message:
+      `Queued ${summary.toQueue.length} for build` +
+      (sweep?.held ? `. ${sweep.held}` : started ? `; ${started} started now. The rest follow bottom-up.` : "."),
+  };
+}
+
+export async function cancelBuildAction(planId: string, ids: string[]): Promise<PlanActionState> {
+  await requireAuth();
+  if (!ObjectId.isValid(planId)) return { error: "bad plan id" };
+  const db = await getDb();
+  const n = await cancelBuild(db, { companyId: getCompany().companyId, planId: new ObjectId(planId), keys: ids });
+  revalidatePlan(planId);
+  return { message: n ? `Took ${n} page(s) out of the build. Work already running continues.` : "Nothing to cancel." };
 }
 
 // ── schedule ──────────────────────────────────────────────────────────────

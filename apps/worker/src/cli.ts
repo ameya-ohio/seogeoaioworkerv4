@@ -38,6 +38,9 @@ import {
   resumeSchedule,
   pauseSchedule,
   runScheduleTick,
+  queueBuild,
+  resequencePlan,
+  runBuildSweep,
   suggestMapping,
   updateSchedule,
   type CompanyConfig,
@@ -59,6 +62,7 @@ import { installSignalHandlers, startQueue, type QueueController } from "./queue
 import { startScrapeQueue } from "./scrapeQueue.js";
 import { startPlanQueue } from "./planQueue.js";
 import { startScheduleQueue } from "./scheduleQueue.js";
+import { startBuildQueue } from "./buildQueue.js";
 import type { PlanDeps } from "./planRunner.js";
 import { PythonScraperCli, importScrapedCorpus, type ScrapeDeps } from "./scrapeRunner.js";
 import { readFile } from "node:fs/promises";
@@ -217,6 +221,11 @@ async function cmdStart(argv: string[]): Promise<void> {
   if (!anyOnly || planOnly) {
     const planDeps: PlanDeps = { db, cfg, llm: new AnthropicLlmClient(), log };
     controllers.push(startPlanQueue(planDeps));
+  }
+  // Operator-queued builds run whenever the article queue does, unless the
+  // cadence is in dry-run mode (then nothing may be produced).
+  if ((!anyOnly || scheduleOnly) && !cfg.schedule.dryRun) {
+    controllers.push(startBuildQueue({ db, cfg, companyId, log }));
   }
   // The cadence is off unless switched on deliberately: a scheduler that
   // starts firing on deploy would spend money nobody asked for.
@@ -681,12 +690,12 @@ async function cmdPlanImport(argv: string[]): Promise<void> {
     console.log(`Priority: ${JSON.stringify(r.byPriority)}`);
     console.log(`Funnel:   ${JSON.stringify(r.byFunnel)}`);
     console.log(`Intent:   ${JSON.stringify(r.byIntent)}`);
-    if (analysis.promotions.length > 0) {
+    if (analysis.deferrals.length > 0) {
       console.log(
-        `\nStructure overrode priority for ${analysis.promotions.length} parent page(s):`,
+        `\nBottom-up order moved ${analysis.deferrals.length} parent page(s) after their children:`,
       );
-      for (const p of analysis.promotions.slice(0, 10)) {
-        console.log(`  ${p.parentKey} pulled forward so ${p.childKey} is not blocked`);
+      for (const p of analysis.deferrals.slice(0, 10)) {
+        console.log(`  ${p.parentKey} follows ${p.childKey}, its last child`);
       }
     }
     if (r.needsQueryTarget.length > 0) {
@@ -953,6 +962,7 @@ async function cmdSchedulePreview(argv: string[]): Promise<void> {
         failureCount: i.failureCount,
         retryAfter: i.retryAfter,
         dependencyOverride: i.dependencyOverride,
+        held: Boolean(i.held),
       })),
       new Date(),
       intFlag(flags, "count") ?? 10,
@@ -1005,6 +1015,83 @@ async function cmdScheduleTick(argv: string[]): Promise<void> {
   }
 }
 
+// ── builds ────────────────────────────────────────────────────────────────
+
+async function cmdPlanResequence(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const planId = planIdFlag(flags);
+  const { db } = await setup();
+  try {
+    const write = flags["write"] === true;
+    const res = await resequencePlan(db, planId, { write });
+    console.log(
+      `${res.changed} item(s) ${write ? "renumbered" : "would be renumbered (pass --write)"}` +
+        ` into bottom-up order`,
+    );
+    for (const v of res.violations) console.log(`  ! ${v}`);
+  } finally {
+    await db.close();
+  }
+}
+
+async function cmdBuildQueue(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const planId = planIdFlag(flags);
+  const raw = typeof flags["item"] === "string" ? (flags["item"] as string) : "";
+  if (!raw) {
+    console.error("--item <externalId>[,<externalId>] is required");
+    process.exit(2);
+  }
+  const { db, companyId } = await setup();
+  try {
+    const ext = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    const rows = await db.planItems.find({ planId, externalId: { $in: ext } }).toArray();
+    const missing = ext.filter((e) => !rows.some((r) => r.externalId === e));
+    if (missing.length) console.log(`not in this plan: ${missing.join(", ")}`);
+    const summary = await queueBuild(db, {
+      companyId,
+      planId,
+      keys: rows.map((r) => r._id?.toHexString() ?? ""),
+    });
+    console.log(
+      `Queued ${summary.toQueue.length}: ${summary.byRole.cluster} cluster, ` +
+        `${summary.byRole.hub} hub, ${summary.byRole.pillar} pillar` +
+        ` (already produced ${summary.alreadyProduced}, running ${summary.inProgress},` +
+        ` already queued ${summary.alreadyQueued}, held ${summary.held})`,
+    );
+    for (const s of summary.subtopics) {
+      console.log(`  ${s.pillarName} › ${s.subtopicName ?? "(pillar-level)"}: ${s.clusters} article(s)${s.hub ? " + hub" : ""}`);
+    }
+  } finally {
+    await db.close();
+  }
+}
+
+async function cmdBuildSweep(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const { cfg, db, companyId } = await setup();
+  try {
+    const planId = typeof flags["plan"] === "string" ? planIdFlag(flags) : undefined;
+    const outcomes = await runBuildSweep({
+      db,
+      companyId,
+      ...(planId ? { planId } : {}),
+      maxRunAttempts: cfg.maxRunAttempts,
+      contextFileExists: await contextFileChecker(db, companyId, cfg.repoRoot),
+      log: console.log,
+    });
+    if (!outcomes.length) console.log("no queued builds");
+    for (const o of outcomes) {
+      console.log(
+        `plan ${o.planId}: ${o.held ?? `${o.enqueued.length} queued`}` +
+          (o.enqueued.length ? ` — ${o.enqueued.map((e) => e.slug).join(", ")}` : ""),
+      );
+    }
+  } finally {
+    await db.close();
+  }
+}
+
 const HELP = `blogagent-worker <command>
 
 Commands:
@@ -1049,6 +1136,13 @@ Commands:
   schedule-pause --plan <id>         Stop firing; nothing is lost
   schedule-preview --plan <id>       Project the next N articles with dates [--count 10]
   schedule-tick [--dry-run]          Run one tick now (dry run writes nothing)
+
+  plan-resequence --plan <id>        Renumber a plan in bottom-up build order [--write]
+                                     (dry run unless --write)
+  build-queue --plan <id> --item <externalId>[,<externalId>]
+                                     Queue the item's whole subtopic (or, for a pillar
+                                     page, the whole pillar) for bottom-up build
+  build-sweep [--plan <id>]          Run one build sweep now (the worker does this every poll)
 
 Env: MONGODB_URI, MONGODB_DB, ANTHROPIC_API_KEY, WORKER_CONCURRENCY,
      PHASE_MODEL_DEFAULT / PHASE_MODEL_<PHASE>, STORAGE_DRIVER (local|s3),
@@ -1110,6 +1204,12 @@ async function main(): Promise<void> {
       return cmdSchedulePreview(rest);
     case "schedule-tick":
       return cmdScheduleTick(rest);
+    case "plan-resequence":
+      return cmdPlanResequence(rest);
+    case "build-queue":
+      return cmdBuildQueue(rest);
+    case "build-sweep":
+      return cmdBuildSweep(rest);
     default:
       console.log(HELP);
       process.exit(cmd ? 2 : 0);

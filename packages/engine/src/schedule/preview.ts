@@ -9,7 +9,7 @@ import { isReady, type ReadinessItem } from "./readiness.js";
  *
  * This replays the REAL selection loop against a virtual clock rather than
  * listing calendar dates. A naive "every weekday at 07:00" preview is wrong
- * in exactly the case the operator cares about: parent-gating and
+ * in exactly the case the operator cares about: child-gating and
  * `maxInFlight` mean a fire can produce fewer articles than the batch size,
  * or none at all, and those slips compound across weeks.
  *
@@ -31,6 +31,7 @@ export interface PreviewItem {
   retryAfter?: Date | undefined;
   dependencyOverride?: boolean | undefined;
   articleStage?: Stage | undefined;
+  held?: boolean | undefined;
 }
 
 export interface PreviewEntryItem {
@@ -81,7 +82,13 @@ export function previewSchedule(
     state.set(i.key, entry);
   }
 
-  const byKey = new Map(items.map((i) => [i.key, i]));
+  const childrenOf = new Map<string, PreviewItem[]>();
+  for (const i of items) {
+    if (!i.parentKey) continue;
+    const list = childrenOf.get(i.parentKey) ?? [];
+    list.push(i);
+    childrenOf.set(i.parentKey, list);
+  }
   const ordered = [...items].sort((a, b) => a.sequence - b.sequence);
 
   const readinessOf = (i: PreviewItem): ReadinessItem => {
@@ -94,6 +101,7 @@ export function previewSchedule(
       dependencyOverride: i.dependencyOverride,
       parentKey: i.parentKey,
       articleStage: s?.articleStage,
+      held: i.held,
     };
   };
 
@@ -143,12 +151,11 @@ export function previewSchedule(
     const picked: PreviewEntryItem[] = [];
     for (const item of ordered) {
       if (picked.length >= budget) break;
-      // A parent named but absent from the plan resolves to null, matching
-      // the tick: the child is not held hostage to a row that does not exist.
-      const parentItem = item.parentKey ? byKey.get(item.parentKey) : undefined;
+      // The unattended cadence never produces a held item.
+      if (item.held) continue;
       const r = isReady(
         readinessOf(item),
-        parentItem ? readinessOf(parentItem) : null,
+        (childrenOf.get(item.key) ?? []).map(readinessOf),
         enqueuedThisTick,
         {
           requireApproval: opts.requireApproval,
@@ -176,9 +183,9 @@ export function previewSchedule(
     }
 
     const entry: PreviewEntry = { fireAt, items: picked };
-    if (picked.length === 0) entry.note = "no item is ready — every candidate is waiting on a parent";
+    if (picked.length === 0) entry.note = "no item is ready — every candidate is waiting on the pages under it";
     else if (picked.length < opts.cadence.batchSize) {
-      entry.note = `${picked.length} of ${opts.cadence.batchSize} — the rest are waiting on a parent`;
+      entry.note = `${picked.length} of ${opts.cadence.batchSize} — the rest are waiting on the pages under them`;
     }
     entries.push(entry);
   }

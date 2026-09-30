@@ -7,6 +7,7 @@ import {
   isEligible,
   isProducedStage,
   isReady,
+  childrenOutstanding,
   retryBackoffMs,
   type ReadinessItem,
   type ReadinessOptions,
@@ -22,18 +23,22 @@ const opts = (over: Partial<ReadinessOptions> = {}): ReadinessOptions => ({
   ...over,
 });
 
+/** The item under test: a hub. */
 const item = (over: Partial<ReadinessItem> = {}): ReadinessItem => ({
-  key: "child",
+  key: "hub",
   status: "planned",
   failureCount: 0,
-  parentKey: "parent",
+  parentKey: "pillar",
   ...over,
 });
 
-const parent = (status: PlanItemStatus, over: Partial<ReadinessItem> = {}): ReadinessItem => ({
-  key: "parent",
+let n = 0;
+/** One of the hub's cluster articles. */
+const child = (status: PlanItemStatus, over: Partial<ReadinessItem> = {}): ReadinessItem => ({
+  key: `child-${n++}`,
   status,
   failureCount: 0,
+  parentKey: "hub",
   ...over,
 });
 
@@ -99,63 +104,74 @@ describe("isEligible", () => {
   });
 });
 
-describe("isReady — dependencies", () => {
-  it("is ready with no parent", () => {
-    expect(isReady(item({ parentKey: null }), null, none, opts())).toEqual({ ready: true });
+describe("isReady — bottom-up dependencies", () => {
+  it("is ready with no children (a cluster article)", () => {
+    expect(isReady(item(), [], none, opts())).toEqual({ ready: true });
   });
 
-  it("is ready once the parent is done", () => {
-    expect(isReady(item(), parent("done"), none, opts())).toEqual({ ready: true });
+  it("is ready once every child is done", () => {
+    expect(isReady(item(), [child("done"), child("done")], none, opts())).toEqual({ ready: true });
   });
 
-  it("waits while the parent is unproduced or in flight", () => {
-    expect(isReady(item(), parent("planned"), none, opts())).toEqual({
+  it("waits while any child is unproduced or in flight", () => {
+    expect(isReady(item(), [child("done"), child("planned")], none, opts())).toEqual({
       ready: false,
-      reason: "parent_pending",
+      reason: "children_pending",
     });
-    expect(isReady(item(), parent("enqueued"), none, opts())).toEqual({
+    expect(isReady(item(), [child("done"), child("failed")], none, opts())).toEqual({
       ready: false,
-      reason: "parent_in_flight",
+      reason: "children_pending",
     });
-    expect(isReady(item(), parent("in_progress"), none, opts())).toEqual({
+    expect(isReady(item(), [child("done"), child("enqueued")], none, opts())).toEqual({
       ready: false,
-      reason: "parent_in_flight",
+      reason: "children_in_flight",
     });
-  });
-
-  it("treats a parent enqueued earlier in THIS tick as in flight", () => {
-    // Without this, WORKER_CONCURRENCY > 1 could start the child first.
-    expect(isReady(item(), parent("planned"), new Set(["parent"]), opts())).toEqual({
+    expect(isReady(item(), [child("in_progress")], none, opts())).toEqual({
       ready: false,
-      reason: "parent_in_flight",
+      reason: "children_in_flight",
     });
   });
 
-  it("reports a blocked parent distinctly, so the operator knows to act", () => {
-    for (const s of ["quarantined", "slug_conflict"] as PlanItemStatus[]) {
-      expect(isReady(item(), parent(s), none, opts())).toEqual({
-        ready: false,
-        reason: "parent_blocked",
-      });
-    }
+  it("treats a child enqueued earlier in THIS tick as in flight", () => {
+    // Without this, WORKER_CONCURRENCY > 1 could start the hub before its last article.
+    const last = child("planned");
+    expect(isReady(item(), [child("done"), last], new Set([last.key]), opts())).toEqual({
+      ready: false,
+      reason: "children_in_flight",
+    });
   });
 
-  it("lets a child through when its parent was deliberately skipped", () => {
-    expect(isReady(item(), parent("skipped"), none, opts())).toEqual({ ready: true });
+  it("reports a blocked child first, so the operator knows to act", () => {
+    expect(
+      isReady(item(), [child("planned"), child("slug_conflict"), child("enqueued")], none, opts()),
+    ).toEqual({ ready: false, reason: "children_blocked" });
+  });
+
+  it("does not wait for skipped, quarantined or held-and-unsent children", () => {
+    const kids = [
+      child("done"),
+      child("skipped"),
+      child("quarantined"),
+      child("planned", { held: true }),
+    ];
+    expect(isReady(item(), kids, none, opts())).toEqual({ ready: true });
+  });
+
+  it("does wait for a held child an operator already sent", () => {
+    expect(isReady(item(), [child("in_progress", { held: true })], none, opts())).toEqual({
+      ready: false,
+      reason: "children_in_flight",
+    });
   });
 
   it("honours an operator dependency override", () => {
-    expect(isReady(item({ dependencyOverride: true }), parent("planned"), none, opts())).toEqual({
-      ready: true,
-    });
-  });
-
-  it("does not hold a child hostage to a parent missing from the plan", () => {
-    expect(isReady(item(), null, none, opts())).toEqual({ ready: true });
+    expect(
+      isReady(item({ dependencyOverride: true }), [child("planned")], none, opts()),
+    ).toEqual({ ready: true });
   });
 
   it("checks eligibility before dependencies", () => {
-    expect(isReady(item({ status: "done" }), parent("done"), none, opts())).toEqual({
+    expect(isReady(item({ status: "done" }), [child("done")], none, opts())).toEqual({
       ready: false,
       reason: "terminal",
     });
@@ -163,32 +179,41 @@ describe("isReady — dependencies", () => {
 });
 
 describe("isReady — requireApproval", () => {
-  it("accepts a parent at review by default", () => {
-    expect(isReady(item(), parent("done", { articleStage: "review" }), none, opts())).toEqual({
+  it("accepts children at review by default", () => {
+    expect(isReady(item(), [child("done", { articleStage: "review" })], none, opts())).toEqual({
       ready: true,
     });
   });
 
-  it("requires approval when the operator asked for it", () => {
+  it("requires approval of every child when the operator asked for it", () => {
     const strict = opts({ requireApproval: true });
-    expect(isReady(item(), parent("done", { articleStage: "review" }), none, strict)).toEqual({
-      ready: false,
-      reason: "parent_unapproved",
-    });
-    expect(isReady(item(), parent("done", { articleStage: "approved" }), none, strict)).toEqual({
-      ready: true,
-    });
-    expect(isReady(item(), parent("done", { articleStage: "published" }), none, strict)).toEqual({
-      ready: true,
-    });
+    expect(
+      isReady(item(), [child("done", { articleStage: "approved" }), child("done", { articleStage: "review" })], none, strict),
+    ).toEqual({ ready: false, reason: "children_unapproved" });
+    expect(
+      isReady(item(), [child("done", { articleStage: "approved" }), child("done", { articleStage: "published" })], none, strict),
+    ).toEqual({ ready: true });
+  });
+});
+
+describe("childrenOutstanding", () => {
+  it("counts what still holds the parent, leaving out skipped and held children", () => {
+    const kids = [
+      child("done"),
+      child("planned"),
+      child("in_progress"),
+      child("skipped"),
+      child("planned", { held: true }),
+    ];
+    expect(childrenOutstanding(kids, { requireApproval: false })).toEqual({ waiting: 2, counted: 3 });
   });
 });
 
 describe("explainNotReady", () => {
   it("has plain-English text for every reason", () => {
     const reasons = [
-      "parent_pending", "parent_in_flight", "parent_blocked",
-      "parent_unapproved", "not_before", "terminal", "attempts_exhausted",
+      "children_pending", "children_in_flight", "children_blocked",
+      "children_unapproved", "not_before", "terminal", "attempts_exhausted",
     ] as const;
     for (const r of reasons) {
       expect(explainNotReady(r).length).toBeGreaterThan(10);
