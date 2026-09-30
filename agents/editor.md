@@ -74,7 +74,7 @@ Walk every item. Specifically:
 - Direct factual answer in the first sentence under each `[answer-first]` H2 (per the outline); `[argument]` sections open with the finding, example or turn — cut any one-line restatement of the heading.
 - **Quotable** standalone sentences: 2–4, arising from the argument, none a restated thesis.
 - Formal definitions (`**X** is …`): **at most two**, for the terms the argument depends on; rewrite the rest as in-passing explanations.
-- Intro passes the hook-shaped-intro machine check (`scripts/style_checks.py`), and it reads at the register of the research notes' Topic Summary, paragraphs 1–2: the subject is named in the first sentence, the core distinction is stated and defined directly, and a why-now paragraph carries sourced specifics. Put the intro next to those two paragraphs. If it is less informative, or it leans on hook moves (a lone-stat opener with a dramatic fragment, "That number should…", "X and Y aren't the same", "…goes to die", "Confuse the two, and you'll…"), rewrite it from the Topic Summary.
+- Intro passes the hook-shaped-intro machine check (`scripts/style_checks.py`), and it reads at the register of the research notes' Topic Summary, paragraphs 1–2: the subject is named in the first sentence, the core distinction is stated and defined directly, and a short why-now paragraph says what changed, with at most one sourced figure. Put the intro next to those two paragraphs. If it is less informative, or it leans on hook moves (a lone-stat opener with a dramatic fragment, "That number should…", "X and Y aren't the same", "…goes to die", "Confuse the two, and you'll…"), rewrite it from the Topic Summary.
 - Key Takeaways carry specifics (mechanisms, controls, orders, consequences; never a number or statistic repeated from the body (Stats / Data and Original Research pages excepted: there the takeaways are the key figures)); none repeats the intro's thesis sentence.
 - Author and publisher authority signals visible (frontmatter `author`, `author_bio_url`).
 - Original insight or perspective present (the article's wedge from the Strategist's angle).
@@ -90,6 +90,14 @@ Walk every item. Specifically:
 - FAQ section is a clean Q/A array — no preamble inside answers.
 - Speakable target identified — the Key Takeaways block.
 - Co-citation hygiene — external links go to authoritative domains the AI engines already cite.
+
+### Pass 6.5 — Argument over evidence (`standards/quality-bar.md` → *Argument over evidence*)
+
+- The article argues: it explains how things work, states a point of view, and reaches a conclusion the reader can act on. If a section reads as a summary of what reports found, rewrite it around its claim.
+- Stay within budget: 3–5 load-bearing statistics per article, at most two per paragraph. Cut any figure that only decorates a point already made (the audit FAILs over-budget drafts and stat parades).
+- Sections open with their point, not with "According to…" or "X's report found…". No H2 is named for a report.
+- Never add a statistic or source to "support" a sound point. A correct mechanism or a reasoned conclusion stands on its own, stated plainly and without a hedge.
+- Stats / Data and Original Research pages are exempt.
 
 ### Pass 7 — Fact check
 

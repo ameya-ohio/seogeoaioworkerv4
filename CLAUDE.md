@@ -164,7 +164,7 @@ Then summarize for the user:
 
 - **Always create the article folder FIRST.** Never start Phase 1 without it.
 - **Never skip phases.** Even short articles run the full pipeline.
-- **Never fabricate** statistics, quotes, or sources. Every fact in the article must trace to `research-notes.md`. If research did not surface a needed source, go back to Phase 1 and search again rather than inventing one.
+- **Never fabricate** statistics, quotes, or sources. Every statistic, quote, dated event and named source in the article must trace to `research-notes.md`. Mechanism, practice and reasoning are written from expertise and need no citation. Use few statistics: the article argues, and evidence supports it (`standards/quality-bar.md` → *Argument over evidence*). If research did not surface a needed source, go back to Phase 1 and search again rather than inventing one.
 - **Empty context folder ≠ failure.** If `context/brand/` is empty, log it and proceed with sensible defaults from `agents/writer.md` and `standards/quality-bar.md`. Do the same for sales/marketing/finance/author-style.
 - **Author Style default** (until `context/author-style/` is populated): clear, expert, balanced — neither overly casual nor stiff. Confident voice, second-person where natural, short paragraphs (2–4 sentences), concrete examples. Avoid AI clichés (banned-phrases list lives in `standards/quality-bar.md`).
 - **Cite sources inline:** in `research-notes.md` use markdown footnote-style or numbered citations with full URLs; in `article.md` body use natural attribution ("According to a 2025 Stanford study…") plus a citation in the JSON-LD `citation` array.

@@ -122,6 +122,26 @@ Write the way a senior practitioner explains something to a peer in a triage mee
 
 What changed: the editorial tail was cut (rule 6); the 34-word definition became two sentences, one of them stating what risk is *for* (rules 1–2); "could" became "can" (7); "burn…findings that don't matter" became "spend…lower priority findings" (3–4); "equally dangerous" became "equally risky", and "exposure" became "identity exposure", holding the defined terms (5).
 
+## Argument over evidence (every article, D57)
+
+The article's job is to leave the reader clear on the problem. It explains how the thing works, takes a position, and reasons its way to a conclusion the reader can act on. Evidence supports that argument. It doesn't replace it. A page that makes each point by citing a report reads as a literature review, and an executive reader skims past it looking for what the author actually thinks.
+
+**What needs a source.** A statistic, a survey figure, a dated event, a named incident, a quote, a claim about what a specific organization said or did, and the text of a standard or regulation. These trace to `research-notes.md` exactly as the fact-check rules below require. That hasn't changed.
+
+**What doesn't.** How a mechanism works (a KDC issues service tickets encrypted with the service account's key), established practice, what follows logically from those, and the company's point of view. Write these from expertise, stated plainly and accurately. Don't hunt for a citation to prop up a point the reasoning already makes, and don't hedge it because it has no footnote. The technical reviewer checks that it's correct.
+
+**The budget.**
+- **3–5 load-bearing statistics per article.** Most sections carry none. A section that explains a mechanism or makes the case runs on reasoning.
+- **A statistic earns its place when the argument turns on it:** it sizes the problem, changes a priority, or settles a disagreement. Cut one that only decorates a point already made, and never add one to "support" a sentence that stands on its own.
+- **One figure per paragraph, two at most.** Three figures in a paragraph is a stat parade, and the audit fails it.
+- **Open each section with its point, not its source.** The claim comes first, then the evidence for it. "According to…" and "X's 2026 report found…" don't open sections.
+- **Organize sections around claims, not reports.** No H2 is named for a study, and no section exists to summarize one.
+- **The why-now paragraph** of the intro says what changed in one to three sentences, with at most one sourced figure.
+
+**The register to aim for:** a senior practitioner briefing an executive. There's a clear point of view, the reasoning is visible, the technical detail is exact, and every section ends with the reader knowing something they can act on.
+
+`scripts/style_checks.py` machine-checks the budget. It FAILs more than max(6, one per 300 words) sentences carrying a statistic and any paragraph with a third statistic. It WARNs when two or more sections open on a statistic or a source, and on an H2 named for a report. Stats / Data and Original Research pages are exempt, because there the numbers are the point.
+
 ## Forbidden AI Slop Patterns (Editor enforces) 
 
 ### RULE: No Assertion Chaining.
@@ -288,7 +308,7 @@ Returning to the opening image at the close to "bring the piece full circle." Fe
 
 Opening with a performance instead of the subject. The pattern: a lone statistic, then a dramatic fragment ("The attacker used a valid identity and walked in the front door."), then a paragraph commenting on the opening ("That number should reframe how teams talk about X, but mostly it hasn't."), then a set-piece about terms ("They aren't the same word, and the gap between them is where remediation effort goes to die."), then a threat ("Confuse the two, and you'll spend a sprint fixing the wrong things."). Each move delays the substance and leaves the reader less informed than a plain statement would.
 
-**Fix:** Start from the research notes' Topic Summary, paragraphs 1–2. Paragraph 1 names the subject, states the distinction or problem, defines it, and says what getting it wrong costs. Paragraph 2 explains why now, with sourced specifics attributed inline. A statistic belongs inside a sentence that makes a claim ("…CrowdStrike's 2026 Global Threat Report found 82% of detections were malware-free, meaning…"). It shouldn't stand alone as the opener.
+**Fix:** Start from the research notes' Topic Summary, paragraphs 1–2. Paragraph 1 names the subject, states the distinction or problem, defines it, and says what getting it wrong costs. Paragraph 2 says what changed, in one to three sentences, with at most one sourced figure (*Argument over evidence*). A statistic belongs inside a sentence that makes a claim ("…CrowdStrike's 2026 Global Threat Report found 82% of detections were malware-free, meaning…"). It shouldn't stand alone as the opener.
 
 
 ## AI Marketing Slop Vocabulary
@@ -325,9 +345,9 @@ These are throat-clearing devices that signal the writer is about to say somethi
 
 "Massive." "Explosive." "Historic." "Unprecedented." "Staggering." "Devastating."
 
-Quantification beats hot adjectives every time. "$60 billion evaporated" is more devastating than "a devastating loss."
+The concrete fact beats the hot adjective every time. "$60 billion evaporated" is more devastating than "a devastating loss."
 
-**Fix:** Lead with the number. The number is the adjective.
+**Fix:** Replace the adjective with the concrete fact: the mechanism, the scope, or a sourced number when you have one that carries the point. Don't reach for a statistic just to replace an adjective.
 
 ### Generic Business Analogies
 
@@ -399,8 +419,8 @@ Banned outright. Acceptable only for genuine acronyms (LLM, RAG, CRM, GTM). Neve
 ## Voice rules (Editor enforces)
 
 ### Specific over general
-- Name the company, person, product, dollar amount, percentage, year. "A 2025 McKinsey survey of 800 enterprises" beats "industry studies."
-- Examples: "Salesforce" beats "a leading CRM." "$3.4B" beats "billions." "Q1 2026" beats "early this year."
+- Name the control, the attribute, the product, the year. "Unconstrained delegation on a file server" beats "risky settings." "Q1 2026" beats "early this year."
+- Specific means precise. It doesn't mean a statistic in every paragraph (*Argument over evidence*). When you do cite a figure, name its source: "a 2025 McKinsey survey of 800 enterprises" beats "industry studies."
 
 ### Concrete over abstract
 - Write what the reader can picture. If a sentence describes a concept, follow it with a sentence describing an instance.

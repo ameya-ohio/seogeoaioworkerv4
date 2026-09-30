@@ -26,6 +26,12 @@ MAX_TRIADS_PER_1K = 6.0       # WARN only — lists of three are often legitimat
 MIN_SENTENCE_CV = 0.45        # WARN only — stdev/mean of prose sentence lengths
 MAX_SIGNPOST_OPENERS = 3      # WARN only — "That's why…", "This is also why…"
 MAX_SENTENCE_WORDS = 30       # WARN only — operator register: one claim per sentence
+# Argument over evidence (D57): the article reasons; statistics support it.
+MIN_STAT_CAP = 6              # FAIL above max(6, one statistic sentence per WORDS_PER_STAT words)
+WORDS_PER_STAT = 300
+MAX_STATS_PER_PARAGRAPH = 2   # FAIL: a third statistic in one paragraph is a stat parade
+MAX_EVIDENCE_OPENERS = 1      # WARN: sections that open on a statistic or a source instead of their point
+EVIDENCE_FORMATS = {"stats-data", "original-research"}  # the numbers are the point; limits off
 
 _CONTRAST = [
     # "not X, but Y" / "not X, rather Y" (but not "not only … but also")
@@ -96,6 +102,23 @@ _INTRO_HOOKS = re.compile(
 # A statistic in the opening words of the first sentence = a stat hook. Bare years don't count.
 _STAT_TOKEN = re.compile(r"(?:\$\d|\d+(?:[.,]\d+)?\s*(?:%|percent\b|x\b|:1\b)|\b(?!(?:19|20)\d\d\b)\d+(?:[.,]\d+)?\b)", re.I)
 STAT_OPENER_WORDS = 6
+# A statistic as a reader sees one: a percentage, money, a multiple or ratio, a
+# count in millions, a comma-grouped count, "one in N". Bare numbers (Tier 0,
+# event 4769, "three steps") aren't statistics.
+_STATISTIC = re.compile(
+    r"(?:[$€£]\s?\d|\b\d+(?:\.\d+)?\s*(?:%|percent\b)|\b\d+(?:\.\d+)?x\b|\b\d+:1\b"
+    r"|\b\d[\d,.]*\s*(?:million|billion|trillion)\b|\b\d{1,3}(?:,\d{3})+\b|\b(?:one|\d+) in (?:every )?\d+\b)",
+    re.I,
+)
+# A sentence that leads with its source: "According to…", "Verizon's 2026 DBIR recorded…".
+_SOURCE_LEAD = re.compile(
+    r"^(?:according to\b|per the\b|in (?:its|a|the) \d{4}\b)"
+    r"|^[^.]{0,80}\b(?:report|survey|study|research|DBIR|analysis|advisory)\b[^.]{0,60}\b"
+    r"(?:found|finds|recorded|records|reported|reports|shows|showed|estimated|estimates|counted|counts)\b",
+    re.I,
+)
+# A source named in a heading ("The 2026 DBIR's…"); a leading verb ("Report what…") is an instruction.
+_SOURCE_HEADING = re.compile(r"(?<!^)\b(?:report|survey|study)\b|\bDBIR\b", re.I)
 
 _STOP = set(
     """
@@ -487,14 +510,92 @@ def check_signposts(prose: list[str]) -> Finding | None:
     )
 
 
+def stat_cap(word_count: int) -> int:
+    return max(MIN_STAT_CAP, round(word_count / WORDS_PER_STAT))
+
+
+def check_stat_density(blocks: list[str], word_count: int) -> Finding | None:
+    hits = [s[:110] for b in blocks for s in sentences(b) if _STATISTIC.search(s)]
+    cap = stat_cap(word_count)
+    if len(hits) <= cap:
+        return None
+    return Finding(
+        "fail",
+        f"Evidence: {len(hits)} sentences carry a statistic (max {cap} at this length) — keep the few the "
+        f"argument turns on and make the rest of the case by reasoning",
+        hits,
+    )
+
+
+def check_stat_stacking(prose: list[str]) -> Finding | None:
+    hits = []
+    for b in prose:
+        n = sum(1 for s in sentences(b) if _STATISTIC.search(s))
+        if n > MAX_STATS_PER_PARAGRAPH:
+            hits.append(f"{n} statistics: {' '.join(b.split())[:100]}")
+    if not hits:
+        return None
+    return Finding(
+        "fail",
+        f"Evidence: {len(hits)} paragraphs stack more than {MAX_STATS_PER_PARAGRAPH} statistics — state the point, "
+        f"keep the one figure that carries it",
+        hits,
+    )
+
+
+def _first_prose_sentence(section: str) -> str:
+    _, prose = prose_blocks(section)
+    return (sentences(prose[0]) or [""])[0] if prose else ""
+
+
+def check_evidence_openers(sections: list[tuple[str, str]]) -> Finding | None:
+    hits = []
+    for heading, text in sections:
+        if re.match(r"(?:key takeaways|faq|frequently asked)", heading, re.I):
+            continue
+        first = _first_prose_sentence(text)
+        if first and (_STATISTIC.search(first) or _SOURCE_LEAD.search(first)):
+            hits.append(f"{heading[:50]}: {first[:90]}")
+    if len(hits) <= MAX_EVIDENCE_OPENERS:
+        return None
+    return Finding(
+        "warn",
+        f"Evidence: {len(hits)} sections open on a statistic or a source — open with the section's point, "
+        f"then bring in the evidence",
+        hits,
+    )
+
+
+def check_source_headings(sections: list[tuple[str, str]]) -> Finding | None:
+    hits = [h for h, _ in sections if _SOURCE_HEADING.search(h)]
+    if not hits:
+        return None
+    return Finding(
+        "warn",
+        "Evidence: H2s built around a source — organize each section around a claim, not a report",
+        hits,
+    )
+
+
 def run_all(
     body: str,
     word_count: int,
     *,
     takeaways: tuple[int, int] = (KEY_TAKEAWAYS, KEY_TAKEAWAYS),
+    article_type: str = "",
 ) -> list[Finding]:
     blocks, prose = prose_blocks(body)
     intro, sections = split_sections(body)
+    evidence = (
+        []
+        if article_type in EVIDENCE_FORMATS
+        else [
+            check_stat_density(blocks, word_count),
+            check_stat_stacking(prose),
+            check_evidence_openers(sections),
+            check_source_headings(sections),
+        ]
+    )
     findings: list[Finding | None] = [
         check_faq_filler(sections),
         check_faq_answer_length(sections),
@@ -513,6 +614,7 @@ def run_all(
         check_signposts(prose),
         check_long_sentences(prose),
         check_long_paragraphs(prose, intro),
+        *evidence,
     ]
     return [f for f in findings if f]
 

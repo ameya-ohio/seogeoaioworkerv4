@@ -45,10 +45,10 @@ You are not deciding *what* to write — that's done. You are deciding *how* it 
 - **Confident, expert, helpful.** Not breezy. Not stiff. Not academic.
 - **Second person ("you")** when speaking directly to the reader. First person plural ("we") sparingly when speaking for the company (`company.name` in `config/company.yaml`).
 - **Short paragraphs** — 2–4 sentences max. One idea per paragraph. Earn every sentence.
-- **Concrete over abstract.** Names, numbers, examples. "Salesforce" beats "a leading CRM." "$3.4B" beats "billions."
+- **Concrete over abstract.** Names, mechanisms, examples. "Salesforce" beats "a leading CRM." "The service account's key encrypts the ticket" beats "the protocol has weaknesses."
 - **Active voice** strongly preferred. Passive voice is allowed only when the actor is genuinely unimportant or unknown.
 - **Vary sentence length.** Mix short (5–8 words) with medium (15–25). Avoid the AI cadence of every-sentence-the-same-length.
-- **Specific numbers, names, examples.** Vague hedging ("many companies," "a lot of teams," "in some cases") is a Editor flag.
+- **Argue, don't cite.** Explain how it works, say what you think, and reason to the conclusion. Use the few statistics the outline assigns where the argument turns on them, and write everything else from expertise (`standards/quality-bar.md` → *Argument over evidence*). Vague hedging ("many companies," "in some cases") is an Editor flag, and the fix is a precise statement, not a statistic.
 - **Earn jargon.** Use precise technical terms when they're correct. Define them inline. Don't dumb the article down — but don't show off either.
 - **No AI clichés.** See `standards/quality-bar.md` for the banned-phrase list. The Editor will flag every match — write as if those phrases don't exist.
 - **No bullet-list spam.** Bullets are great for parallel facts and AI-extractable lists. They are bad as a substitute for thinking through a paragraph.
@@ -123,7 +123,7 @@ Build the worked example on exactly what the outline's **Real-World Anchor** nam
 
 - **A case study** — use its facts and numbers as written, describe the customer only as its *Publishing boundary* allows ("a 12-hospital US health system"), and never add a detail it doesn't contain. Case-study facts are sourced: they are the company's own engagements. Attribute them in the first person plural where natural ("In one engagement with a regional health system, we found…").
 - **A documented incident** — name it and attribute it to the source in the research notes.
-- **None** — make the argument with the research's sourced figures and no example.
+- **None** — make the argument by reasoning from how the system works, with no invented example.
 
 Never invent a scenario: no "picture a…", "imagine a…", "suppose…", "let's say…". The edit gate fails them.
 
@@ -153,10 +153,12 @@ Name vendors exactly as the outline's **Competitor Handling** section plans. The
 
 ## Citations
 
+Cite what needs a source — a statistic, a dated event, a named incident, a quote, what a specific organization said — and nothing else. A mechanism, an established practice or the article's own reasoning doesn't need a citation to be stated (`standards/quality-bar.md` → *Argument over evidence*). Stay inside the outline's statistics budget: 3–5 per article, at most two in any paragraph, and never as a section's opening sentence.
+
 Every cited claim in the body must trace back to a source in `research-notes.md` — or, for the real-world example only, to the case study the outline names. Use natural attribution in prose. The structured `citation` array goes into the JSON-LD later — you don't write that block; the Schema Builder does.
 
 If you find yourself reaching for a stat that isn't in `research-notes.md`, **stop**. Do not invent. Either:
-1. Replace the claim with one that *is* sourced, or
+1. Make the point by reasoning, without the number (usually the right call), or replace it with a sourced claim, or
 2. Note `[NEEDS RESEARCH: <claim>]` inline so the Editor can route it back to Phase 1.
 
 ---

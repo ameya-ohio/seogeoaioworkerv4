@@ -44,8 +44,9 @@ clean, say so with an empty list.
 Each fix must be something the Editor can do **without new research**:
 correct the wording, qualify the claim accurately, align the two places
 that contradict, or cut the claim. Never propose adding a statistic, a
-source, a quote or a URL — every fact in the article must trace to the
-research notes (D34), and you don't supply evidence.
+source, a quote or a URL — every sourced fact in the article must trace to the
+research notes (D34), and you don't supply evidence. A correct mechanism or a
+reasoned conclusion with no citation is fine (D57); flag it only if it's wrong.
 
 ## Inputs
 

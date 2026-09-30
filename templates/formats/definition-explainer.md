@@ -9,7 +9,7 @@
 1. **H1:** "What is [entity]?" or "[Entity]: definition and how it works". The H1 is the only question-shaped heading outside the FAQ.
 2. **Intro (definition block).** Built from the research Topic Summary ¶1–2 (D44), with the definition as its first 40–60 words: one sentence of definition, then two of essential qualification. It must stand alone with zero surrounding context, with no "as discussed above" and no reliance on the H1 for the subject. This block is the product.
 3. **Key Takeaways:** the count in page.md.
-4. **Why it matters:** the consequence of getting it wrong, with sourced figures.
+4. **Why it matters:** the consequence of getting it wrong, reasoned from the mechanism; one sourced figure if it carries the point.
 5. **How it works:** the mechanism, briefly, as a numbered sequence where it's sequential.
 6. **Components or types:** a list or table.
 7. **[Entity] and its nearest neighbour:** about 100 words on the term it's confused with, then a pointer to the Comparison page.

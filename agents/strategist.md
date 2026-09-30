@@ -102,7 +102,7 @@ Vary the anchors: use the target's query or a natural variant, and don't reuse a
 
 ### 9. External authoritative citations
 
-From research's Authoritative Sources list, pick the **specific** citations the article will use, and where. Match each citation to a section of the outline. The Schema Builder will populate the JSON-LD `citation` array from this list.
+From research's Authoritative Sources list, pick the **specific** citations the article will use, and where. Match each citation to a section of the outline. Budget **3–5 load-bearing statistics** for the whole article (`standards/quality-bar.md` → *Argument over evidence*). Pick the ones the argument turns on, and leave the rest in the research notes. Standards, vendor documentation and incident write-ups that ground a mechanism don't count against the budget. The Schema Builder will populate the JSON-LD `citation` array from this list.
 
 ### 10. Quotable sound bites
 
@@ -113,7 +113,7 @@ LLMs love clean, citable, standalone sentences. List 2–4 that fall out of the 
 The intro comes from the research notes' **Topic Summary, paragraphs 1–2**. Those paragraphs are synthesis: they say what the subject is and why it matters now, and that is the register the intro should have. Plan the intro in that shape, and don't turn it into a "hook":
 
 - **Paragraph 1: the substance.** Name the subject in the first sentence and state the problem or distinction directly. Define the core terms in a sentence each, and say what getting it wrong costs. Concede-then-pivot (see `context/author-style/`) happens inside this paragraph ("the terms get used interchangeably; they name different layers"), with no warm-up before it.
-- **Paragraph 2: why now.** Give the specific, sourced forces that make this urgent, each attributed inline (named report, number, year).
+- **Paragraph 2: why now.** Say what changed, in one to three sentences, with at most one sourced figure. Don't list a figure per driver.
 - **Optional short paragraph 3:** the thesis preview, if paragraph 1 doesn't already carry it.
 
 In the Intro Strategy section, record which Topic Summary sentences carry over and what has to change: the primary keyword in the first 100 words, wording aligned with the thesis, and cuts for any claim the body won't support. Tighten the summary. Don't repackage it.
@@ -138,7 +138,7 @@ The "one concrete worked example" in the arc must be **real**. Choose, in order:
 
 1. **A case study** from `context/case-studies/` whose *Topics* genuinely match this article — at most one. Note which sections it anchors and which of its numbers carry the argument. Respect its *Publishing boundary* exactly.
 2. Otherwise, **a documented incident** from the research notes (named breach, published post-mortem, advisory) with its source.
-3. Otherwise, **no worked example** — make the argument with the research's sourced figures.
+3. Otherwise, **no worked example** — make the argument by reasoning from how the system works.
 
 Never plan a hypothetical ("picture a domain with 400 accounts…", "imagine a hospital…"). The edit gate fails invented scenarios, and a reader who does this work can tell.
 
@@ -156,7 +156,7 @@ Apply `standards/quality-bar.md` → *Competitor handling*, using the vendor lis
 Full outline. For each section:
 - H2 (or H3) heading, written exactly as it should appear — **declarative statements, never questions** (D33). Question form is allowed only inside the FAQ section. Contrastive and imperative headings in the house style ("The limits of pass and fail", "Add the attacker's perspective") beat topic labels.
 - One-sentence summary of what the section covers **and how it advances the thesis**
-- Which research items / citations / entities go in it
+- Which research items / citations / entities go in it, or `reasoning` when the section carries the argument on its own (most should)
 - Which brief required-passages (if a brief exists) this section satisfies
 - Word-count guidance (rough, e.g. "150–250 words")
 
@@ -228,13 +228,13 @@ Write to `articles/YYYY-MM-DD-slug/outline.md` using this structure:
 
 ## Intro Strategy
 [Paragraph 1 — the substance: the distinction/problem, core definitions, the cost of confusing them]
-[Paragraph 2 — why now: the sourced forces, by name]
+[Paragraph 2 — why now: what changed, one to three sentences, at most one sourced figure]
 [Topic Summary sentences carried over; what changes (keyword placement, thesis wording, cuts)]
 
 ## Real-World Anchor
 [context/case-studies/<file>.md — which sections it anchors, which facts carry the argument, and the publishing boundary]
 or [documented incident: <name> — <source from research notes>]
-or [none — no case study or documented incident fits; the argument rests on sourced figures]
+or [none — no case study or documented incident fits; the argument rests on reasoning]
 
 ## Competitor Handling
 [Mode: vendor format (D51 exception, re-verify-by date: <YYYY-MM-DD>) | strict]
@@ -276,6 +276,6 @@ or [none — no case study or documented incident fits; the argument rests on so
 ## Hard rules
 
 - **Decide.** Don't list "options" for the Writer to choose from. The Writer follows the outline.
-- **Keep the outline auditable.** Every section ties back to research items, citations, entities. The Editor will spot-check.
+- **Keep the outline auditable.** Every section ties back to the thesis. Name the research items a section uses, or mark it `reasoning`. The Editor will spot-check.
 - **No keyword stuffing in headings.** Headings are written for humans first, search engines second, AI engines third. Good headings naturally include the entities the article is about.
 - **Don't pad word count.** If the topic is genuinely 1,200 words, don't pad to 2,500. Padding is what AI-detectable text smells like and AI engines deprioritize it.

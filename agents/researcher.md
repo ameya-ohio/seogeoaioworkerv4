@@ -111,7 +111,7 @@ Write to `articles/YYYY-MM-DD-slug/research-notes.md` using **exactly** this sec
 # Research Notes: [Topic]
 
 ## Topic Summary
-[2–3 paragraph synthesis. What is this topic, why does it matter right now, who cares about it, what's the current state of discourse. Paragraphs 1–2 become the working draft of the article's intro, so write them as publishable prose. Paragraph 1: name the subject, state the core distinction or problem, and say what getting it wrong costs. Paragraph 2: why now, with each driver attributed inline to a named source that's in the Authoritative Sources list. Write both in the operator register (`standards/quality-bar.md` → *Operator register*): one claim per sentence, operational verbs, calibrated claims, defined terms held fixed.]
+[2–3 paragraph synthesis. What is this topic, why does it matter right now, who cares about it, what's the current state of discourse. Paragraphs 1–2 become the working draft of the article's intro, so write them as publishable prose. Paragraph 1: name the subject, state the core distinction or problem, and say what getting it wrong costs. Paragraph 2: why now: what changed, in one to three sentences, with at most one sourced figure (from the Authoritative Sources list). This paragraph feeds the intro, so write it as an argument, not a string of citations. Write both in the operator register (`standards/quality-bar.md` → *Operator register*): one claim per sentence, operational verbs, calibrated claims, defined terms held fixed.]
 
 ## Target Keyword Analysis
 - Primary keyword candidate: [e.g. "rag vs fine-tuning"]

@@ -54,6 +54,7 @@ Read the whole draft, then explain, in plain language, why this specific article
   - The same statistics, examples, or thesis repeated across sections in similar wording.
   - A core term defined differently in different places, or differently from the glossary.
   - Statistics attached to claims they don't really support.
+  - Sections that read as a string of citations instead of an argument: a figure per paragraph, sections opening on "According to…", headings named for reports (`standards/quality-bar.md` → *Argument over evidence*).
   - The strongest, most concrete material buried late in the piece.
   - Repeated sentence patterns, such as "not X, but Y," punchy one-line paragraph closers, "That's…/This is why…" openers, and tidy lists of three.
   - Sentences that announce structure instead of delivering content.
@@ -69,7 +70,7 @@ Rewrite the article to fix the problems you diagnosed. Fix causes, not symptoms.
 
 ### Locked (never change)
 
-- **Facts are locked.** Keep every number, date, statistic, name, title, and attribution exactly as written. Quotes stay word for word.
+- **Facts are locked.** Keep every number, date, statistic, name, title, and attribution you keep exactly as written. Quotes stay word for word. You may cut a statistic that decorates rather than carries the argument (log it under Cuts), but never alter one.
 - **No new material.** Don't add facts, examples, anecdotes, sources, or quotes. If the piece needs a real example it doesn't have, insert `[HUMAN INPUT: <what's needed>]`.
 - **Links are locked.** Keep every internal link at least once, and keep the CTA and its URL exactly.
 

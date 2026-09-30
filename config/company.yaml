@@ -150,7 +150,7 @@ competitors:
       names: [AuthMind]
     # Product-only: the rest of the company's domain stays citable.
     - name: Tenable Identity Exposure
-      url_prefixes: [tenable.com/products/identity-exposure]
+      url_prefixes: [tenable.com/products/identity-exposure, docs.tenable.com/identity-exposure]
       names: [Tenable Identity Exposure, Tenable.ad]
     - name: Microsoft Defender for Identity
       url_prefixes: [learn.microsoft.com/en-us/defender-for-identity]

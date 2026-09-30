@@ -7,7 +7,7 @@
 ## Structure
 1. **H1:** "[N] [Topic] Best Practices".
 2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block names and numbers the practices.
-3. Why it matters: the cost of getting it wrong, from sourced incident or breach data.
+3. Why it matters: the cost of getting it wrong, reasoned from how the failure happens; a documented incident or one sourced figure where it carries the point.
 4. One H2 per practice, 150–250 words, headed with the imperative: why it works, how to implement it, how to verify it, what it costs.
 5. Priority order: which three to do first.
 6. Anti-patterns: what to stop doing. Consistently the most-cited section of this format.

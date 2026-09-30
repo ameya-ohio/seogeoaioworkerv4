@@ -25,6 +25,9 @@ Reports per-check PASS / WARN / FAIL on:
   - style limits (scripts/style_checks.py): 'not X, but Y' contrasts, a claim
     restated 3+ times, hedge density (FAIL); lists of three, uniform sentence
     length, signpost openers (WARN)
+  - argument over evidence (scripts/style_checks.py, D57): statistics over
+    budget or stacked 3+ in a paragraph (FAIL); sections opening on a
+    statistic or source, H2s named for a report (WARN)
   - head-to-head competitors (scripts/competitor_checks.py, list in
     config/company.yaml competitors.head_to_head): linked, in the JSON-LD
     citation array, named in the intro / Key Takeaways / FAQ, or used as a
@@ -428,6 +431,7 @@ def audit(folder: Path) -> int:
         body_clean,
         count_words(body_clean),
         **({"takeaways": (takeaways.min, takeaways.max)} if takeaways else {}),
+        article_type=fmt_slug or "",
     )
     for f in style:
         (a.fail if f.level == "fail" else a.warn)(format_finding(f))

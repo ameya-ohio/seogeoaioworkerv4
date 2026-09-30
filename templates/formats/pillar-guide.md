@@ -11,7 +11,7 @@
 3. **Key Takeaways:** the count in page.md.
 4. **A table of contents** with jump links to each H2.
 5. **What [head term] is:** a full definition, even though a child Definition page exists. The pillar must stand on its own. Where a hub merged into this pillar (the brief says so), this section answers that hub's query completely.
-6. **Why it matters:** sourced, dated figures.
+6. **Why it matters:** the consequence, reasoned plainly, with the one or two sourced, dated figures that size it.
 7. **One H2 per sub-theme**, 5–7 of them, grouping the brief's child pages. Each answers its own question in its first sentence and runs 300–600 words with one table or list. It then points down to the child page with that page's head term as the anchor, in plain text until the child is live (D35).
 8. **How it works:** the mechanism as a numbered sequence.
 9. **A comparison table:** the head term against its neighbouring categories.

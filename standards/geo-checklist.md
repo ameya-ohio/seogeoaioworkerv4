@@ -16,6 +16,7 @@ The Editor walks this list explicitly.
 ### Statistics with sources
 - Every statistic in-text is paired with a named source ("according to a 2025 McKinsey survey of 800 enterprises…").
 - The source's authority matters more than the impressiveness of the number.
+- Use few: 3–5 load-bearing statistics per article (`quality-bar.md` → *Argument over evidence*). Engines cite a clear, well-reasoned explanation; a wall of borrowed figures gives them nothing of yours to cite.
 
 ### Direct answers near the top
 - The intro previews the thesis in plain language by paragraph two or three.
@@ -66,7 +67,7 @@ The Editor walks this list explicitly.
 ## Tier 3 — Co-citation and corroboration
 
 ### External corroboration
-- Link to authoritative sources that confirm the article's claims.
+- Link to authoritative sources that confirm the article's factual claims (statistics, incidents, standards). Reasoning and mechanism don't need a link.
 - AI engines weight articles cited *by* high-authority pages and articles that themselves cite high-authority pages. Be in the same neighborhood.
 
 ### Co-citation hygiene
@@ -98,7 +99,7 @@ The Editor walks this list explicitly.
 | ------------------ | ----------------------------- | ----------------------------------------------------- |
 | What's rewarded    | Click on a blue link          | Citation inside an AI answer                          |
 | Optimization unit  | Page                          | Sentence (the line that gets quoted)                  |
-| Authority signal   | Backlinks                     | Co-citation, entity richness, factual density         |
+| Authority signal   | Backlinks                     | Co-citation, entity richness, clear precise claims    |
 | Structure          | Skimmable sections            | Direct-answer-per-section + structured Q/A           |
 | Schema role        | Helps with rich results       | Helps engines ground the citation                    |
 | Banned             | Keyword stuffing              | AI-detectable phrasing                               |

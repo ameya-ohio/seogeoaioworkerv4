@@ -236,5 +236,55 @@ class HedgeAndWarnTests(unittest.TestCase):
         self.assertFalse([f for f in run(body) if "contrast" in f.message])
 
 
+# The intro paragraph 2 of the production "identity exposure vs vulnerabilities"
+# draft: four figures from three reports in five sentences (D57).
+STAT_PARADE = (
+    "Three findings from 2026 put the distinction in front of security teams. Verizon's 2026 Data Breach "
+    "Investigations Report recorded vulnerability exploitation overtaking credential abuse, 31% against 13%. "
+    "BeyondTrust's 2026 report found Elevation of Privilege flaws made up 40% of all Microsoft vulnerabilities. "
+    "A January 2026 ManageEngine survey found machine-to-human identity ratios above 100:1 at nearly half of organizations."
+)
+REASONED = (
+    "A kerberoastable account is dangerous in proportion to what it can reach. The KDC encrypts the service "
+    "ticket with the account's key, so anyone holding a ticket can attack the password offline. Fix the "
+    "accounts on paths to Tier 0 first."
+)
+
+
+class EvidenceTests(unittest.TestCase):
+    def _evidence(self, body, article_type=""):
+        return [f for f in sc.run_all(body, len(body.split()), article_type=article_type) if f.message.startswith("Evidence")]
+
+    def test_stat_parade_paragraph_fails(self):
+        found = [f for f in self._evidence(STAT_PARADE) if "stack" in f.message]
+        self.assertEqual(found[0].level, "fail")
+
+    def test_reasoned_prose_and_bare_numbers_pass(self):
+        body = REASONED + "\n\nEvent 4769 logs each request, and Tier 0 holds three kinds of asset."
+        self.assertFalse(self._evidence(body))
+
+    def test_budget_scales_with_length(self):
+        stats = "\n\n".join(f"Section {i} matters. A survey found {i + 10}% of teams agree." for i in range(8))
+        found = [f for f in self._evidence(stats) if "carry a statistic" in f.message]
+        self.assertEqual(found[0].level, "fail")
+        long = stats + "\n\n" + "\n\n".join([REASONED] * 60)
+        self.assertFalse([f for f in self._evidence(long) if "carry a statistic" in f.message])
+
+    def test_source_openers_and_report_headings_warn(self):
+        body = (
+            "## Credential theft keeps working\n\nAccording to Verizon, credential abuse led. " + REASONED
+            + "\n\n## The 2026 DBIR undercounts identity\n\nVerizon's 2026 report found that 22% began with stolen credentials."
+            + "\n\n## Report what an attacker can reach\n\n" + REASONED
+        )
+        found = self._evidence(body)
+        openers = [f for f in found if "open on a statistic" in f.message]
+        headings = [f for f in found if "built around a source" in f.message]
+        self.assertEqual(openers[0].level, "warn")
+        self.assertEqual(headings[0].snippets, ["The 2026 DBIR undercounts identity"])
+
+    def test_stats_formats_are_exempt(self):
+        self.assertFalse(self._evidence(STAT_PARADE, "stats-data"))
+
+
 if __name__ == "__main__":
     unittest.main()
