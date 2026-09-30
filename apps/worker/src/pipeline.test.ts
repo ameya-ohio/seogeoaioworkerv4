@@ -551,6 +551,8 @@ class FakeDirectLlm implements DirectLlm {
   badSchemaOnce = false;
   /** Writer drafts contain a banned phrase (edit pre-audit test). */
   dirtyDraft = false;
+  /** Edit and HDCP each write one internal link, with different anchors. */
+  anchors?: { edit: string; hdcp: string; url: string };
 
   async generate(req: DirectLlmRequest): Promise<DirectLlmResponse> {
     const phase = /You are running the (\w+) phase/.exec(req.prompt)?.[1] ?? "?";
@@ -571,6 +573,13 @@ class FakeDirectLlm implements DirectLlm {
         JSON.stringify({ pattern: "contrarian", subtitle: null, hero_image_alt: "Alt text for the header" }),
       ),
     };
+    if (this.anchors) {
+      const withLink = (anchor: string) =>
+        ARTICLE.replace("Body text about layers.", `Body text about layers, and [${anchor}](${this.anchors!.url}) covers the rest.`) +
+        "\n<!-- EDIT SUMMARY: no changes needed -->\n";
+      bodies["edit"] = file("article.md", withLink(this.anchors.edit));
+      bodies["hdcp"] = file("article.md", withLink(this.anchors.hdcp)) + "\n" + file("hdcp.json", HDCP_LOG);
+    }
     if (phase === "write" && this.dirtyDraft) {
       bodies["write"] = file("article.md", ARTICLE.replace("Body text about layers.", "Body text about the blast radius of layers.")) +
         "\n" + file("meta.json", JSON.stringify({ title: "t", slug: "pipeline-e2e" }));
@@ -715,6 +724,37 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
     const doc = await db.articles.findOne({ _id: article._id });
     expect([...(doc?.artifacts.article ?? "").matchAll(/```json-ld/g)]).toHaveLength(1);
     expect(doc?.stage).toBe("review");
+  }, 120_000);
+
+  it("re-records links and anchors after HDCP rewrites them (D53 registry, not a gate)", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "hdcp-anchors",
+      folder: "2026-09-14-hdcp-anchors",
+      topic: "Context engineering basics",
+      targetKeyword: "context engineering",
+    });
+    await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const claimed = await claimRun(db, "test-worker", 60_000);
+    const url = "https://www.testco.example/learn/context/layers/";
+    const llm = new FakeDirectLlm();
+    llm.anchors = { edit: "How to measure context layers", hdcp: "measuring context layers", url };
+    const seen: string[] = [];
+    const linkChecker: LinkChecker = {
+      check: async (body) => {
+        seen.push(body.includes("measuring context layers") ? "hdcp" : "edit");
+        return { ranAt: new Date(), results: body.includes(url) ? [{ url, status: "deferred" }] : [], missingCount: 0, deferredCount: 1 };
+      },
+    };
+    const direct = new DirectPhaseRunner(llm, fakeRenderer([]));
+    await runPipeline({ ...makeDeps(new FakeInvoker(), { cfg: directCfg(), direct }), linkChecker }, claimed!);
+
+    const doc = await db.articles.findOne({ _id: article._id });
+    expect(doc?.stage).toBe("review");
+    // The edit gate checked the Editor's anchors; the registry holds HDCP's.
+    expect(seen).toContain("edit");
+    expect(seen[seen.length - 1]).toBe("hdcp");
+    expect(doc?.internalLinks).toEqual([{ url, anchor: "measuring context layers" }]);
   }, 120_000);
 
   it("hands the Editor the edit gate's findings on the draft before attempt 1", async () => {

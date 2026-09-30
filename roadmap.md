@@ -335,8 +335,28 @@ Goal: every article carries four validated facets from brief to export, and each
   - the query-shaped verbatim opener fails;
   - "X vs Y" keywords are satisfied by both terms appearing naturally, which removes the incentive that produced the opener;
   - burn-cycles variants are banned.
-- [ ] 4F.9a **HELD (operator, 2026-09-29):** re-run P01-S01-A02 from write under the new checks (D53 links, stuffed opener, burn cycles); then the P01 pillar (full guide) and S01 hub (routing, 4–6 FAQs).
-- [ ] 4F.9b ~~Acceptance plan (superseded by the run above):~~ import the real pillar map, then run P01-S01-A02 "Identity Exposure vs Identity Risk" (Comparison (Concept), MOFU). Check the path `/learn/identity-exposure-management/identity-exposure/vs-identity-risk/`, a table near the top, 3 takeaways, 3–5 FAQs, the assessment CTA close, Article + FAQPage schema, and the export bundle. Then the P01 pillar (full guide) and the S01 hub (routing, 4–6 FAQs).
+- [x] 4F.9a **Re-run PASSED (2026-09-30).** P01-S01-A02 was re-run from write in production on `09f8e00`: write → edit (2 attempts) → **HDCP** → schema → design, about 22 min and $2.30 (HDCP 8 min, $1.28).
+  - The Editor's pre-audit caught "burning remediation cycles" under the new ban.
+  - HDCP found 26 issues (before H8/M14/L4, after H0/M0/L1), made 9 cuts and raised no flags. Its fact, coverage and link diffs all passed.
+    - A1: the Microsoft, Verizon and Unit 42 figures were duplicated.
+    - A3: both core terms were defined three ways each.
+    - B2: NIST was cited, then disclaimed.
+    - B1: a stat didn't support its claim.
+    - F2: a takeaway contradicted the body.
+    - A5: "three trends" delivered two.
+    - A6: the case study was buried; HDCP moved it into the first body section.
+    - About 12 "not X" contrasts, 5 aphoristic closers, and brochure copy.
+  - **Result:**
+    - the opener names the subject ("Identity exposure and identity risk are two terms security teams routinely collapse into one");
+    - 3 takeaways, each a mechanism or order of operations, with no repeated numbers;
+    - 6 internal links written into their sentences, one per target, all deferred (the targets are planned);
+    - 1,843 words;
+    - **the final audit after HDCP has 0 FAILs** (1 WARN: sentence rhythm 0.31);
+    - the Framer export downloads.
+  - **Found:** link checks and the anchor registry had been recorded at Edit, before HDCP rewrote the anchors. They're now re-recorded after HDCP as bookkeeping, not a gate (4F.14).
+- [x] 4F.14 **Links re-recorded after HDCP:** `recordLinks` (shared with the edit step) re-resolves the body's internal links after HDCP and stores `linkChecks` + `internalLinks`, so the site-wide anchor registry holds the anchors that ship. It never gates (D54). A test proves the registry holds HDCP's anchors, not the Editor's. Worker 50 tests.
+- [ ] 4F.9b Next pages: the P01 pillar (full guide) and the S01 hub (routing, 4–6 FAQs).
+- [ ] ~~Acceptance plan (superseded by the runs above):~~ import the real pillar map, then run P01-S01-A02 "Identity Exposure vs Identity Risk" (Comparison (Concept), MOFU). Check the path `/learn/identity-exposure-management/identity-exposure/vs-identity-risk/`, a table near the top, 3 takeaways, 3–5 FAQs, the assessment CTA close, Article + FAQPage schema, and the export bundle. Then the P01 pillar (full guide) and the S01 hub (routing, 4–6 FAQs).
 - [x] 4F.12 **Internal linking (D53):**
   - engine `links/inventory.ts` (inventory, markdown-link extraction, still-deferred resolution, articles waiting on a URL)
   - `LinkStatus` gains deferred / off_target / anchor_conflict
@@ -510,7 +530,9 @@ Newest first. Each session appends: what was decided, what was built, what's nex
   Ameya's bad examples fail on each problem and his rewrites pass, as a test fixture.
 - **Tests:** engine 352, worker 49, Python 69. Deployed to Railway.
 
-**Next up:** 4F.9a, the re-run of P01-S01-A02 from write, is held until Ameya says go. Then the P01 pillar and S01 hub, and 4F.10 operator inputs (fact sheets, redirects for the old `/resources/blog/` articles).
+- **Later the same session — HDCP (D54):** Ameya's Human Driven Content Protocol is built as Phase 4.5 (Opus 5.5) between Edit and Schema. Its own verification is the gate, and no edit gate runs after it. Its first real pass on P01-S01-A02 is recorded under 4F.9a. The anchor registry is now re-recorded after HDCP (4F.14).
+
+**Next up:** the P01 pillar and S01 hub (4F.9b), then 4F.10 operator inputs. (Updated 2026-09-30: 4F.9a re-run passed.) Then the P01 pillar and S01 hub, and 4F.10 operator inputs (fact sheets, redirects for the old `/resources/blog/` articles).
 
 ### Session 25 — 2026-09-29 (page formats, facets, /learn/ URLs, Framer export — Phase 4F)
 - **Input (Ameya):** `Saporo_Content_Type_Build_Specs.md` (24 formats for the 504-page pillar map), and the news that Saporo runs its site on Framer, not HubSpot. Every page, clusters included, lives under `/learn/<pillar>/<hub>/<page>/`, and the closing CTA is fixed per funnel stage.

@@ -186,22 +186,7 @@ async function runCodeStep(
     // Body citations check deterministically against the research-verified
     // set; internal links resolve against inventory + the live site.
     const citationReport = deps.citationVerifier.verifyArticleBody(body, article.citationChecks);
-    const linkReport = await deps.linkChecker.check(body, {
-      ...(article._id ? { articleId: article._id } : {}),
-      inventory,
-    });
-    // D53: this article's anchors join the site-wide registry, so the next
-    // article can't reuse one for a different page.
-    const hosts = new Set(linkReport.results.map((r) => r.url));
-    const internalLinks = extractMarkdownLinks(articleProse(body))
-      .filter((l) => hosts.has(l.url))
-      .map((l) => ({ url: l.url, anchor: l.anchor }));
-    if (article._id) {
-      await db.articles.updateOne(
-        { _id: article._id },
-        { $set: { linkChecks: linkReport, internalLinks, updatedAt: new Date() } },
-      );
-    }
+    const linkReport = await recordLinks(deps, article, body, inventory);
     return { report, citationReport, linkReport };
   }
   if (phase === "schema") {
@@ -275,6 +260,35 @@ async function materializeHdcpInputs(cfg: WorkerConfig, article: ArticleDoc): Pr
     ``,
   ];
   await writeFile(join(articleDir(cfg, article), "hdcp-inputs.md"), lines.join("\n"), "utf-8");
+}
+
+/**
+ * D53: resolve the body's internal links and record them — the link report
+ * Review shows, and the site-wide anchor registry the next article is checked
+ * against. The Edit gate uses the report; after HDCP it is re-recorded so the
+ * registry holds the anchors that actually ship (bookkeeping, never a gate).
+ */
+async function recordLinks(
+  deps: PipelineDeps,
+  article: ArticleDoc,
+  body: string,
+  inventory: LinkTarget[],
+): Promise<LinkReport> {
+  const linkReport = await deps.linkChecker.check(body, {
+    ...(article._id ? { articleId: article._id } : {}),
+    inventory,
+  });
+  const hosts = new Set(linkReport.results.map((r) => r.url));
+  const internalLinks = extractMarkdownLinks(articleProse(body))
+    .filter((l) => hosts.has(l.url))
+    .map((l) => ({ url: l.url, anchor: l.anchor }));
+  if (article._id) {
+    await deps.db.articles.updateOne(
+      { _id: article._id },
+      { $set: { linkChecks: linkReport, internalLinks, updatedAt: new Date() } },
+    );
+  }
+  return linkReport;
 }
 
 /** Store the HDCP log on the article and put each finding in the run log. */
@@ -446,7 +460,19 @@ async function executePhase(
         data: { phase, attempt },
       });
       await persistPhaseOutputs(deps.db, cfg, deps.storage, article, phase);
-      if (phase === "hdcp") await recordHdcp(deps, article, files.hdcpJson);
+      if (phase === "hdcp") {
+        await recordHdcp(deps, article, files.hdcpJson);
+        // HDCP rewrote the anchors: record the ones that ship. Not a gate
+        // (operator decision) — a problem shows in Review, it doesn't block.
+        if (files.article) {
+          const lr = await recordLinks(deps, article, files.article, page.inventory);
+          const flagged = lr.results.filter((r) => r.status === "missing" || r.status === "off_target" || r.status === "anchor_conflict");
+          deps.log(
+            `[${article.slug}/hdcp] links re-recorded: ${lr.results.length} internal, ${lr.deferredCount ?? 0} deferred` +
+              (flagged.length ? `, ${flagged.length} to review: ${flagged.map((r) => `${r.status} ${r.url}`).join("; ")}` : ""),
+          );
+        }
+      }
       if (phase === "outline" && files.outline) {
         // Which case study (or incident, or none) the article is anchored on.
         const anchor = /^##\s+Real-World Anchor\s*\n+([^\n]+)/im.exec(files.outline)?.[1]?.trim();
