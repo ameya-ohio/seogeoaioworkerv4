@@ -31,8 +31,9 @@ enqueue → runs (queued) ──claim/lease──▶ worker
   the queue resumes there, so completed phases never re-run (D58):
   - **Gate failure** — `failRun` requeues at the failing phase (one attempt).
   - **Worker crash** — the lease expires and another worker reclaims the run
-    at `currentPhase` (one attempt, so a phase that keeps killing its worker
-    still runs out of attempts).
+    at `currentPhase`. That costs an attempt, and a lost run with no attempts
+    left is failed instead of reclaimed (`failLostRuns`), so a phase that keeps
+    killing its worker can't loop.
   - **Deploy / SIGTERM** — the worker releases its in-flight pipeline runs
     back to `queued` at `currentPhase`, refunds the attempt, and exits
     (`releaseRun`). It doesn't wait for runs to finish: Railway kills the

@@ -1,6 +1,8 @@
 import { ObjectId } from "mongodb";
 import type { EngineDb } from "../db.js";
 import type { PhaseResult, RunDoc, WorkStage } from "../types.js";
+import { markFailed } from "./articles.js";
+import { emitEvent } from "./events.js";
 
 export interface EnqueueInput {
   companyId: string;
@@ -37,7 +39,8 @@ export async function enqueueRun(db: EngineDb, input: EnqueueInput): Promise<Run
  * A reclaimed run resumes at the phase it was in (`currentPhase`), not at the
  * stage it was first queued from: the phases before it already persisted their
  * artifacts, so re-running them only repeats paid work. A reclaim still counts
- * as an attempt, so a phase that keeps crashing its worker can't loop forever.
+ * as an attempt, and a lost run with no attempts left is failed instead of
+ * reclaimed (failLostRuns), so a phase that keeps crashing its worker can't loop.
  */
 export async function claimRun(
   db: EngineDb,
@@ -46,11 +49,12 @@ export async function claimRun(
 ): Promise<RunDoc | null> {
   const now = new Date();
   const leaseUntil = new Date(now.getTime() + leaseMs);
+  await failLostRuns(db, now);
   const res = await db.runs.findOneAndUpdate(
     {
       $or: [
         { status: "queued" },
-        { status: "running", leaseUntil: { $lt: now } },
+        { status: "running", leaseUntil: { $lt: now }, $expr: { $lt: ["$attempts", "$maxAttempts"] } },
       ],
     },
     [
@@ -73,6 +77,35 @@ export async function claimRun(
     { sort: { queuedAt: 1 }, returnDocument: "after" },
   );
   return res ?? null;
+}
+
+/**
+ * Fail runs whose worker died (lease expired) with no attempts left. Without
+ * this, claimRun would reclaim them forever: only failRun checked maxAttempts.
+ */
+export async function failLostRuns(db: EngineDb, now = new Date()): Promise<number> {
+  const lost = await db.runs
+    .find({ status: "running", leaseUntil: { $lt: now }, $expr: { $gte: ["$attempts", "$maxAttempts"] } })
+    .toArray();
+  let failed = 0;
+  for (const run of lost) {
+    const error = `worker lost the run during ${run.currentPhase ?? run.fromStage} with no attempts left (${run.attempts}/${run.maxAttempts})`;
+    const res = await db.runs.updateOne(
+      { _id: run._id, status: "running", leaseUntil: { $lt: now } },
+      { $set: { status: "failed", error, endedAt: now, updatedAt: now }, $unset: { leaseUntil: "", workerId: "" } },
+    );
+    if (res.modifiedCount !== 1 || !run._id) continue;
+    failed++;
+    await markFailed(db, run.articleId, error);
+    await emitEvent(db, {
+      companyId: run.companyId,
+      runId: run._id,
+      articleId: run.articleId,
+      type: "run.failed",
+      message: `Run failed permanently: ${error}`,
+    });
+  }
+  return failed;
 }
 
 /** Record the phase a run is starting, so a reclaim or release resumes there. */

@@ -85,6 +85,19 @@ describe("run queue", () => {
     await completeRun(db, run._id as ObjectId);
   });
 
+  it("a lost run with no attempts left is failed, not reclaimed", async () => {
+    const article = await makeArticle("q-lost-exhausted");
+    const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId, maxAttempts: 1 });
+    await claimRun(db, "worker-a", -1); // attempt 1 of 1, worker dies
+    await setRunPhase(db, run._id as ObjectId, "write");
+
+    expect(await claimRun(db, "worker-b", 60_000)).toBeNull();
+    const doc = await db.runs.findOne({ _id: run._id });
+    expect(doc?.status).toBe("failed");
+    expect(doc?.error).toMatch(/lost the run during write/);
+    expect((await db.articles.findOne({ _id: article._id }))?.stage).toBe("failed");
+  });
+
   it("a fresh claim keeps fromStage even when a stale currentPhase is present", async () => {
     const article = await makeArticle("q-fresh-claim");
     const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId, fromStage: "outline" });
