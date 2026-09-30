@@ -94,8 +94,8 @@ async function loadGateFiles(
   const schemaJson = await read("schema.json");
   if (schemaJson !== undefined) files.schemaJson = schemaJson;
   if (phase === "hdcp") {
-    const hdcpJson = await read("hdcp.json");
-    if (hdcpJson !== undefined) files.hdcpJson = hdcpJson;
+    const hdcpLog = await read("hdcp.md");
+    if (hdcpLog !== undefined) files.hdcpLog = hdcpLog;
   }
   if (phase === "design") files.headerPngExists = existsSync(join(dir, "header.png"));
   if (outputs.report) files.report = outputs.report;
@@ -238,15 +238,43 @@ async function runTechnicalReview(deps: PipelineDeps, article: ArticleDoc): Prom
 }
 
 /**
- * HDCP inputs: what the pipeline already knows about the draft, so the
- * agent starts from it (operator decision #4) — the technical review's
- * findings and the edit-stage audit's failures and warnings.
+ * HDCP inputs (agents/hdcp.md): the protocol's `cluster_context` — the hub,
+ * the pages that own sibling topics, the glossary when context/glossary.md
+ * exists — plus what the pipeline already knows about the draft (the
+ * technical review's findings and the edit-stage audit's failures/warnings).
  */
-async function materializeHdcpInputs(cfg: WorkerConfig, article: ArticleDoc): Promise<void> {
+async function materializeHdcpInputs(cfg: WorkerConfig, article: ArticleDoc, inventory: LinkTarget[]): Promise<void> {
   const tr = article.technicalReview;
   const checks = (article.audit?.checks ?? []).filter((c) => c.level !== "pass");
+  const role = article.facets?.pageRole ?? "";
+  const hubPath = role === "cluster" && article.trail && article.trail.length >= 2 ? article.trail[article.trail.length - 2]?.path : undefined;
+  const base = article.canonicalUrl && article.path && article.canonicalUrl.endsWith(article.path)
+    ? article.canonicalUrl.slice(0, -article.path.length)
+    : "";
+  const hubUrl = hubPath ? (inventory.find((t) => t.path === hubPath)?.url ?? (base ? `${base}${hubPath}` : hubPath)) : undefined;
+  const glossaryPath = join(cfg.repoRoot, "context", "glossary.md");
+  const glossary = existsSync(glossaryPath) ? (await readFile(glossaryPath, "utf-8")).trim() : "";
   const lines = [
-    `# What the pipeline already knows about this draft`,
+    `# HDCP inputs`,
+    ``,
+    `## Target`,
+    ``,
+    `- target_keyword: ${String(article.frontmatter?.["primary_keyword"] ?? article.targetKeyword ?? "")}`,
+    `- content_role: ${role || "(not set)"}`,
+    ``,
+    `## cluster_context`,
+    ``,
+    `### hub_url`,
+    ``,
+    hubUrl ?? (role === "cluster" ? "_unknown_" : `_none: this page is a ${role || "standalone page"}_`),
+    ``,
+    `### pages (the topic each one owns — summarize and link, don't retell)`,
+    ``,
+    ...(inventory.length ? inventory.map((t) => `- **${t.title}** — ${t.url}\n  - Owns: ${t.query}. ${t.covers}`) : [`_none_`]),
+    ``,
+    `### glossary`,
+    ``,
+    glossary || `_none: no context/glossary.md yet — hold each core term to one definition within the article_`,
     ``,
     `## Technical review (before the Editor)`,
     ``,
@@ -291,22 +319,17 @@ async function recordLinks(
   return linkReport;
 }
 
-/** Store the HDCP log on the article and put each finding in the run log. */
-async function recordHdcp(deps: PipelineDeps, article: ArticleDoc, hdcpJson: string | undefined): Promise<void> {
-  const { log } = parseHdcpLog(hdcpJson, deps.cfg.models.hdcp);
+/** Store the HDCP log on the article and put its changes, cuts and flags in the run log. */
+async function recordHdcp(deps: PipelineDeps, article: ArticleDoc, hdcpLog: string | undefined): Promise<void> {
+  const { log } = parseHdcpLog(hdcpLog, deps.cfg.models.hdcp);
   if (!log || !article._id) return;
   await deps.db.articles.updateOne({ _id: article._id }, { $set: { hdcp: log, updatedAt: new Date() } });
-  const v = log.verification;
-  deps.log(
-    `[${article.slug}/hdcp] ${log.findings.length} finding(s); before H${v.findings_before.high}/M${v.findings_before.medium}/L${v.findings_before.low}` +
-      ` → after H${v.findings_after.high}/M${v.findings_after.medium}/L${v.findings_after.low}` +
-      `; fact diff ${v.fact_diff_passed ?? "?"}, coverage ${v.coverage_diff_passed ?? "?"}, links ${v.link_diff_passed ?? "?"}` +
-      `; ${log.cuts.length} cut(s), ${log.flags.length} flag(s)`,
-  );
-  for (const f of log.findings) {
-    deps.log(`[${article.slug}/hdcp]   - ${f.code} ${f.severity} @ ${f.location}: "${f.excerpt}" — ${f.diagnosis.slice(0, 160)}`);
-  }
-  for (const flag of log.flags) deps.log(`[${article.slug}/hdcp]   flag: ${flag.slice(0, 200)}`);
+  const tag = `[${article.slug}/hdcp]`;
+  deps.log(`${tag} ${log.changes.length} change(s), ${log.cuts.length} cut(s), ${log.flags.length} flag(s)`);
+  deps.log(`${tag}   diagnosis: ${log.diagnosis.replace(/\s+/g, " ").slice(0, 400)}`);
+  for (const c of log.changes) deps.log(`${tag}   change: ${c.slice(0, 200)}`);
+  for (const c of log.cuts) deps.log(`${tag}   cut: ${c.content.slice(0, 140)}${c.reason ? ` — ${c.reason.slice(0, 100)}` : ""}`);
+  for (const f of log.flags) deps.log(`${tag}   flag: ${f.slice(0, 200)}`);
 }
 
 export interface PhaseOutcome {
@@ -337,7 +360,7 @@ async function executePhase(
   // chose for a page that had none reach the Writer.
   const page = await pageRulesFor(db, cfg, article);
   await materializePageSpec(cfg, article, page.rules, page.inventory);
-  if (phase === "hdcp") await materializeHdcpInputs(cfg, article);
+  if (phase === "hdcp") await materializeHdcpInputs(cfg, article, page.inventory);
 
   // Edit pre-audit: run the edit gate's own checks on the incoming draft so
   // attempt 1 starts with the exact problems a retry would have been given.
@@ -461,7 +484,7 @@ async function executePhase(
       });
       await persistPhaseOutputs(deps.db, cfg, deps.storage, article, phase);
       if (phase === "hdcp") {
-        await recordHdcp(deps, article, files.hdcpJson);
+        await recordHdcp(deps, article, files.hdcpLog);
         // HDCP rewrote the anchors: record the ones that ship. Not a gate
         // (operator decision) — a problem shows in Review, it doesn't block.
         if (files.article) {

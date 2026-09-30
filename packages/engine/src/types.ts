@@ -154,34 +154,20 @@ export interface ArticleArtifacts {
  * (a formats.json slug) sets the body, search intent is what the SERP
  * expects, and funnel sets the CTA and how much the company appears.
  */
-/** The HDCP agent's log (agents/hdcp.md → Log Format), as stored on the article. */
-export interface HdcpFinding {
-  code: string;
-  severity: "high" | "medium" | "low";
-  location: string;
-  excerpt: string;
-  diagnosis: string;
-  planned_fix: string;
-}
-
+/** The HDCP agent's log (agents/hdcp.md → Log format), as stored on the article. */
 export interface HdcpLog {
   ranAt: Date;
   model: string;
-  summary: string;
-  findings: HdcpFinding[];
+  /** Step 1: the prioritized, plain-language diagnosis. */
+  diagnosis: string;
+  /** "<change> — <which diagnosed problem it fixes>" */
+  changes: string[];
   cuts: { content: string; reason: string }[];
+  /** [HUMAN INPUT: …] flags (empty when the log says "none"). */
   flags: string[];
-  verification: {
-    findings_before: { high: number; medium: number; low: number };
-    findings_after: { high: number; medium: number; low: number };
-    fact_diff_passed?: boolean;
-    coverage_diff_passed?: boolean;
-    link_diff_passed?: boolean;
-    notes?: string;
-  };
   editorNotes: string;
-  /** The rest of the raw log (inventory, version…), kept verbatim. */
-  raw?: Record<string, unknown>;
+  /** The log exactly as returned. */
+  markdown: string;
 }
 
 export interface ArticleFacets {

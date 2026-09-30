@@ -262,25 +262,24 @@ Four layers cover most teams.
 Markdown, because models parse its structure directly.
 `;
 
-const HDCP_LOG = JSON.stringify({
-  agent: "hdcp",
-  version: "1.0",
-  summary: "One statistic repeated in the intro and the body; the case study sat at the end.",
-  findings: [
-    { code: "A1", severity: "high", location: "Intro", excerpt: "four layers", diagnosis: "stat repeated", planned_fix: "keep once" },
-    { code: "C2", severity: "medium", location: "Layers", excerpt: "Context beats cleverness.", diagnosis: "aphoristic closer", planned_fix: "end on the point" },
-  ],
-  cuts: [{ content: "second copy of the layer count", reason: "A1" }],
-  flags: [],
-  verification: {
-    findings_before: { high: 1, medium: 1, low: 0 },
-    findings_after: { high: 0, medium: 0, low: 0 },
-    fact_diff_passed: true,
-    coverage_diff_passed: true,
-    link_diff_passed: true,
-  },
-  editor_notes: "Cut the repeated layer count.",
-});
+const HDCP_LOG = `# HDCP log — pipeline-e2e — 2026-09-14
+
+## Diagnosis
+The layer count is stated in the intro and again in the body, and the case study sits at the end.
+
+## Changes made
+- Kept the layer count once, in the Layers section — repeated statistic
+- Ended the Layers section on the point instead of an aphorism — punchy closer
+
+## Cuts
+- Second copy of the layer count — duplicate
+
+## Flags
+- none
+
+## Editor notes
+Cut the repeated layer count.
+`;
 
 const SCHEMA = {
   "@context": "https://schema.org",
@@ -363,7 +362,7 @@ class FakeInvoker implements AgentInvoker {
         return ok();
       case "HDCP":
         // Rewrites in place (here: unchanged) and logs its own verification.
-        writeFileSync(join(dir, "hdcp.json"), HDCP_LOG);
+        writeFileSync(join(dir, "hdcp.md"), HDCP_LOG);
         return ok();
       case "Schema Builder": {
         writeFileSync(join(dir, "schema.json"), JSON.stringify(SCHEMA, null, 2));
@@ -495,11 +494,16 @@ describe("runPipeline end-to-end (fake agents, real gates + python checks)", () 
     });
     expect(doc?.frontmatter?.["article_type"]).toBe("deep-dive");
     // HDCP ran between Edit and Schema and its log is on the article.
-    expect(doc?.hdcp?.findings.map((f) => f.code)).toEqual(["A1", "C2"]);
-    expect(doc?.hdcp?.verification.findings_after.high).toBe(0);
+    expect(doc?.hdcp?.diagnosis).toContain("layer count");
+    expect(doc?.hdcp?.changes).toHaveLength(2);
+    expect(doc?.hdcp?.cuts).toEqual([{ content: "Second copy of the layer count", reason: "duplicate" }]);
+    expect(doc?.hdcp?.flags).toEqual([]);
     expect(doc?.hdcp?.editorNotes).toContain("layer count");
     expect(doc?.frontmatter?.["funnel"]).toBe("mofu");
     const pageMd = readFileSync(join(repoRoot, "articles", "2026-09-14-pipeline-e2e", "page.md"), "utf-8");
+    const hdcpInputs = readFileSync(join(repoRoot, "articles", "2026-09-14-pipeline-e2e", "hdcp-inputs.md"), "utf-8");
+    expect(hdcpInputs).toContain("## cluster_context");
+    expect(hdcpInputs).toContain("### glossary");
     expect(pageMd).toContain("Deep-dive (`deep-dive`)");
     expect(pageMd).toContain("Key Takeaways:** exactly 3");
 
@@ -566,7 +570,7 @@ class FakeDirectLlm implements DirectLlm {
         "\n" +
         file("meta.json", JSON.stringify({ title: "t", slug: "pipeline-e2e" })),
       edit: file("article.md", ARTICLE + "\n<!-- EDIT SUMMARY: no changes needed -->\n"),
-      hdcp: file("article.md", ARTICLE + "\n<!-- EDIT SUMMARY: no changes needed -->\n") + "\n" + file("hdcp.json", HDCP_LOG),
+      hdcp: file("article.md", ARTICLE + "\n<!-- EDIT SUMMARY: no changes needed -->\n") + "\n" + file("hdcp.md", HDCP_LOG),
       schema: file("schema.json", JSON.stringify(SCHEMA)),
       design: file(
         "header.json",
@@ -578,7 +582,7 @@ class FakeDirectLlm implements DirectLlm {
         ARTICLE.replace("Body text about layers.", `Body text about layers, and [${anchor}](${this.anchors!.url}) covers the rest.`) +
         "\n<!-- EDIT SUMMARY: no changes needed -->\n";
       bodies["edit"] = file("article.md", withLink(this.anchors.edit));
-      bodies["hdcp"] = file("article.md", withLink(this.anchors.hdcp)) + "\n" + file("hdcp.json", HDCP_LOG);
+      bodies["hdcp"] = file("article.md", withLink(this.anchors.hdcp)) + "\n" + file("hdcp.md", HDCP_LOG);
     }
     if (phase === "write" && this.dirtyDraft) {
       bodies["write"] = file("article.md", ARTICLE.replace("Body text about layers.", "Body text about the blast radius of layers.")) +

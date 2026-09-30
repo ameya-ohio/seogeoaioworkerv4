@@ -2,57 +2,60 @@ import { describe, expect, it } from "vitest";
 import { hdcpGate, parseHdcpLog, nextStage, WORK_STAGES } from "./index.js";
 
 const ARTICLE = `---\ntitle: "T"\nslug: "t"\n---\n\n# Title\n\n${"word ".repeat(80)}\n`;
-const log = (afterHigh: number, extra: Record<string, unknown> = {}) =>
-  JSON.stringify({
-    summary: "Two stats repeated; the case sat at the end.",
-    findings: [
-      { code: "A1", severity: "high", location: "Intro", excerpt: "82% of detections", diagnosis: "stat repeated", planned_fix: "keep once" },
-    ],
-    cuts: [{ content: "second 82%", reason: "A1" }],
-    flags: ["[VERIFY: NIST dimension naming]"],
-    verification: {
-      findings_before: { high: 1, medium: 2, low: 0 },
-      findings_after: { high: afterHigh, medium: 0, low: 0 },
-      fact_diff_passed: true,
-    },
-    editor_notes: "Cut the repeated stat.",
-    inventory: { facts: [] },
-    ...extra,
-  });
+const LOG = `# HDCP log — t — 2026-09-30
 
-describe("HDCP phase", () => {
+## Diagnosis
+The Microsoft and Verizon figures each appear twice in near-identical wording, and "identity risk" is defined
+three ways. The only real example, the bank engagement, sits in the second-to-last section.
+
+## Changes made
+- Kept each statistic once, in the section it supports — repeated evidence
+- Moved the bank engagement into the first body section — buried strongest material
+
+## Cuts
+- Second copy of the 22% Verizon figure — duplicate
+- Retelling of the definition — belongs to https://www.saporo.io/learn/identity-exposure-management/identity-exposure/
+
+## Flags
+- none
+
+## Editor notes
+Cut two repeated statistics. Confirm the bank case can lead the body.
+`;
+
+describe("HDCP phase (lean protocol)", () => {
   it("sits between edit and schema", () => {
     expect(WORK_STAGES.indexOf("hdcp")).toBe(WORK_STAGES.indexOf("edit") + 1);
     expect(nextStage("edit")).toBe("hdcp");
     expect(nextStage("hdcp")).toBe("schema");
   });
 
-  it("passes on the agent's own clean verification — no audit re-run", () => {
-    expect(hdcpGate({ article: ARTICLE, hdcpJson: log(0) }).ok).toBe(true);
+  it("parses the markdown log into the stored shape", () => {
+    const { log, problems } = parseHdcpLog(LOG, "claude-opus-5-5");
+    expect(problems).toEqual([]);
+    expect(log?.diagnosis).toMatch(/^The Microsoft and Verizon figures/);
+    expect(log?.changes).toHaveLength(2);
+    expect(log?.cuts[0]).toEqual({ content: "Second copy of the 22% Verizon figure", reason: "duplicate" });
+    expect(log?.cuts[1]?.reason).toContain("belongs to https://www.saporo.io/learn/");
+    expect(log?.flags).toEqual([]);
+    expect(log?.editorNotes).toContain("Confirm the bank case");
+    expect(log?.model).toBe("claude-opus-5-5");
   });
 
-  it("sends the agent back when its own verification leaves a High finding", () => {
-    const g = hdcpGate({ article: ARTICLE, hdcpJson: log(1) });
-    expect(g.ok).toBe(false);
-    expect(g.problems.join(" ")).toMatch(/revise again.*A1 Intro/);
+  it("passes a sound output — the agent's judgment is the check", () => {
+    expect(hdcpGate({ article: ARTICLE, hdcpLog: LOG }).ok).toBe(true);
   });
 
-  it("fails a missing or malformed log, and a dropped H1 or frontmatter", () => {
-    expect(hdcpGate({ article: ARTICLE }).problems.join(" ")).toContain("hdcp.json missing");
-    expect(hdcpGate({ article: ARTICLE, hdcpJson: "{nope" }).problems.join(" ")).toContain("not valid JSON");
-    expect(hdcpGate({ article: ARTICLE.replace("# Title", "Title"), hdcpJson: log(0) }).problems.join(" ")).toContain("H1");
-    expect(hdcpGate({ article: ARTICLE.replace('slug: "t"', 'slug: ""'), hdcpJson: log(0) }).problems.join(" ")).toContain("slug");
+  it("fails a missing diagnosis, no changes, a missing section, or notes left in the article", () => {
+    expect(hdcpGate({ article: ARTICLE }).problems.join(" ")).toContain("hdcp.md missing");
+    expect(hdcpGate({ article: ARTICLE, hdcpLog: LOG.replace(/## Diagnosis[\s\S]*?## Changes/, "## Diagnosis\n\n## Changes") }).problems.join(" ")).toContain("Diagnosis");
+    expect(hdcpGate({ article: ARTICLE, hdcpLog: LOG.replace(/^- Kept.*\n- Moved.*$/m, "") }).problems.join(" ")).toContain("Changes made");
+    expect(hdcpGate({ article: ARTICLE, hdcpLog: LOG.replace("## Flags", "## Notes") }).problems.join(" ")).toContain("Flags");
+    expect(hdcpGate({ article: ARTICLE + "\n## Editor notes\nCut things.\n", hdcpLog: LOG }).problems.join(" ")).toContain("belong in hdcp.md");
   });
 
-  it("parses the log into the stored shape, keeping the rest verbatim", () => {
-    const { log: parsed } = parseHdcpLog(log(0), "claude-opus-5-5");
-    expect(parsed).toMatchObject({
-      model: "claude-opus-5-5",
-      editorNotes: "Cut the repeated stat.",
-      flags: ["[VERIFY: NIST dimension naming]"],
-      verification: { findings_before: { high: 1, medium: 2, low: 0 }, fact_diff_passed: true },
-    });
-    expect(parsed?.findings[0]?.code).toBe("A1");
-    expect(parsed?.raw?.["inventory"]).toEqual({ facts: [] });
+  it("keeps real flags", () => {
+    const { log } = parseHdcpLog(LOG.replace("- none", "- [HUMAN INPUT: a real customer example of stale delegation]"));
+    expect(log?.flags).toEqual(["[HUMAN INPUT: a real customer example of stale delegation]"]);
   });
 });

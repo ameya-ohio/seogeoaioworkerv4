@@ -387,12 +387,12 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           inFolder("research-notes.md"),
         ]),
         task: [
-          `Run the Human Driven Content Protocol on ${inFolder("article.md")}: inventory, diagnose, log, rewrite, verify.`,
-          `Follow "How this runs in the pipeline" in your spec, including the operator's amendments.`,
-          `${inFolder("hdcp-inputs.md")} holds the technical review and audit findings; start from them.`,
-          `Return the complete rewritten article.md (frontmatter unchanged) and hdcp.json (the Log Format, with editor_notes).`,
+          `Run the Human Driven Content Protocol on ${inFolder("article.md")}: Step 1 Diagnose, then Step 2 Rewrite.`,
+          `Follow "How this runs in the pipeline" in your spec; where it differs from the protocol, it wins.`,
+          `${inFolder("hdcp-inputs.md")} holds target_keyword, content_role and cluster_context, plus the technical review and audit findings.`,
+          `Return the complete rewritten article.md (frontmatter unchanged, no editor notes in it) and hdcp.md (the Log format, with ## Editor notes).`,
         ].join("\n"),
-        outputs: ["article.md", "hdcp.json"],
+        outputs: ["article.md", "hdcp.md"],
       };
     case "schema":
       return {

@@ -7,7 +7,7 @@ import { ReviewEditor, type ReviewArticle } from "@/components/review-editor";
 import { hubspotStatus } from "@/lib/actions/content";
 import { publishTarget } from "@/lib/actions/publishing";
 import { getFormats } from "@/lib/db";
-import { CTA_SETTINGS_KEY, formatBySlug, mergeCtaSettings, resolvePageRules } from "@blogagent/engine";
+import { CTA_SETTINGS_KEY, formatBySlug, mergeCtaSettings, resolvePageRules, type ArticleDoc } from "@blogagent/engine";
 
 export const dynamic = "force-dynamic";
 
@@ -68,18 +68,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
         }
       : null,
     editPreAudit: doc.editPreAudit?.items ?? null,
-    hdcp: doc.hdcp
-      ? {
-          ranAt: new Date(doc.hdcp.ranAt).toISOString(),
-          model: doc.hdcp.model,
-          summary: doc.hdcp.summary,
-          findings: doc.hdcp.findings,
-          cuts: doc.hdcp.cuts,
-          flags: doc.hdcp.flags,
-          verification: doc.hdcp.verification,
-          editorNotes: doc.hdcp.editorNotes,
-        }
-      : null,
+    hdcp: doc.hdcp ? hdcpForReview(doc.hdcp) : null,
     hubspot: doc.hubspot?.postId
       ? {
           postId: doc.hubspot.postId,
@@ -134,4 +123,24 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
       <ReviewEditor key={slug} article={article} />
     </>
   );
+}
+
+/**
+ * The HDCP log for Review. Articles run before the lean protocol (D55) carry
+ * the v1 JSON log (summary + coded findings); map it onto the same panel.
+ */
+function hdcpForReview(h: NonNullable<ArticleDoc["hdcp"]>): NonNullable<ReviewArticle["hdcp"]> {
+  const legacy = h as unknown as {
+    summary?: string;
+    findings?: { code: string; location: string; diagnosis: string; planned_fix: string }[];
+  };
+  return {
+    ranAt: new Date(h.ranAt).toISOString(),
+    model: h.model,
+    diagnosis: h.diagnosis ?? legacy.summary ?? "",
+    changes: h.changes ?? (legacy.findings ?? []).map((f) => `${f.code} (${f.location}): ${f.planned_fix} — ${f.diagnosis}`),
+    cuts: h.cuts ?? [],
+    flags: h.flags ?? [],
+    editorNotes: h.editorNotes ?? "",
+  };
 }

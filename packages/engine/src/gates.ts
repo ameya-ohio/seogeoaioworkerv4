@@ -40,8 +40,8 @@ export interface GateFiles {
   page?: PageRules;
   /** Set when the article has no facets: the outline must supply them (validated here). */
   facetRegistry?: FormatRegistry;
-  /** HDCP: the agent's hdcp.json log (raw text). */
-  hdcpJson?: string;
+  /** HDCP: the agent's hdcp.md log (raw markdown). */
+  hdcpLog?: string;
 }
 
 function result(problems: string[]): GateResult {
@@ -317,73 +317,69 @@ export function editGate(files: GateFiles): GateResult {
   return result(problems);
 }
 
+/** One `## Heading` section of a markdown log (case-insensitive). */
+function logSection(md: string, title: string): string | undefined {
+  const m = new RegExp(`^##\\s+${title}\\s*$`, "im").exec(md);
+  if (!m) return undefined;
+  const rest = md.slice(m.index + m[0].length);
+  const next = /^##\s+\S/m.exec(rest);
+  return (next ? rest.slice(0, next.index) : rest).trim();
+}
+
+function bullets(section: string | undefined): string[] {
+  return (section ?? "")
+    .split("\n")
+    .map((l) => /^\s*[-*]\s+(.+)$/.exec(l)?.[1]?.trim() ?? "")
+    .filter(Boolean);
+}
+
 /**
- * Parse an hdcp.json log. Returns the log or the problems that make it
- * unusable. The agent's own verification is the check (operator decision,
- * 2026-09-29): no second audit runs after HDCP.
+ * Parse the HDCP agent's markdown log (agents/hdcp.md → Log format). Returns
+ * the log or the problems that make it unusable. The agent's own judgment is
+ * the check (operator decision, 2026-09-29): no audit runs after HDCP.
  */
 export function parseHdcpLog(
   text: string | undefined,
   model = "",
 ): { log?: import("./types.js").HdcpLog; problems: string[] } {
-  if (!text?.trim()) return { problems: ["hdcp.json missing — return the log as well as the article"] };
-  let raw: Record<string, unknown>;
-  try {
-    raw = JSON.parse(text) as Record<string, unknown>;
-  } catch {
-    return { problems: ["hdcp.json is not valid JSON"] };
-  }
+  if (!text?.trim()) return { problems: ["hdcp.md missing — return the log as well as the article"] };
   const problems: string[] = [];
-  const v = (raw["verification"] ?? {}) as Record<string, unknown>;
-  const counts = (x: unknown) => {
-    const o = (x ?? {}) as Record<string, unknown>;
-    return { high: Number(o["high"] ?? NaN), medium: Number(o["medium"] ?? 0), low: Number(o["low"] ?? 0) };
-  };
-  const before = counts(v["findings_before"]);
-  const after = counts(v["findings_after"]);
-  if (typeof raw["summary"] !== "string" || !String(raw["summary"]).trim()) problems.push("hdcp.json: `summary` missing");
-  if (!Array.isArray(raw["findings"])) problems.push("hdcp.json: `findings` must be an array");
-  if (!Number.isFinite(after.high)) problems.push("hdcp.json: `verification.findings_after.high` missing");
+  const diagnosis = logSection(text, "Diagnosis");
+  const changes = logSection(text, "Changes made");
+  const cuts = logSection(text, "Cuts");
+  const flags = logSection(text, "Flags");
+  const notes = logSection(text, "Editor notes");
+  if (!diagnosis) problems.push("hdcp.md: `## Diagnosis` is missing or empty — Step 1 comes first");
+  if (!bullets(changes).length) problems.push("hdcp.md: `## Changes made` lists no changes");
+  for (const [name, s] of [["Cuts", cuts], ["Flags", flags], ["Editor notes", notes]] as const) {
+    if (s === undefined) problems.push(`hdcp.md: \`## ${name}\` section missing`);
+  }
   if (problems.length) return { problems };
-  const str = (x: unknown) => (typeof x === "string" ? x : "");
-  const findings = (raw["findings"] as Record<string, unknown>[]).map((f) => ({
-    code: str(f["code"]),
-    severity: (["high", "medium", "low"].includes(str(f["severity"])) ? str(f["severity"]) : "low") as "high" | "medium" | "low",
-    location: str(f["location"]),
-    excerpt: str(f["excerpt"]),
-    diagnosis: str(f["diagnosis"]),
-    planned_fix: str(f["planned_fix"]),
-  }));
-  const { summary: _s, findings: _f, cuts, flags, verification: _v, editor_notes, ...rest } = raw;
+  const none = (s: string) => /^(none|n\/a|—|-)\.?$/i.test(s.trim());
   return {
     problems,
     log: {
       ranAt: new Date(),
       model,
-      summary: str(raw["summary"]),
-      findings,
-      cuts: Array.isArray(cuts)
-        ? (cuts as Record<string, unknown>[]).map((c) => ({ content: str(c["content"]), reason: str(c["reason"]) }))
-        : [],
-      flags: Array.isArray(flags) ? (flags as unknown[]).map(String) : [],
-      verification: {
-        findings_before: { high: Number.isFinite(before.high) ? before.high : 0, medium: before.medium, low: before.low },
-        findings_after: after,
-        ...(typeof v["fact_diff_passed"] === "boolean" ? { fact_diff_passed: v["fact_diff_passed"] as boolean } : {}),
-        ...(typeof v["coverage_diff_passed"] === "boolean" ? { coverage_diff_passed: v["coverage_diff_passed"] as boolean } : {}),
-        ...(typeof v["link_diff_passed"] === "boolean" ? { link_diff_passed: v["link_diff_passed"] as boolean } : {}),
-        ...(str(v["notes"]) ? { notes: str(v["notes"]) } : {}),
-      },
-      editorNotes: str(editor_notes),
-      raw: rest,
+      diagnosis: diagnosis as string,
+      changes: bullets(changes),
+      cuts: bullets(cuts)
+        .filter((c) => !none(c))
+        .map((c) => {
+          const at = c.search(/\s[—–-]\s/);
+          return at === -1 ? { content: c, reason: "" } : { content: c.slice(0, at).trim(), reason: c.slice(at + 3).trim() };
+        }),
+      flags: bullets(flags).filter((f) => !none(f)),
+      editorNotes: notes as string,
+      markdown: text,
     },
   };
 }
 
 /**
- * HDCP gate: the output exists and is sound, and the agent's OWN
- * verification reports no High-severity finding left. Deliberately no audit
- * re-run (operator decision): the model's verification is the check.
+ * HDCP gate: the output exists and is sound. Deliberately no audit re-run
+ * and no second opinion on the rewrite (operator decision): the agent's
+ * judgment is the check.
  */
 export function hdcpGate(files: GateFiles): GateResult {
   const problems: string[] = [];
@@ -397,15 +393,10 @@ export function hdcpGate(files: GateFiles): GateResult {
     if (String(frontmatter[key] ?? "").trim() === "") problems.push(`HDCP dropped frontmatter: ${key}`);
   }
   if (countHeadings(cleanBody(body), 1) !== 1) problems.push("HDCP output must keep exactly one H1");
-  const { log, problems: logProblems } = parseHdcpLog(files.hdcpJson);
-  problems.push(...logProblems);
-  if (log && log.verification.findings_after.high > 0) {
-    const open = log.findings.filter((f) => f.severity === "high").map((f) => `${f.code} ${f.location}: ${f.diagnosis}`);
-    problems.push(
-      `your own verification reports ${log.verification.findings_after.high} High-severity finding(s) still in the rewrite — revise again (Phase 4)` +
-        (open.length ? `: ${open.slice(0, 6).join("; ")}` : ""),
-    );
+  if (/^\s*#{1,2}\s+Editor notes\s*$/im.test(body)) {
+    problems.push("the editor notes belong in hdcp.md, not in the article");
   }
+  problems.push(...parseHdcpLog(files.hdcpLog).problems);
   return result(problems);
 }
 

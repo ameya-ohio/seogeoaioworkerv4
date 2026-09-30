@@ -45,22 +45,14 @@ export interface ReviewArticle {
   } | null;
   /** Everything handed to the Editor before its first attempt. */
   editPreAudit: string[] | null;
-  /** HDCP (agents/hdcp.md): diagnosis, cuts, flags and self-verification. */
+  /** HDCP (agents/hdcp.md): diagnosis, changes, cuts, flags and editor notes. */
   hdcp: {
     ranAt: string;
     model: string;
-    summary: string;
-    findings: { code: string; severity: string; location: string; excerpt: string; diagnosis: string; planned_fix: string }[];
+    diagnosis: string;
+    changes: string[];
     cuts: { content: string; reason: string }[];
     flags: string[];
-    verification: {
-      findings_before: { high: number; medium: number; low: number };
-      findings_after: { high: number; medium: number; low: number };
-      fact_diff_passed?: boolean;
-      coverage_diff_passed?: boolean;
-      link_diff_passed?: boolean;
-      notes?: string;
-    };
     editorNotes: string;
   } | null;
   /** HubSpot post for this article (roadmap Phase 5), once sent. */
@@ -623,34 +615,9 @@ function FacetsPanel({
   );
 }
 
-const SEVERITY_STYLE: Record<string, string> = {
-  high: "bg-red-50 text-red-700",
-  medium: "bg-amber-50 text-amber-700",
-  low: "bg-slate-100 text-slate-600",
-};
-
-const HDCP_GROUP: Record<string, string> = {
-  A: "Structure",
-  B: "Evidence",
-  C: "Sentence level",
-  D: "SEO template",
-  E: "Authenticity",
-  F: "Accuracy",
-};
-
 function HdcpPanel({ hdcp, markdown }: { hdcp: ReviewArticle["hdcp"]; markdown: string }) {
   if (!hdcp) return <p className="text-xs text-slate-500">HDCP hasn't run on this article.</p>;
-  const current = normalizeQuote(markdown);
   const openFlags = markdown.match(/\[(?:NEEDS SOURCE|HUMAN INPUT|VERIFY):[^\]]*\]/g) ?? [];
-  const v = hdcp.verification;
-  const counts = (c: { high: number; medium: number; low: number }) => `H${c.high} · M${c.medium} · L${c.low}`;
-  const diff = (label: string, ok?: boolean) =>
-    ok === undefined ? null : (
-      <span className={cls("rounded px-1.5 py-0.5", ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700")}>
-        {label} {ok ? "passed" : "failed"}
-      </span>
-    );
-  const groups = [...new Set(hdcp.findings.map((f) => f.code.charAt(0)))].sort();
   return (
     <div className="space-y-5 text-xs">
       <div>
@@ -658,20 +625,7 @@ function HdcpPanel({ hdcp, markdown }: { hdcp: ReviewArticle["hdcp"]; markdown: 
         <p className="mb-2 text-slate-500">
           {hdcp.model} · {new Date(hdcp.ranAt).toLocaleString()}
         </p>
-        <p className="text-sm text-slate-700">{hdcp.summary}</p>
-      </div>
-      <div className="rounded-md border border-slate-200 p-3">
-        <p className="mb-2 font-semibold uppercase tracking-wide text-slate-400">Self-verification</p>
-        <p className="mb-2 text-slate-700">
-          Findings before <span className="font-mono">{counts(v.findings_before)}</span> → after{" "}
-          <span className="font-mono">{counts(v.findings_after)}</span>
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {diff("fact diff", v.fact_diff_passed)}
-          {diff("coverage", v.coverage_diff_passed)}
-          {diff("links", v.link_diff_passed)}
-        </div>
-        {v.notes && <p className="mt-2 text-slate-500">{v.notes}</p>}
+        <p className="whitespace-pre-line text-sm text-slate-700">{hdcp.diagnosis}</p>
       </div>
       {(hdcp.editorNotes || openFlags.length > 0) && (
         <div className="rounded-md border border-amber-200 bg-amber-50/50 p-3">
@@ -691,43 +645,16 @@ function HdcpPanel({ hdcp, markdown }: { hdcp: ReviewArticle["hdcp"]; markdown: 
           )}
         </div>
       )}
-      {groups.map((g) => (
-        <div key={g}>
-          <p className="mb-2 font-semibold uppercase tracking-wide text-slate-400">
-            {HDCP_GROUP[g] ?? g} ({hdcp.findings.filter((f) => f.code.startsWith(g)).length})
-          </p>
-          <ul className="space-y-2">
-            {hdcp.findings
-              .filter((f) => f.code.startsWith(g))
-              .map((f, i) => {
-                const open = f.excerpt ? current.includes(normalizeQuote(f.excerpt)) : false;
-                return (
-                  <li key={i} className="rounded-md border border-slate-200 p-3">
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-1.5">
-                        <span className="font-mono font-semibold text-slate-700">{f.code}</span>
-                        <span className={cls("rounded-full px-1.5 py-0.5", SEVERITY_STYLE[f.severity] ?? SEVERITY_STYLE["low"])}>
-                          {f.severity}
-                        </span>
-                        <span className="text-slate-500">{f.location}</span>
-                      </span>
-                      {f.excerpt && (
-                        <span className={cls("font-medium", open ? "text-amber-700" : "text-emerald-700")}>
-                          {open ? "still in article" : "changed"}
-                        </span>
-                      )}
-                    </div>
-                    {f.excerpt && (
-                      <blockquote className="mb-1 border-l-2 border-slate-300 pl-2 italic text-slate-600">{f.excerpt}</blockquote>
-                    )}
-                    <p className="text-slate-700">{f.diagnosis}</p>
-                    <p className="mt-1 text-slate-500">Fix: {f.planned_fix}</p>
-                  </li>
-                );
-              })}
+      {hdcp.changes.length > 0 && (
+        <div>
+          <p className="mb-2 font-semibold uppercase tracking-wide text-slate-400">Changes made ({hdcp.changes.length})</p>
+          <ul className="list-disc space-y-1 pl-4 text-slate-700">
+            {hdcp.changes.map((c, i) => (
+              <li key={i}>{c}</li>
+            ))}
           </ul>
         </div>
-      ))}
+      )}
       {hdcp.cuts.length > 0 && (
         <div>
           <p className="mb-2 font-semibold uppercase tracking-wide text-slate-400">Cut ({hdcp.cuts.length})</p>
