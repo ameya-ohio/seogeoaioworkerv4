@@ -317,7 +317,24 @@ Goal: every article carries four validated facets from brief to export, and each
 - [x] 4F.6 **Framer export + Mark live (M6, `59a51b7`):** `export/framer.ts`, zip writer, `/api/export/<slug>`, Mark live with URL check, sign-off gate; LiveLinkChecker resolves by path and live URL.
 - [x] 4F.7 **Guardrails (M7, `52a3665`):** structured plan-item holds (signoff / fact_sheet / dataset / not_producible); the scheduler skips held items and releases met ones each tick; `context/sales/proof-points.md` + `scripts/proof_points.py`.
 - [x] 4F.8 **UI (M8, `b3bfe6a`):** facet badges on plans, board, review queue and articles; Article Type mapping in import; inline path edits and hold badges; a Facets tab in Review.
-- [ ] 4F.9 **Acceptance (also closes 4Q.8):** import the real pillar map, then run P01-S01-A02 "Identity Exposure vs Identity Risk" (Comparison (Concept), MOFU). Check the path `/learn/identity-exposure-management/identity-exposure/vs-identity-risk/`, a table near the top, 3 takeaways, 3–5 FAQs, the assessment CTA close, Article + FAQPage schema, and the export bundle. Then the P01 pillar (full guide) and the S01 hub (routing, 4–6 FAQs).
+- [x] 4F.9 **Acceptance — PASSED 2026-09-29 (also closes 4Q.8).** The real map was imported to production: 503 planned articles, 0 blockers, P01-S02-A01 merged into its pillar. The 9 older P01-S01 articles were renamed to `-v1` to free their slugs. Sharpening was left off and no cadence set. P01-S01-A02 was sent alone and ran in 17 min for about $2.50, with the Editor passing on attempt 2. Results in Review:
+  - path and canonical `…/learn/identity-exposure-management/identity-exposure/vs-identity-risk/`
+  - facets stamped
+  - Home › Learn › Pillar › Hub › Page breadcrumbs
+  - comparison table in the first body section
+  - 3 takeaways
+  - 4 FAQs, none repeating a heading, all mirrored in FAQPage
+  - the close links the MOFU assessment CTA
+  - Article + FAQPage + 2 DefinedTerms, no BlogPosting
+  - banking case study as the anchor
+  - the Framer export has all 6 files
+
+  **Found:** a keyword-stuffed opener ("Identity exposure vs identity risk is a distinction…"), "burning cycles" (operator-register rule 3), and 2,073 words against a 1,200–1,800 band. The first two are now machine FAILs:
+  - the query-shaped verbatim opener fails;
+  - "X vs Y" keywords are satisfied by both terms appearing naturally, which removes the incentive that produced the opener;
+  - burn-cycles variants are banned.
+- [ ] 4F.9a Re-run P01-S01-A02 from write under the new checks; then the P01 pillar (full guide) and S01 hub (routing, 4–6 FAQs).
+- [ ] 4F.9b ~~Acceptance plan (superseded by the run above):~~ import the real pillar map, then run P01-S01-A02 "Identity Exposure vs Identity Risk" (Comparison (Concept), MOFU). Check the path `/learn/identity-exposure-management/identity-exposure/vs-identity-risk/`, a table near the top, 3 takeaways, 3–5 FAQs, the assessment CTA close, Article + FAQPage schema, and the export bundle. Then the P01 pillar (full guide) and the S01 hub (routing, 4–6 FAQs).
 - [ ] 4F.10 **Operator inputs:** fill the methodology column in `context/sales/proof-points.md` and set `Citable: yes`; add fact sheets for Solution / Use Case / Integration pages; decide redirects for the 4 existing `/resources/blog/` articles.
 - [ ] 4F.11 Follow-ups: keyword-library facet columns (keywords don't carry facets until cluster accept sets them); 5.5 `pendingLinks` backfill on Mark live; the D43 link predictor on reserved paths.
 

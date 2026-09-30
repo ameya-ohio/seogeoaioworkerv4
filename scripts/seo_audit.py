@@ -209,6 +209,20 @@ def strip_html_comments(body: str) -> str:
     return re.sub(r"<!--[\s\S]*?-->", "", body)
 
 
+_QUERY_SHAPED = re.compile(r"\b(?:vs\.?|versus)\b|^(?:how to|what is|what are|best|top|why)\b", re.I)
+
+
+def query_shaped_opener(body: str, primary_kw: str) -> str | None:
+    """The intro's first sentence, when it opens with a query-shaped keyword verbatim."""
+    kw = primary_kw.lower().replace("-", " ").strip()
+    if not kw or not _QUERY_SHAPED.search(kw):
+        return None
+    text = re.sub(r"^#\s+.+$", "", body.split("\n## ", 1)[0], flags=re.M)
+    text = " ".join(re.sub(r"[*_`>\[\]]", "", text).split())
+    first = re.split(r"(?<=[.!?])\s", text, maxsplit=1)[0] if text else ""
+    return first[:120] if first.lower().replace("-", " ").startswith(kw) else None
+
+
 def audit(folder: Path) -> int:
     a = Auditor()
 
@@ -301,11 +315,27 @@ def audit(folder: Path) -> int:
         # in the joined output. Compare both forms.
         intro_no_hyphen = intro.replace("-", " ")
         kw_no_hyphen = primary_kw.replace("-", " ")
+        # A comparison query ("x vs y") is satisfied by both terms appearing
+        # naturally: "Identity exposure and identity risk are…" (D32). Requiring
+        # the literal query is what pushed Writers into stuffed openers.
+        sides = [s.strip() for s in re.split(r"\s+(?:vs\.?|versus)\s+", kw_no_hyphen) if s.strip()]
+        both_sides = len(sides) == 2 and all(s in intro_no_hyphen for s in sides)
         if primary_kw in intro or kw_no_hyphen in intro_no_hyphen:
             a.ok(f"Primary keyword in first 100 words: {primary_kw!r}")
+        elif both_sides:
+            a.ok(f"Primary keyword in first 100 words as a natural comparison: {sides[0]!r} and {sides[1]!r}")
         else:
             a.fail(
                 f"Primary keyword {primary_kw!r} NOT found in first 100 words of body."
+            )
+        opener = query_shaped_opener(body_clean, primary_kw)
+        if opener:
+            a.fail(
+                "Keyword-stuffed opener (D32): the first sentence opens with the search query "
+                f"{primary_kw!r} verbatim — open with the subject as a person would write it "
+                f"(e.g. \"{sides[0].capitalize()} and {sides[1]} are…\")" if len(sides) == 2 else
+                "Keyword-stuffed opener (D32): the first sentence opens with the search query "
+                f"{primary_kw!r} verbatim — open with the subject as a person would write it: …{opener}…"
             )
 
     if re.search(r"^##\s+key takeaways", body_clean, flags=re.IGNORECASE | re.MULTILINE):

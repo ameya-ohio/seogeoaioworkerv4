@@ -60,7 +60,7 @@ Walk every item. Specifically:
 - **Meta description** 140–160 chars; primary keyword present; clear value prop; soft CTA.
 - **Slug** short, lowercase, hyphenated, keyword-focused.
 - **H1** unique, matches search intent.
-- **Primary keyword in first 100 words, naturally** — confirm by counting words from the start of the body (not the frontmatter). The inclusion must read as a sentence a person would write; if the lede contorts to fit the phrase (D32's stuffed-lede failure), rewrite the lede rather than forcing the keyword. A close natural variant beats an awkward exact match.
+- **Primary keyword in first 100 words, naturally** — confirm by counting words from the start of the body (not the frontmatter). The inclusion must read as a sentence a person would write; if the lede contorts to fit the phrase (D32's stuffed-lede failure), rewrite the lede rather than forcing the keyword. A close natural variant beats an awkward exact match: for an "X vs Y" keyword, both terms appearing naturally passes the audit, and a first sentence that opens with the query verbatim fails it.
 - **Keyword density** natural; semantic richness over repetition. No stuffing.
 - **External authoritative links**: at least 3.
 - **Internal link placeholders**: at least 1 if no live internal-site context exists.

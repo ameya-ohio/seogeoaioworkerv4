@@ -68,5 +68,10 @@ delve
 leverage
 utilize
 navigate
-
-
+# Operator register rule 3 (D44): operational verbs, not dramatic ones.
+burn cycles
+burning cycles
+burns cycles
+burn remediation cycles
+burning remediation cycles
+burn through cycles
