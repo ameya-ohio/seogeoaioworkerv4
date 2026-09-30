@@ -6,7 +6,7 @@
 
 ## Structure
 1. **H1:** "[N] [Topic] Examples".
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block names the example categories.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60); paragraph 1 carries the answer block below within its first 60–80 words, and paragraph 2 says why it matters now: a change or a consequence that supports the thesis, with at most one figure and only one the argument turns on. The answer block names the example categories.
 3. A quick-reference table: example, environment, mechanism, impact, fix.
 4. One H2 per example, 200–350 words, same sub-structure each time: the scenario, the technical mechanism, why it happens, what an attacker gains, how to detect it, how to fix it. Group by environment (Active Directory, Entra ID, AWS IAM, Okta, hybrid).
 5. Patterns across the examples, then how to find these in your own environment.

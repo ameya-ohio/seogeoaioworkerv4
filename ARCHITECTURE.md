@@ -169,25 +169,23 @@ This is the core flow. Every article runs all 6 phases in order, no skipping, wi
 
 **Spec:** `agents/researcher.md`.
 
-**Inputs:** user prompt + (optional) topic/keyword + tools (`WebSearch`, `WebFetch`).
+**Inputs:** `research-brief.md` (D60), written by the worker (or by the orchestrator in terminal mode) before research: the page's facets and required coverage, the brief's evidence requirements and company position, the neighbouring pages that own their own topics, and the **research playbook** for the format's research mode, plus role/funnel/intent modifiers. Tools: `WebSearch`, `WebFetch`.
+
+**The quiver (D60).** `standards/formats.json` maps each of the 23 article types to one of nine research modes (procedure, mechanism, catalog, comparison, measurement, argument, data, pillar, commercial). Each mode has a playbook in `templates/research/<mode>.md` saying what the page is built from, which sources to prefer, what not to collect, what shape candidate positions take, how many figures the mode usually needs, and when research is done. `templates/research/modifiers.md` adjusts it for the page's role (a cluster goes deep on one question and skips what siblings own; a hub maps its children; a pillar goes broad), funnel and intent. Playbooks are Admin-editable like the format guides.
 
 **Process:**
-1. Parse the user's request for topic, outline, keywords, audience hints.
-2. Map the topic landscape via 3–5 broad searches.
-3. Identify the top 10 ranking pages for the target keyword; document each one's angle and what it misses.
-4. Find authoritative primary sources (research, gov data, peer-reviewed studies, official docs).
-5. Map what AI engines (Google AI Overviews, Perplexity, ChatGPT) currently surface for adjacent queries.
-6. List key entities (people, orgs, products, concepts) with Wikipedia/Wikidata URLs.
-7. Capture every citable statistic, quote, case study with full provenance.
-8. Document debates and counterpoints.
-9. Mine PAA / Reddit / Quora for questions people are actually asking.
-10. Identify content gaps — what is missing that this article could own.
+1. Read the research brief and scope: the page's question, and what it will not research because another page owns it.
+2. Gather the playbook's **Subject Material**: the procedure with its commands, the mechanism, the example bank, the dimensions, the measures, each with its specifics and source (or `practice`).
+3. Check what ranks, briefly: what each top result gets wrong or leaves out about the subject.
+4. Form 2–3 **candidate positions** from the material, each with its support, strongest objection, and what the article would argue.
+5. Bank up to 8 attributed claims, each tagged with the position it supports and passing the relevance test (would it change what this page's reader does?).
+6. Entities, questions, debates, content gaps.
 
-**Output:** `research-notes.md` in the article folder, in the exact 11-section structure spec'd in `agents/researcher.md`.
+**Output:** `research-notes.md` in the exact structure spec'd in `agents/researcher.md` (Topic Summary as a briefing to the Strategist, not intro copy; Subject Material; Candidate Positions; the evidence bank; the rest).
 
-**Gate:** notes exist; ≥ 8 cited sources; at least one named stat, one named entity, one content gap.
+**Gate:** notes exist with all sections; ≥ 8 cited sources; substantive Subject Material; ≥ 2 candidate positions; every banked figure or quote tagged `supports: P<n>` (or `None needed:`); one named entity, one content gap; D34 live verification; no competitor sources.
 
-**Why so structured:** the Strategist (Phase 2) consumes this output directly. If Phase 1 is unstructured, Phase 2 can't make sharp decisions. The 11-section template is the contract between Phase 1 and Phase 2.
+**Why so structured:** before D60 the Researcher got only a topic and keyword, so every page ran the same SEO-landscape recipe. A how-to got threat-report statistics instead of commands, an examples page got single-environment mechanisms for a cross-environment thesis, and every cluster page re-researched the hub's definition. Nothing downstream can add what research didn't find, so research has to know what the page is.
 
 ### Phase 2 — Strategist
 
@@ -195,8 +193,9 @@ This is the core flow. Every article runs all 6 phases in order, no skipping, wi
 
 **Inputs:** `research-notes.md` + all `standards/*.md` + relevant `context/` folders.
 
-**Decisions made (with reasoning):**
-1. **Angle.** One-sentence "Unlike [the SERP], this article does [X] by [Y]" wedge.
+**Decisions made (with reasoning), argument first (D60):**
+0. **Thesis and Argument Spine.** The thesis from the research's Candidate Positions, broken into 3–5 claims, each with its proof (mechanism, banked evidence, anchor or reasoning). Every body H2 names the claim it advances (or the format requirement it serves), its own claim and its proof; procedure steps carry the exact `Action:`, examples their `Specifics:`. 3–5 banked statistics are assigned to spine claims; the rest are dropped.
+1. **Angle.** A claim about the subject the top results don't make ("The top results treat X as Y; this article shows Z, because [mechanism]"). A format edge is noted separately.
 2. **Keywords.** Primary + 3–7 secondary.
 3. **Search intent.** informational / commercial / transactional / navigational.
 4. **Word count target.** Based on SERP median; ±15% allowed per `standards/seo-checklist.md`.
@@ -206,13 +205,13 @@ This is the core flow. Every article runs all 6 phases in order, no skipping, wi
 8. **Internal link opportunities.** Real URLs or placeholders.
 9. **External citations to use.** Specific sources from Phase 1 to embed inline.
 10. **Quotable sound bites.** 3–5 sentences the article should contain.
-11. **Intro strategy.** Built from the research Topic Summary paragraphs 1–2: substance paragraph (distinction, definitions, cost) + why-now paragraph (sourced drivers). No hook-shaped openers.
+11. **Intro strategy.** Built from the thesis: paragraph 1 states the problem the thesis answers, in its terms; paragraph 2 says why it matters now, with at most one figure assigned to a spine claim. No hook-shaped openers.
 12. **Closing/CTA.** One specific next step.
 13. **H2/H3 outline.** Full section-by-section outline with word-count budgets per section.
 
 **Output:** `outline.md` in the article folder.
 
-**Gate:** outline exists with primary keyword chosen, 3–7 FAQ questions, ≥4 H2 sections, all entities + citations listed by name.
+**Gate:** outline exists with primary keyword chosen, FAQ count in the page's range, ≥4 H2 sections, a real thesis, a 3–5 claim Argument Spine every claim of which an H2 advances, `Advances:`/`Claim:` on every body H2 (at least half advancing a spine claim), each citation tied to a spine claim or marked "mechanism", and the procedure/catalog requirements.
 
 **Why so opinionated:** the Writer follows the outline mechanically. If the outline says "highlight X stat in this section, link to Y here, define term Z," the Writer does that. Strategist makes decisions so Writer doesn't have to.
 
@@ -222,7 +221,7 @@ This is the core flow. Every article runs all 6 phases in order, no skipping, wi
 
 **Inputs:** `outline.md` + `research-notes.md` + `context/author-style/` (default voice rules if empty) + `context/brand/`.
 
-**Process:** mechanical execution of the outline. Frontmatter complete. H1 = title. Intro (2–3 paragraphs, drafted from the research Topic Summary paragraphs 1–2). `## Key Takeaways` block (exactly 3 standalone-citable bullets). H2/H3 sections in order, each with direct-answer-first paragraph and inline citations. FAQ section with H3 per question. Bold + define key terms inline (`**Term** is X`). Closing/CTA.
+**Process:** mechanical execution of the outline. Frontmatter complete. H1 = title. Intro (2–3 paragraphs, drafted from the outline's Intro Strategy, which starts from the thesis). `## Key Takeaways` block (exactly 3 standalone-citable bullets). H2/H3 sections in order, each with direct-answer-first paragraph and inline citations. FAQ section with H3 per question. Bold + define key terms inline (`**Term** is X`). Closing/CTA.
 
 **Voice rules (defaults until `context/author-style/` is populated):**
 - Confident, expert, helpful; not breezy, not stiff.

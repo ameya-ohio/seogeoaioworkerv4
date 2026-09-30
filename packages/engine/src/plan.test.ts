@@ -66,7 +66,11 @@ beforeEach(async () => {
   ]);
 });
 
-async function seedPlan(): Promise<PlanDoc> {
+/**
+ * `enriched` (default) marks every brief enriched, as production has them
+ * before a build: D60 builds wait on pending briefs.
+ */
+async function seedPlan(opts: { enriched?: boolean } = {}): Promise<PlanDoc> {
   const wb = await readWorkbook(
     readFileSync(join(here, "plan", "__fixtures__", "sample-plan.xlsx")),
     "sample-plan.xlsx",
@@ -88,6 +92,9 @@ async function seedPlan(): Promise<PlanDoc> {
     items: analysis.items,
     report: analysis.report,
   });
+  if (opts.enriched !== false) {
+    await db.planItems.updateMany({ planId: plan._id as ObjectId }, { $set: { enrichment: "done" } });
+  }
   return plan;
 }
 
@@ -159,7 +166,7 @@ describe("commitPlan", () => {
   });
 
   it("counts items by status and enrichment state", async () => {
-    const plan = await seedPlan();
+    const plan = await seedPlan({ enriched: false });
     const counts = await planCounts(db, plan._id as ObjectId);
     expect(counts.total).toBe(9);
     expect(counts.byStatus.planned).toBe(9);
@@ -386,6 +393,16 @@ describe("runScheduleTick", () => {
     expect((await tick()).status).toBe("no_work");
   });
 
+  it("waits for pending briefs and queues their enrichment (D60)", async () => {
+    const plan = await seedPlan({ enriched: false });
+    const planId = plan._id as ObjectId;
+    await activeSchedule(planId);
+    const out = await tick();
+    expect(out.enqueued).toHaveLength(0);
+    expect(out.skipped.some((s) => s.reason === "awaiting_enrichment")).toBe(true);
+    expect((await db.plans.findOne({ _id: planId }))?.status).toBe("enriching");
+  });
+
   it("enqueues the first ready item in sequence order", async () => {
     const plan = await seedPlan();
     await activeSchedule(plan._id as ObjectId);
@@ -570,6 +587,17 @@ describe("builds — bottom-up, by subtopic", () => {
     expect(summary.subtopics[0]).toMatchObject({ clusters: 2, hub: true });
     expect(summary.pillarPages.map((p) => p.pillarId)).toEqual(["P01"]);
     expect(await db.planItems.countDocuments({ planId, buildQueuedAt: { $exists: true } })).toBe(4);
+  });
+
+  it("queues brief enrichment with the build, and builds once briefs are enriched (D60)", async () => {
+    const plan = await seedPlan({ enriched: false });
+    const planId = plan._id as ObjectId;
+    await queueBuild(db, { companyId: COMPANY, planId, keys: [await idOf(planId, "P01-S01-A02")] });
+    expect((await db.plans.findOne({ _id: planId }))?.status).toBe("enriching");
+    expect((await sweep(planId))[0]?.enqueued ?? []).toHaveLength(0);
+    // A failed enrichment falls back to the deterministic brief and builds.
+    await db.planItems.updateMany({ planId }, { $set: { enrichment: "failed" } });
+    expect((await sweep(planId))[0]?.enqueued.length).toBe(2);
   });
 
   it("builds the cluster articles first, then the hub, then the pillar once every hub is built", async () => {

@@ -62,7 +62,7 @@ Every article must have:
 
 1. **YAML frontmatter** (complete — see below)
 2. **One H1** — the title. Only one.
-3. **Intro** — 2–3 paragraphs built from the research Topic Summary (see Process step 4). Banned openers (`In today's fast-paced world…`, `In the ever-evolving landscape…`, etc.) are documented in `standards/quality-bar.md` and will be stripped on sight.
+3. **Intro** — 2–3 paragraphs built from the outline's Intro Strategy, which starts from the thesis (see Process step 4). Banned openers (`In today's fast-paced world…`, `In the ever-evolving landscape…`, etc.) are documented in `standards/quality-bar.md` and will be stripped on sight.
 4. **Key Takeaways** block under an H2 `## Key Takeaways` — exactly 3 bullets, near the top. This is the speakable block the Schema Builder will reference.
 5. **H2/H3 hierarchy** matching the outline. Logical, scannable, keyword-aligned where natural.
 6. **FAQ section** under an H2 `## Frequently Asked Questions`. Each question is an H3. Each answer is 2–5 sentences, direct, standalone.

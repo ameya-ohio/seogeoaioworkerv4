@@ -438,6 +438,40 @@ export async function failPlanEnrichment(
       $unset: { leaseUntil: "", workerId: "" },
     },
   );
+  // D60: builds wait for enrichment. With no attempt left, release the items
+  // still pending onto their deterministic brief instead of blocking them.
+  if (!retry) {
+    await db.planItems.updateMany(
+      { planId, enrichment: "pending" },
+      {
+        $set: {
+          enrichment: "failed",
+          enrichmentProblems: [`plan enrichment failed: ${error.slice(0, 200)}`],
+          updatedAt: new Date(),
+        },
+      },
+    );
+  }
+}
+
+/**
+ * D60: make sure a plan with pending briefs has its enrichment pass queued.
+ * Builds and the cadence wait on enrichment (readiness `awaiting_enrichment`),
+ * so queueing a build must start it. Unlike `requestPlanEnrichment` this
+ * never resets finished or failed items, and it leaves a running pass alone.
+ * Returns true when it queued the pass.
+ */
+export async function ensurePlanEnrichment(db: EngineDb, planId: ObjectId): Promise<boolean> {
+  const pending = await db.planItems.countDocuments({ planId, enrichment: "pending" });
+  if (pending === 0) return false;
+  const res = await db.plans.updateOne(
+    { _id: planId, status: { $nin: ["enriching", "archived"] } },
+    {
+      $set: { status: "enriching", stage: "enrich", attempts: 0, updatedAt: new Date() },
+      $unset: { leaseUntil: "", workerId: "", error: "" },
+    },
+  );
+  return res.modifiedCount === 1;
 }
 
 /**

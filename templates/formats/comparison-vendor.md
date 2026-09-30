@@ -6,7 +6,7 @@
 
 ## Structure
 1. **H1:** "[Company] vs [Competitor]: [honest framing]".
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block says who each is genuinely best for in 60 words and **concedes something real**. That concession is what makes the rest credible.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60); paragraph 1 carries the answer block below within its first 60–80 words, and paragraph 2 says why it matters now: a change or a consequence that supports the thesis, with at most one figure and only one the argument turns on. The answer block says who each is genuinely best for in 60 words and **concedes something real**. That concession is what makes the rest credible.
 3. At a glance: a comparison table of architecture, deployment, coverage, remediation, time to value, pricing model and best fit.
 4. What the competitor does well, placed **before** the company's case and written so their customers would agree.
 5. Where the company is different: architectural, not adjectival.

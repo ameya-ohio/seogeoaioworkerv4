@@ -96,6 +96,8 @@ describe("per-page gate ranges (D49)", () => {
       "> x",
       "## Thesis",
       "Identity exposure is a condition and identity risk is the likelihood that condition gets exploited.",
+      "## Argument Spine",
+      "1. One — proof: reasoning\n2. Two — proof: reasoning\n3. Three — proof: reasoning",
       "## Keywords",
       "- Primary: identity exposure vs identity risk",
       "## Target Entities (for `mentions` array)",
@@ -103,12 +105,12 @@ describe("per-page gate ranges (D49)", () => {
       "## FAQ Candidates",
       ...Array.from({ length: faqs }, (_, i) => `${i + 1}. Question ${i}?`),
       "## External Citations to Use",
-      "1. x",
+      "1. x — mechanism",
       "## Full Outline",
-      "### H2: A",
-      "### H2: B",
-      "### H2: C",
-      "### H2: D",
+      "### H2: A\n- Advances: spine #1\n- Claim: a",
+      "### H2: B\n- Advances: spine #2\n- Claim: b",
+      "### H2: C\n- Advances: spine #3\n- Claim: c",
+      "### H2: D\n- Advances: format — the table\n- Claim: d",
     ].join("\n\n");
 
   it("uses the page's FAQ range, and allows none on an optional page", () => {

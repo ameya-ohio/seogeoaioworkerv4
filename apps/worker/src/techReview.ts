@@ -15,10 +15,25 @@ import { caseStudies, competitiveLandscape, estimateCostUsd, parseFiles, renderI
  * `skipped` and the Editor runs without it.
  */
 export interface TechReviewer {
-  review(input: { articleMd: string; researchNotes: string; onProgress?: (t: string) => void }): Promise<TechnicalReview>;
+  review(input: {
+    articleMd: string;
+    researchNotes: string;
+    /** D60: the page spec and outline, so substance findings know the format and the thesis. */
+    pageMd?: string;
+    outline?: string;
+    onProgress?: (t: string) => void;
+  }): Promise<TechnicalReview>;
 }
 
-const KINDS: readonly TechnicalIssueKind[] = ["technical_error", "contradiction", "outdated", "unsupported_number"];
+const KINDS: readonly TechnicalIssueKind[] = [
+  "technical_error",
+  "contradiction",
+  "outdated",
+  "unsupported_number",
+  "not_actionable",
+  "generic_example",
+  "thesis_unsupported",
+];
 const MAX_ISSUES = 12;
 
 /** Whitespace- and emphasis-insensitive form, for matching quotes back to the draft. */
@@ -70,6 +85,8 @@ export class LlmTechReviewer implements TechReviewer {
   async review(input: {
     articleMd: string;
     researchNotes: string;
+    pageMd?: string;
+    outline?: string;
     onProgress?: (t: string) => void;
   }): Promise<TechnicalReview> {
     const { model, effort } = this.cfg.techReview;
@@ -86,6 +103,8 @@ export class LlmTechReviewer implements TechReviewer {
           renderInputs([
             { path: "article.md", content: input.articleMd },
             { path: "research-notes.md", content: input.researchNotes },
+            ...(input.pageMd ? [{ path: "page.md", content: input.pageMd }] : []),
+            ...(input.outline ? [{ path: "outline.md", content: input.outline }] : []),
             // Case-study facts are sourced (the company's own engagements), not unsupported numbers.
             ...(await caseStudies(this.cfg)),
             // Vendor map: catches wrong or stale claims about competing/complementary products.

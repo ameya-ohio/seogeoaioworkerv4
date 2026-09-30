@@ -5,6 +5,7 @@ import { getArticleBySlug } from "../dal/articles.js";
 import { emitPlanEvent } from "../dal/planEvents.js";
 import {
   enqueuePlanItem,
+  ensurePlanEnrichment,
   planCostUsd,
   releaseMetHolds,
 } from "../dal/plans.js";
@@ -386,6 +387,7 @@ async function tickBody(
 
   const enqueuedThisTick = new Set<string>();
   const blockedReported = new Set<string>();
+  let enrichmentRequested = false;
 
   for (const item of candidates) {
     if (budget <= 0) break;
@@ -407,6 +409,10 @@ async function tickBody(
           companyId, planId, planItemId: itemId, type: "item.blocked",
           message: `"${item.title}" is blocked: a page under it needs attention`,
         });
+      }
+      if (ready.reason === "awaiting_enrichment" && !deps.dryRun && !enrichmentRequested) {
+        enrichmentRequested = true;
+        if (await ensurePlanEnrichment(db, planId)) log(`plan ${planId.toHexString()}: queued brief enrichment (D60)`);
       }
       if (ready.reason === "attempts_exhausted" && item.status === "failed") {
         await db.planItems.updateOne(

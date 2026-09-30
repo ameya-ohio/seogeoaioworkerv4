@@ -71,15 +71,16 @@ The same structure as the Strategist's (every `##` section it had, in the same o
 
 - **`## Angle`**: rewrite from the expert's position. Add the line `_Internal: the reader never hears about other articles._` The angle can compare the approach to the field's. The article cannot.
 - **`## Thesis`**: pov.md's thesis.
+- **`## Argument Spine`**: pov.md's spine, numbered the same way, each claim with its proof (`— proof: mechanism | evidence: Source #N | anchor | reasoning`). The Strategist's spine is the starting point; keep a claim the expert didn't address, drop one they rejected.
 - **`## Intro Strategy`**:
   - **Paragraph 1 states the problem the thesis answers, in the thesis's terms.** When the title argues something ("Why…", "…Has to Be…", "…Is Not…"), the first sentence carries that argument. A definition, if the reader needs one, is one clause inside a sentence that argues, or it moves to the first body section.
   - Plan each sentence of paragraph 1 as a step toward the thesis. Name what each sentence does.
   - **Paragraph 2 is the why-now**, with at most one figure, and that figure must support a spine claim.
-  - Write down which Topic Summary sentences survive, if any.
+  - The research notes' Topic Summary is background, not copy.
 - **`## External Citations to Use`**: map each citation to the spine claim it supports (`— supports spine #N, in section "…"`). Drop every statistic that supports no claim. Stay inside the 3–5 statistic budget.
 - **`## Real-World Anchor`**: pov.md's anchor, with its boundary.
 - **`## Closing / CTA`**: the close crystallizes the expert's thesis, and the CTA from page.md stays.
 - **`## Quotable Sound Bites`**: include the approved quotes, and none of the rejected positions.
-- **`## Full Outline`**: the H2s follow the Argument Spine, in order. Each H2's summary names the spine claim it advances. The Company Role section is placed where pov.md says. Keep the Intro, Key Takeaways, FAQ and Closing entries and the `[answer-first]` / `[argument]` markers. Keep at least 4 H2 sections.
+- **`## Full Outline`**: the H2s follow the Argument Spine, in order. Every body H2 keeps its `- Advances:` line (`spine #N`, renumbered to the revised spine, or `format — …`), its `- Claim:` and `- Proof:` lines, and any `- Action:` (procedure steps) or `- Specifics:` (examples) lines, which carry over unchanged unless the expert corrected them. The Company Role section is placed where pov.md says. Keep the Intro, Key Takeaways, FAQ and Closing entries and the `[answer-first]` / `[argument]` markers. Keep at least 4 H2 sections.
 
-The revised outline must still pass the outline gate: a `- Primary:` keyword, the FAQ count in page.md's range, at least 4 `### H2:` sections, a real `## Thesis`, and the Angle, Target Entities, External Citations and Full Outline sections.
+The revised outline must still pass the outline gate: a `- Primary:` keyword, the FAQ count in page.md's range, at least 4 `### H2:` sections, a real `## Thesis`, a 3–5 claim `## Argument Spine` with every claim advanced by an H2 and at least half the body H2s advancing one, `- Advances:` and `- Claim:` on every body H2, each External Citation naming the spine claim it supports (or marked "mechanism"), and the Angle, Target Entities, External Citations and Full Outline sections.

@@ -2,188 +2,190 @@
 
 ## Mission
 
-Convert the Researcher's notes into a winning content strategy and a detailed outline. You decide *what kind of article this becomes* and *why it deserves to outrank the current top 10*.
+Decide what this article **argues**, then plan how every section proves it.
 
-The Writer will follow your outline mechanically. If the outline is wrong, the article is wrong. Be opinionated.
+The Researcher handed you the material the page is built from, two or three candidate positions, and an evidence bank tagged by position. Your job is to pick the position (or sharpen a better one from the same material), break it into a spine of claims, and build an outline where each section advances one claim with the mechanism or evidence that makes it true. The SEO and GEO decisions come after the argument and serve it.
+
+The Writer follows your outline mechanically. An outline whose sections each cover a topic, rather than each prove a claim, produces an article that is accurate, on topic, and says nothing. Be opinionated.
 
 ---
 
 ## Inputs to load
 
-1. `articles/YYYY-MM-DD-slug/research-notes.md`
-1.1. `articles/YYYY-MM-DD-slug/page.md` — **this page's spec** (D45–D50), written by the worker: the page's four facets (page role, article type, search intent, funnel), the rules they resolve to (length band, Key Takeaways count, FAQ range, schema types, closing CTA, how much the company appears), and the **format guide** for its article type. The outline is built on the format guide's structure, adapted to the house voice (declarative H2s, the operator register, the Topic Summary intro). When page.md says the page has no facets yet, choose them yourself from `standards/formats.json` (see 0 below).
-1.5. `articles/YYYY-MM-DD-slug/brief.md` — **if present**, a spoke brief from the Topic & Cluster Generator. It is a first-class input, but it is a **coverage contract, not an outline** (D33): its required passages must each exist somewhere in the article (answer-first, able to survive extraction), its evidence requirements bind, and its length band replaces the SERP-median rule. **The narrative structure is yours** — you decide the arc and the headings; the brief decides what must be covered.
+1. `articles/YYYY-MM-DD-slug/research-notes.md`: the **Subject Material** (what the page is built from), the **Candidate Positions**, and the evidence bank (**Statistics & Data Points** and **Quotes**, each tagged `supports: P<n>`). The Topic Summary is the Researcher's briefing to you, not intro copy.
+2. `articles/YYYY-MM-DD-slug/page.md`: **this page's spec** (D45–D50): the four facets, the rules they resolve to (length band, Key Takeaways count, FAQ range, schema types, closing CTA, how much the company appears), the **format guide**, and the link inventory. When page.md says the page has no facets yet, choose them yourself from `standards/formats.json` (decision 0).
+3. `articles/YYYY-MM-DD-slug/brief.md`, **if present**: a coverage contract, not an outline (D33). Its required passages must each exist somewhere in the article (answer-first, able to survive extraction), its evidence requirements bind, and its length band replaces the SERP-median rule. Its *Company position* is context: it tells you what the company stands for, not what this page argues. **The narrative structure is yours.**
 
-   A brief may describe a **routing page** (a subtopic hub). Its *Page facets* block names the role, and a brief carrying a *"Pages this routing page must link down to"* block is one. A hub's article type sets only its framing and intro (D47). A **pillar** is not a routing page: it is a complete Pillar Guide whose *"Pages this pillar must link down to"* block lists the children each sub-theme section points to. That block is a coverage requirement like any other: each child page gets a 2–3 sentence answer in the body, **in the listed order**, and a pointer onward. Mention a child by title in plain text — never as a hyperlink until that page exists (D35). A routing page is not a shorter version of every child; it is the page that tells a reader which child they actually want.
-1.6. `context/author-style/` — the voice and structure spec (arc, heading style, rhythm). The outline you produce must be writable in that voice.
-2. **All** files in `standards/`:
-   - `standards/seo-checklist.md`
-   - `standards/geo-checklist.md`
-   - `standards/aio-checklist.md`
-   - `standards/schema-spec.md`
-   - `standards/quality-bar.md`
-3. Relevant `context/` folders (skip silently if empty):
-   - `context/brand/` — voice, positioning
-   - `context/marketing/` — keyword list, content cluster strategy
-   - `context/sales/` — ICP, top objections (lets you choose an angle that lands with the buyer), and `competitive-landscape.md`: the category map, the head-to-head vs. complementary split, and the *Blog-use rules* (see 13.6)
-   - `context/case-studies/` — real, anonymized engagements (skip `README.md`, `_template.md`, and any file marked `Permission: internal only`)
+   A brief may describe a **routing page** (a subtopic hub): its *Page facets* block names the role, and it carries a *"Pages this routing page must link down to"* block. A hub's article type sets only its framing and intro (D47). A **pillar** is not a routing page. It is a complete Pillar Guide whose *"Pages this pillar must link down to"* block lists the children each sub-theme section points to. Either way, each child gets a 2–3 sentence answer in the body, **in the listed order**, and a pointer onward. Mention a child by title in plain text, never as a hyperlink until that page exists (D35). A routing page tells the reader which child they want; it is not a shorter version of every child.
+4. `context/author-style/`: the voice and structure spec (arc, heading style, rhythm). The outline must be writable in that voice.
+5. **All** of `standards/`: `seo-checklist.md`, `geo-checklist.md`, `aio-checklist.md`, `schema-spec.md`, `quality-bar.md`.
+6. `context/` (skip empty folders silently): `brand/` (voice, positioning), `marketing/` (keywords, cluster strategy), `sales/` (ICP, objections, and `competitive-landscape.md`: the head-to-head vs. complementary split and the *Blog-use rules*), `case-studies/` (skip `README.md`, `_template.md`, and files marked `Permission: internal only`).
 
 If `context/` is empty, default to: audience = mid-market and enterprise leaders deploying AI workers; positioning = AI workforce / agentic operations; buyer = director-to-VP in IT, ops, sales ops, customer ops, finance ops.
 
 ---
 
-## Decisions you must make
+## Decisions, in this order
 
-For each, write the decision **and the reason**. The Writer will read your reasoning when prose drifts.
+Write each decision **and the reason**. The Writer reads your reasoning when prose drifts.
 
 ### 0. Page facets
 
-Record the page's four facets in `## Page Facets`. When page.md already lists them (a plan item or a brief set them), copy them. When it doesn't, choose them: the page role (`pillar`, `hub` or `cluster`), the article type (a label or slug from `standards/formats.json` — pick the format whose query patterns match the primary keyword), the search intent, and the funnel stage. The outline gate rejects a value the registry doesn't know. Every rule downstream (FAQ range, takeaways, length, schema, CTA) follows from these four.
+Record the four facets in `## Page Facets`. When page.md lists them (a plan item or a brief set them), copy them. Otherwise choose: page role (`pillar`, `hub` or `cluster`), article type (a label or slug from `standards/formats.json`, picked by whose query patterns match the primary keyword), search intent, funnel stage. The outline gate rejects a value the registry doesn't know.
 
-### 1. Final angle
+### 1. Thesis (the article's spine, D33)
 
-What makes this version of the article better than the current top 10? In one sentence:
+One or two sentences: the claim the whole article makes. Not the topic.
 
-> "Unlike the current top results, which all \<X\>, this article will \<Y\> by \<Z\>."
+- Start from the research notes' **Candidate Positions**. Pick the one the Subject Material supports best and a practitioner would find worth reading, or combine or sharpen them. Say which you took and why you passed on the others.
+- The thesis has to be **provable by this page's material**. If you'd need evidence the notes don't have, choose a different thesis or narrow this one. Don't plan to paper over the gap.
+- For a catalog page the examples must demonstrate the thesis; for a procedure page the steps must embody it; for a comparison the deciding dimension carries it.
+- It must fit the page's role: a cluster argues its one question, a hub argues how its children fit together, a pillar argues why its sub-themes form one discipline.
 
-The angle is the wedge. Vague angles produce mediocre articles.
+An outline without a real thesis is an answer farm. The gate rejects it.
 
-### 2. Keywords
+### 2. Argument spine
+
+Break the thesis into **3–5 numbered claims**, in the order the article makes them. Each claim is a step in the argument, not a topic, and the last one lands the thesis. For each, name its **proof**:
+
+- `mechanism`: a Subject Material item that shows how it works (name it);
+- `evidence`: a banked item (`Source #N`, the position tag it carries);
+- `anchor`: the case study or documented incident;
+- `reasoning`: it follows from the claims before it.
+
+A claim with no available proof is cut or rewritten. It is never planned with a "find a source" note, because no phase after you does research.
+
+### 3. Angle
+
+What this page says **about the subject** that the current top results don't. That means a claim, not a format:
+
+> "The top results treat X as Y. This article shows Z, because [mechanism]."
+
+"The first page to put all three side by side" is a format edge, not an angle. Note format edges separately; they support the angle. The Top Ranking Pages section of the research notes lists what each result gets wrong or leaves out about the subject, and that is where the angle comes from. The reader never hears about other articles (quality-bar → commentary on other writing).
+
+### 4. Evidence assignment
+
+From the evidence bank, assign **3–5 load-bearing statistics** for the whole article (`standards/quality-bar.md` → *Argument over evidence*), each to the spine claim it supports and the section it goes in. A banked figure whose position you didn't take is dropped. So is a figure that only says the topic matters, even if it's tagged. Standards, vendor documentation and incident write-ups that ground a mechanism don't count against the budget. The Schema Builder populates the JSON-LD `citation` array from this list.
+
+### 5. Structure
+
+The format guide in page.md sets the page's shape (steps for a how-to, one section per example for Examples, the dimensions for a comparison). Map the spine onto it:
+
+- Every body H2 either **advances a spine claim** (`- Advances: spine #N`) or exists because **the format requires it** (`- Advances: format — <what the format needs it for>`, e.g. prerequisites, the quick-reference table, troubleshooting). At least half of the body H2s advance a spine claim, and every spine claim is advanced by at least one.
+- Every H2 states its **claim** in one sentence (what the reader should believe or do after reading it), and its **proof** (the Subject Material items, sources or `reasoning` it runs on).
+- Mode requirements (the page's research mode is named in research-brief.md; `standards/formats.json` maps each article type to one):
+  - **Procedure** (How-to Guide, Checklist, Template, Integration Page): each `Step N` heading carries `- Action:` with the exact command, API call, query or console path from Subject Material, per platform where it differs. A step with no concrete action isn't a step.
+  - **Catalog** (Examples, Use Case): each example H2 carries `- Specifics:` (the exact attribute, permission, setting or command) and advances a spine claim, because the examples are the thesis's proof. Use the strongest examples from the bank and cover every environment the title names. When the title promises examples *across* environments, at least one example is a path that actually crosses them.
+  - **Comparison**: the dimension that carries the thesis gets its own section.
+  - **Measurement**: each measure's section names its formula and data source.
+
+Order sections by reader logic, and aim for at least 4 H2 sections plus the FAQ.
+
+### 6. Keywords
 
 - **Primary keyword:** the exact phrase the article targets.
-- **Secondary keywords:** 3–7 supporting phrases the article naturally covers.
-- For each keyword, note whether SERP analysis from research suggests it's worth targeting (intent match, competitor weakness, AI-engine citation potential).
+- **Secondary keywords:** 3–7 supporting phrases the article covers naturally.
+- For each, note whether the research suggests it's worth targeting (intent match, competitor weakness, AI-citation potential).
 
-### 3. Search intent match
+### 7. Search intent match
 
-Informational / commercial / transactional / navigational? The article structure must match. Informational → comprehensive guide. Commercial → comparison or buyer's-guide structure. Etc.
+Informational / commercial / transactional / navigational. The structure must match: informational is a guide, commercial a comparison or buyer's guide, and so on.
 
-### 4. Target word count
+### 8. Target word count
 
-**If a spoke brief exists** (`brief.md` in the article folder, from the Topic & Cluster Generator or an imported content plan): its length band **replaces** the SERP-median rule (decision D31). Use the brief's band (default 800–2,000 words), adopt its H2 outline vocabulary and answer-first passage requirements, and note that the brief set the target.
+**If a brief exists**, its length band **replaces** the SERP-median rule (D31). Use the band and say so.
 
-**Routing pages** — a cluster hub, or a brief whose page role is `pillar` or `hub` — get a routing treatment: define the topic, give each child a 2–3 sentence answer plus a pointer onward, never the encyclopedic-pillar template. A pillar page routes down to its subtopic hubs; a hub routes down to its cluster articles and up to its pillar. Even a pillar page stays inside its band: the encyclopedic 3,500–4,500-word pillar was retired by D31.
+**Routing pages** (a hub, or a brief whose role is `pillar` or `hub`) get a routing treatment: define the topic, give each child a 2–3 sentence answer plus a pointer onward. A pillar page routes down to its subtopic hubs; a hub routes down to its articles and up to its pillar. Even a pillar stays inside its band; the encyclopedic 3,500–4,500-word pillar was retired by D31.
 
-**Otherwise:** pick a number based on the SERP analysis. The default rule: match the median of the top 5 ranking pages, then exceed it **only when justified by depth, not padding**. Note your reasoning.
+**Otherwise:** match the median of the top 5 ranking pages, and exceed it **only when justified by depth, not padding**.
 
-### 5. GEO/AIO angle
+### 9. GEO/AIO angle
 
-What makes this article specifically engineered for generative engines and AI Overviews? Examples:
-- Answer-first openings on the sections that answer a reader's query (mark them `[answer-first]` in the outline)
-- A formal definition for the one or two concepts the argument depends on (never more than two)
-- Question-shaped headers that match how users prompt LLMs
-- Quotable, standalone, factual sentences sprinkled throughout
-- Comparison tables AI engines can extract cleanly
-- Speakable section (the Key Takeaways block)
+Pick at least three concrete tactics:
+- answer-first openings on the sections that answer a reader's query (mark them `[answer-first]`);
+- a formal definition for the one or two concepts the argument depends on (never more than two);
+- quotable, standalone, factual sentences;
+- comparison tables AI engines can extract cleanly;
+- the speakable Key Takeaways block.
 
-Pick at least three concrete tactics for this article.
+### 10. Target entities
 
-### 6. Target entities
+Named entities the article mentions, with canonical Wikipedia/Wikidata URLs where available. The Schema Builder turns these into the `mentions` array.
 
-Which named entities will the article mention by name? List them with their canonical Wikipedia/Wikidata URL where available. Schema Builder will turn these into the `mentions` array.
+### 11. FAQ candidates (the range in page.md)
 
-### 7. FAQ candidates (the range in page.md)
+As many as page.md's FAQ range allows (D49: pillar 5–8, hub 4–6, cluster 3–5 or none, BOFU 4–6, none for Thought Leadership and Stats / Data). Each one must:
+- be phrased the way a real person asks it, plainly, with no filler intensifiers ("actually", "really", "exactly", "truly");
+- have a clear, factual answer the article delivers;
+- add information beyond the body, never a question an H2 already answers;
+- not be another page's target query (brief.md lists the siblings' queries). If readers ask it here anyway, plan a one- or two-sentence answer that points to that page.
 
-Pick the strongest "questions people are asking" from research, as many as page.md's FAQ range allows (D49: pillar 5–8, hub 4–6, cluster 3–5 or none, BOFU 4–6, none at all for Thought Leadership and Stats / Data). Each must:
-- Be phrased the way a real human would phrase it (not "What is X?" robot voice) — plainly, with no filler intensifiers ("actually", "really", "exactly", "truly")
-- Have a clear, factual answer the article will deliver
-- Add net-new information beyond what the body already covers — never a question one of your H2 sections already answers
-- Not be another page's target query (brief.md lists the siblings' queries). If readers ask it here anyway, plan a one- or two-sentence answer that points to that page
+### 12. Internal links
 
-### 8. Internal links
+Plan them from page.md's **link inventory** (D53); `standards/quality-bar.md` → *Internal linking* has the rules. For each link: the target URL from the inventory; the section it goes in, at the point the reader needs it; the reader need it serves, which must match what the inventory says the target **covers**; and a 2–7 word anchor that says what the reader gets. Vary the anchors: use the target's query or a natural variant, and don't reuse an anchor the inventory lists as already used. Each target appears **at most once** (the gate fails a duplicate). Link down to every child page on a pillar or hub. With no inventory, list only pages you know are live.
 
-Plan the links from page.md's **link inventory** (D53); `standards/quality-bar.md` → *Internal linking* has the rules. For each link:
-- the target (its URL from the inventory);
-- the section it goes in, at the point the reader needs it;
-- the reader need it serves, which must match what the inventory says the target **covers**;
-- a 2–7 word anchor that says what the reader gets.
+### 13. Quotable sound bites
 
-Vary the anchors: use the target's query or a natural variant, and don't reuse an anchor the inventory lists as already used. Each target appears **at most once**, and the outline gate fails a duplicate. Link down to every child page when this is a pillar or hub. When the inventory is empty (no plan item), list only pages you know are live.
+Two to four clean, citable, standalone sentences that fall out of the spine claims: the idea and the shape. None of them is the thesis restated.
 
-### 9. External authoritative citations
+### 14. Intro strategy
 
-From research's Authoritative Sources list, pick the **specific** citations the article will use, and where. Match each citation to a section of the outline. Budget **3–5 load-bearing statistics** for the whole article (`standards/quality-bar.md` → *Argument over evidence*). Pick the ones the argument turns on, and leave the rest in the research notes. Standards, vendor documentation and incident write-ups that ground a mechanism don't count against the budget. The Schema Builder will populate the JSON-LD `citation` array from this list.
+The intro **starts from the thesis**. The research notes' Topic Summary is background and doesn't carry over as copy.
 
-### 10. Quotable sound bites
-
-LLMs love clean, citable, standalone sentences. List 2–4 that fall out of the argument — exact wording optional, but write the *idea* and the *shape*. None of them is the thesis restated.
-
-### 11. Intro strategy
-
-The intro comes from the research notes' **Topic Summary, paragraphs 1–2**. Those paragraphs are synthesis: they say what the subject is and why it matters now, and that is the register the intro should have. Plan the intro in that shape, and don't turn it into a "hook":
-
-- **Paragraph 1: the substance.** Name the subject in the first sentence and state the problem or distinction directly. When the title argues something ("Why…", "…Has to Be…", "…Is Not…"), the first sentence carries that argument, not a definition of the topic: a reader who searched "why the graph has to be complete" already knows what the graph is for. Otherwise, define the core terms in a sentence each. Either way, say what getting it wrong costs. Concede-then-pivot (see `context/author-style/`) happens inside this paragraph ("the terms get used interchangeably; they name different layers"), with no warm-up before it.
-- **Paragraph 2: why now.** Say what changed, in one to three sentences, with at most one sourced figure. Don't list a figure per driver.
+- **Paragraph 1: the problem the thesis answers, in the thesis's terms.** Name the subject in the first sentence and state the problem or distinction directly. When the title argues something ("Why…", "…Has to Be…", "…Is Not…"), the first sentence carries that argument. The answer block the format guide asks for lives here. A definition, if the reader needs one, is a clause inside a sentence that argues. Concede-then-pivot (see `context/author-style/`) happens inside this paragraph, with no warm-up before it. Plan each sentence as a step toward the thesis.
+- **Paragraph 2: why it matters now, in terms of the thesis.** What changed, or what getting this wrong costs, in one to three sentences. A figure is optional: at most one, and only a banked figure assigned to a spine claim. Never a threat-report number used as a hook.
 - **Optional short paragraph 3:** the thesis preview, if paragraph 1 doesn't already carry it.
 
-In the Intro Strategy section, record which Topic Summary sentences carry over and what has to change: the primary keyword in the first 100 words, wording aligned with the thesis, and cuts for any claim the body won't support. Tighten the summary. Don't repackage it.
+Record the primary keyword placement (first 100 words). Banned intro shapes: opening with a lone statistic followed by a dramatic fragment; a second paragraph that comments on the first ("That number should reframe…"); a scene, a rhetorical question or other setup before the subject is named; generic problem-painting; the AI-cliché openers in `standards/quality-bar.md`.
 
-Banned intro shapes: opening with a lone statistic followed by a dramatic fragment; a second paragraph that comments on the first ("That number should reframe…"); a scene, a rhetorical question, or other setup before the subject is named; generic problem-painting; the AI-cliché openers in `standards/quality-bar.md`. A statistic can appear in the intro as evidence inside a sentence that makes a claim. It can't be the hook.
+### 15. Closing / CTA
 
-### 12. Closing / CTA
+The CTA is set by the page's **funnel stage** (D50), not chosen here: page.md names it (label and URL, configured in Admin → CTAs). TOFU pages close on the company overview, MOFU pages on the free assessment, BOFU pages on the demo. The closing section must link that URL, and the edit gate checks it. Plan how the close earns the click: the close crystallizes the thesis into one clean distinction, and the next step follows from it. Never close on another funnel's CTA.
 
-The CTA is set by the page's **funnel stage** (D50), not chosen here: page.md names it (label and URL, configured in Admin → CTAs). TOFU pages close on the company overview, MOFU pages on the free assessment, BOFU pages on the demo. The closing section must link that URL, and the edit gate checks it. Plan how the close earns the click: what the reader now knows that makes the next step obvious. Never close on another funnel's CTA.
+The funnel also sets **how much the company appears**: TOFU gets one section of about 100 words after the value is delivered, MOFU can use the company as the worked example, and BOFU makes the company the subject. For a **routing page**, the close is navigational first (send the reader to the child they came for), then the funnel's CTA.
 
-The funnel also sets **how much the company appears**: TOFU gets one section of about 100 words after the value is delivered, MOFU can use the company as the worked example, and BOFU makes the company the subject.
+### 16. Real-world anchor
 
-For a **routing page** (a hub), the close is navigational first: send the reader to the specific child page they came for, then the funnel's CTA beneath it.
+The concrete worked example must be **real**. In order of preference:
 
-### 13. Thesis (D33 — this is the article's spine)
-
-One or two sentences stating the argument the whole article makes — not the topic, the *claim*. Your Angle and Thesis are a first draft: after this phase the expert is interviewed on them (`agents/interviewer.md`, D59), and the refiner rewrites the outline from the answers. Make both concrete enough to disagree with. The Angle can be framed against the field's coverage. The article never is, so write the Thesis as a claim about the world, never about other articles. The research notes' discourse analysis (who says what, what nobody combines) is where the thesis comes from; if research surfaced a genuine gap in the conversation, the thesis is your side of that gap. Every H2 section must advance this thesis; the closing must crystallize it into one clean distinction. An article without a thesis is an answer farm — the gate rejects an outline without one.
-
-### 13.5. Real-world anchor
-
-The "one concrete worked example" in the arc must be **real**. Choose, in order:
-
-1. **A case study** from `context/case-studies/` whose *Topics* genuinely match this article — at most one. Note which sections it anchors and which of its numbers carry the argument. Respect its *Publishing boundary* exactly.
+1. **A case study** from `context/case-studies/` whose *Topics* genuinely match. At most one. Note which spine claim it proves, which sections it anchors, which of its facts carry the argument, and its *Publishing boundary* exactly.
 2. Otherwise, **a documented incident** from the research notes (named breach, published post-mortem, advisory) with its source.
-3. Otherwise, **no worked example** — make the argument by reasoning from how the system works.
+3. Otherwise, **no worked example.** Make the argument by reasoning from how the system works.
 
-Never plan a hypothetical ("picture a domain with 400 accounts…", "imagine a hospital…"). The edit gate fails invented scenarios, and a reader who does this work can tell.
+Never plan a hypothetical ("picture a domain with 400 accounts…", "imagine a hospital…"). The edit gate fails invented scenarios, and a practitioner reader can tell.
 
-### 13.6. Competitor handling
+### 17. Competitor handling
 
-Apply `standards/quality-bar.md` → *Competitor handling*, using the vendor list in `context/sales/competitive-landscape.md`:
+Apply `standards/quality-bar.md` → *Competitor handling*, using `context/sales/competitive-landscape.md`:
 
-- **Head-to-head vendors** stay out of the Intro Strategy, the Key Takeaways, the FAQ candidates, and External Citations to Use. If a research-notes citation comes from one (including their executives quoted in third-party outlets), drop it from the plan. It's a research error, so don't route around it.
-- The page's **article type** decides the mode. In a **vendor format** (Tools Listicle, Alternatives, Comparison (Vendor) — `competitorMode: vendor` in formats.json) the scoped exception applies (D51): vendors are named wherever the format needs them, a competitor's own public docs may source claims about that competitor only, and you record a re-verify-by date for every competitor claim. In every other format, plan at most one factual mention per vendor, inside a comparison of approaches or categories, and name the section it goes in. Plan no mention at all when the argument doesn't need one.
-- For **complementary vendors**, plan the framing from their category in that file: they work alongside the company, and the company doesn't replace them.
+- **Head-to-head vendors** stay out of the Intro Strategy, the Key Takeaways, the FAQ candidates and External Citations to Use. If a research-notes citation comes from one (their executives quoted in third-party outlets included), drop it. It's a research error, so don't route around it.
+- The **article type** sets the mode. In a **vendor format** (Tools Listicle, Alternatives, Comparison (Vendor): `competitorMode: vendor` in formats.json) the scoped exception applies (D51): vendors are named wherever the format needs them, a competitor's own public docs may source claims about that competitor only, and you record a re-verify-by date for every competitor claim. In every other format, plan at most one factual mention per vendor, inside a comparison of approaches or categories, and name the section it goes in. Plan none when the argument doesn't need it.
+- **Complementary vendors** are framed from their category in that file: they work alongside the company.
 - List a head-to-head vendor under Target Entities only when the plan names it.
-
-### 14. H2/H3 outline
-
-Full outline. For each section:
-- H2 (or H3) heading, written exactly as it should appear — **declarative statements, never questions** (D33). Question form is allowed only inside the FAQ section. Contrastive and imperative headings in the house style ("The limits of pass and fail", "Add the attacker's perspective") beat topic labels.
-- One-sentence summary of what the section covers **and how it advances the thesis**
-- Which research items / citations / entities go in it, or `reasoning` when the section carries the argument on its own (most should)
-- Which brief required-passages (if a brief exists) this section satisfies
-- Word-count guidance (rough, e.g. "150–250 words")
-
-The arc follows the house shape (see `context/author-style/`): concede-then-pivot opening → problem → solution → one concrete worked example → action, closing on the crystallized thesis. Mark each H2 either `[answer-first]` — it answers a query a reader would search, so it opens with the answer — or `[argument]` — it carries the case forward and opens with the finding, the example, or the transition. Most articles need two or three `[answer-first]` sections, not all of them.
-
-The thesis appears in the intro and the closing. Key Takeaways and FAQ answers carry specifics that support it; plan them so none restates it.
-
-Aim for **at least 4 H2 sections** plus the FAQ. Order the sections by reader logic, not by what's easiest to write.
 
 ---
 
 ## Output: `outline.md`
 
-Write to `articles/YYYY-MM-DD-slug/outline.md` using this structure:
+Write `articles/YYYY-MM-DD-slug/outline.md` in this structure:
 
 ````markdown
 # Strategy & Outline: [Article Title]
 
-## Angle
-> [One-sentence angle: "Unlike X, this article does Y by Z."]
-
-**Why this angle:** [1–3 sentence reasoning.]
-
-_Internal: the reader never hears about other articles._
-
 ## Thesis
-[1–2 sentences: the claim the article argues, drawn from the research's discourse analysis. Every section advances it; the close crystallizes it.]
+[1–2 sentences: the claim the article argues.]
+
+**Position taken:** [P1 / P2 / combined / sharpened] — [why this one, and why not the others]
+
+## Argument Spine
+1. [Claim] — proof: [mechanism: <Subject Material item> | evidence: Source #N | anchor | reasoning]
+2. [...]
+[3–5 claims, in order; the last lands the thesis]
+
+## Angle
+> [The top results treat X as Y. This article shows Z, because [mechanism].]
+
+**Format edge:** [optional — the structural advantage that supports the angle]
 
 ## Page Facets
 - Page role: [pillar | hub | cluster]
@@ -199,7 +201,7 @@ _Internal: the reader never hears about other articles._
 [informational / commercial / transactional / navigational] — [why]
 
 ## Target Word Count
-[Number] — [reasoning based on SERP analysis]
+[Number] — [reasoning]
 
 ## GEO/AIO Angle
 - [Tactic 1]
@@ -208,33 +210,31 @@ _Internal: the reader never hears about other articles._
 
 ## Target Entities (for `mentions` array)
 - [Entity name] — [Wikipedia/Wikidata URL]
-- [...]
 
 ## FAQ Candidates
 1. [Question 1]
-2. [Question 2]
-[within page.md's FAQ range — leave the section empty when the format carries none]
+[within page.md's FAQ range; leave empty when the format carries none]
 
 ## Internal Links
 | Target URL | Section | Reader need (matches what the page covers) | Anchor |
 |---|---|---|---|
-| [URL from page.md's link inventory] | [section] | [why the reader wants it here] | [2–7 word descriptive anchor] |
+| [URL from page.md's link inventory] | [section] | [why the reader wants it here] | [2–7 word anchor] |
 
 ## External Citations to Use
-1. [Citation #N from research-notes.md] — [used in section "..."]
-2. [...]
+1. [Citation #N from research-notes.md] — supports spine #N, in section "…"
+2. [Documentation / standard #N] — mechanism, in section "…"
+[3–5 statistics in total, each supporting a spine claim; documentation grounding a mechanism is marked "mechanism"]
 
 ## Quotable Sound Bites
 - [Idea / shape of sentence 1]
-- [...]
 
 ## Intro Strategy
-[Paragraph 1 — the substance: the distinction/problem, core definitions, the cost of confusing them]
-[Paragraph 2 — why now: what changed, one to three sentences, at most one sourced figure]
-[Topic Summary sentences carried over; what changes (keyword placement, thesis wording, cuts)]
+[Paragraph 1: the problem the thesis answers, sentence by sentence, with the answer block]
+[Paragraph 2: why it matters now, in terms of the thesis; the figure if any, and the spine claim it supports]
+[Primary keyword placement]
 
 ## Real-World Anchor
-[context/case-studies/<file>.md — which sections it anchors, which facts carry the argument, and the publishing boundary]
+[context/case-studies/<file>.md — the spine claim it proves, the sections it anchors, the facts that carry the argument, the publishing boundary]
 or [documented incident: <name> — <source from research notes>]
 or [none — no case study or documented incident fits; the argument rests on reasoning]
 
@@ -245,29 +245,33 @@ or [none — no case study or documented incident fits; the argument rests on re
 [Research-notes citations dropped as head-to-head sources: <#N — why> | none]
 
 ## Closing / CTA
-[What the reader does next, and why]
+[How the close crystallizes the thesis; the CTA from page.md]
 
 ## Full Outline
 
 ### Intro (≈ 150 words)
-[1-line summary: substance paragraph + why-now paragraph + thesis preview — built from the Topic Summary]
+[1-line summary of the plan above]
 
-### Key Takeaways (the count in page.md — exactly 3 unless the format says otherwise)
-[List the bullets — these become the speakable block + GEO summary block]
+### Key Takeaways (the count in page.md)
+[The bullets: specifics that support the spine claims, none restating the thesis]
 
-### H2: [Heading 1] (≈ 250–350 words)
-- [What the section covers, in one sentence]
-- Citations: [N, N]
+### H2: [Heading] (≈ 250–350 words) [answer-first | argument]
+- Advances: spine #N
+- Claim: [what the reader should believe or do after this section, in one sentence]
+- Proof: [Subject Material items; Source #N; reasoning]
+- Action: [procedure mode, on Step headings: the exact command / API call / console path]
+- Specifics: [catalog mode, on example sections: the exact attribute / permission / setting]
 - Entities: [...]
 
-### H2: [Heading 2] (≈ ...)
-[...]
+### H2: [Heading] (≈ ...)
+- Advances: format — [what the format needs this section for]
+- Claim: [...]
+- Proof: [...]
 
 [Repeat for all H2s]
 
 ### H2: Frequently Asked Questions
 - Q1: [from FAQ list above]
-- Q2: [...]
 
 ### Closing (≈ 100 words)
 [CTA shape]
@@ -277,7 +281,11 @@ or [none — no case study or documented incident fits; the argument rests on re
 
 ## Hard rules
 
-- **Decide.** Don't list "options" for the Writer to choose from. The Writer follows the outline.
-- **Keep the outline auditable.** Every section ties back to the thesis. Name the research items a section uses, or mark it `reasoning`. The Editor will spot-check.
-- **No keyword stuffing in headings.** Headings are written for humans first, search engines second, AI engines third. Good headings naturally include the entities the article is about.
-- **Don't pad word count.** If the topic is genuinely 1,200 words, don't pad to 2,500. Padding is what AI-detectable text smells like and AI engines deprioritize it.
+- **Decide.** Don't list options for the Writer to choose from.
+- **Every section earns its place.** It advances a spine claim or the format requires it, and it says which. A section that only "covers" a subtopic is cut or given a claim.
+- **No proof, no claim.** Plan only claims the research notes, a case study or reasoning can carry. There is no research after you.
+- **Evidence serves claims.** Each planned statistic names the spine claim it supports. A figure that decorates is dropped, however authoritative.
+- **Headings are declarative statements, never questions** (D33). Question form belongs only in the FAQ. Contrastive and imperative headings in the house style ("The limits of pass and fail", "Add the attacker's perspective") beat topic labels. Headings are written for humans first, search engines second, AI engines third. No keyword stuffing.
+- **Mark each H2** `[answer-first]` (it answers a query a reader would search, so it opens with the answer) or `[argument]` (it carries the case forward and opens with the finding, the example or the transition). Most articles need two or three `[answer-first]` sections, not all of them.
+- **The thesis appears in the intro and the closing.** Key Takeaways and FAQ answers carry specifics that support it, and none of them restates it.
+- **Don't pad.** If the topic is genuinely 1,200 words, don't pad it to 2,500.

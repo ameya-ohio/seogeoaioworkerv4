@@ -33,6 +33,20 @@ const GOOD_RESEARCH = `# Research Notes: test
 ## Topic Summary
 A summary of the topic with enough substance to count as real words here.
 
+## Subject Material
+### Mechanism
+${"The retrieval layer returns chunks ranked by embedding similarity; the prompt window caps how many fit, so chunk size sets recall. ".repeat(8)}
+
+## Candidate Positions
+### P1: Context failures, not model failures, explain most AI SDR underperformance
+- Supported by: Mechanism; Source #1
+- Strongest objection: newer models tolerate noisy context — the evidence says recall still caps quality
+- The article would argue: fix the context layer before upgrading the model
+### P2: Chunk size is the most under-tuned setting in sales corpora
+- Supported by: Mechanism
+- Strongest objection: defaults are fine — they are tuned for prose, not call notes
+- The article would argue: tune chunking to the document type
+
 ## Target Keyword Analysis
 Primary candidate: context engineering. Volume is decent, intent informational.
 
@@ -50,7 +64,7 @@ ${urlList(6).replace(/example/g, "authority")}
 - 42% of teams report improved reply rates (Source: https://authority0.com/source-0)
 
 ## Quotes Worth Including
-- "Context beats cleverness." — someone credible
+- "Context beats cleverness." — someone credible, Source #2 (supports: P1)
 
 ## Questions People Are Asking
 - What is context engineering?
@@ -74,6 +88,25 @@ describe("researchGate", () => {
 
   it("fails on missing file", () => {
     expect(researchGate({}).ok).toBe(false);
+  });
+
+  it("requires Subject Material and 2+ Candidate Positions (D60)", () => {
+    const noMaterial = GOOD_RESEARCH.replace(/## Subject Material[\s\S]*?(?=## Candidate Positions)/, "## Subject Material\nthin\n\n");
+    expect(researchGate({ researchNotes: noMaterial, citationReport: okCitations() }).problems.join(" ")).toMatch(/Subject Material has/);
+    const onePosition = GOOD_RESEARCH.replace(/### P2:[\s\S]*?(?=## Target Keyword)/, "");
+    expect(researchGate({ researchNotes: onePosition, citationReport: okCitations() }).problems.join(" ")).toMatch(/Candidate Positions lists 1/);
+  });
+
+  it("requires every banked figure to name the position it supports (D60)", () => {
+    const untagged = GOOD_RESEARCH.replace("Source #2 (supports: P1)", "Source #2");
+    expect(researchGate({ researchNotes: untagged, citationReport: okCitations() }).problems.join(" ")).toMatch(/not tagged with the position/);
+    const unknown = GOOD_RESEARCH.replace("(supports: P1)", "(supports: P7)");
+    expect(researchGate({ researchNotes: unknown, citationReport: okCitations() }).problems.join(" ")).toMatch(/P7, which is not a Candidate Position/);
+  });
+
+  it("accepts an explicit 'None needed' in place of statistics (D60)", () => {
+    const none = GOOD_RESEARCH.replace(/## Statistics & Data Points\n[^\n]+\n/, "## Statistics & Data Points\nNone needed: a procedure.\n");
+    expect(researchGate({ researchNotes: none, citationReport: okCitations() }).problems).toEqual([]);
   });
 
   it("fails when the competitor check found a head-to-head vendor as a source", () => {
@@ -134,6 +167,11 @@ const GOOD_OUTLINE = `# Strategy & Outline: Test Article
 ## Thesis
 Context failures, not model failures, explain most AI SDR underperformance — and fixing the context layer beats upgrading the model.
 
+## Argument Spine
+1. Retrieval recall caps answer quality — proof: mechanism
+2. Recall is set by chunking and format, not the model — proof: reasoning
+3. So the context layer is the cheaper fix — proof: evidence: Source #1
+
 ## Keywords
 - Primary: context engineering for ai sdr
 - Secondary: [ai sdr architecture]
@@ -161,7 +199,7 @@ informational — readers are evaluating architectures
 - /blog/how-to-build-ai-sdr — in the intro
 
 ## External Citations to Use
-1. Citation #1 — used in section "Layers"
+1. Citation #1 — supports spine #3, in section "Chunk-Size Math"
 
 ## Quotable Sound Bites
 - Context beats cleverness.
@@ -181,17 +219,21 @@ Hook + thesis.
 The bullets.
 
 ### H2: The Four Layers (≈ 300 words)
-- What the section covers
+- Advances: spine #1
+- Claim: answer quality is capped by what retrieval returns
 - Citations: [1]
 
 ### H2: The Six Artifacts (≈ 300 words)
-- Covers artifacts
+- Advances: format — the reference list the format carries
+- Claim: six artifacts make up the context layer
 
 ### H2: Markdown Over PDFs (≈ 250 words)
-- Format guidance
+- Advances: spine #2
+- Claim: format changes recall more than model choice
 
 ### H2: Chunk-Size Math (≈ 250 words)
-- The numbers
+- Advances: spine #3
+- Claim: tuning chunk size is the cheapest quality gain
 
 ### H2: Frequently Asked Questions
 - Q1: What is context engineering?
@@ -220,12 +262,41 @@ describe("outlineGate", () => {
 
   it("fails with too few H2 sections", () => {
     const g = outlineGate({
-      outline: GOOD_OUTLINE.replace("### H2: Chunk-Size Math (≈ 250 words)\n- The numbers\n\n", "").replace(
-        "### H2: Markdown Over PDFs (≈ 250 words)\n- Format guidance\n\n",
-        "",
-      ),
+      outline: GOOD_OUTLINE.replace(/### H2: Markdown Over PDFs[\s\S]*?(?=### H2: Frequently)/, ""),
     });
     expect(g.problems.join(" ")).toMatch(/H2 section/);
+  });
+
+  it("requires an Argument Spine whose claims every section advances (D60)", () => {
+    const noSpine = GOOD_OUTLINE.replace(/## Argument Spine[\s\S]*?(?=## Keywords)/, "");
+    expect(outlineGate({ outline: noSpine }).problems.join(" ")).toMatch(/Missing required section: ## Argument Spine/);
+    const noAdvances = GOOD_OUTLINE.replace("- Advances: spine #2\n", "");
+    const p1 = outlineGate({ outline: noAdvances }).problems.join(" ");
+    expect(p1).toMatch(/"Markdown Over PDFs" has no "- Advances:"/);
+    expect(p1).toMatch(/claim #2 is not advanced/);
+    const allFormat = GOOD_OUTLINE.replace(/Advances: spine #\d/g, "Advances: format — filler");
+    expect(outlineGate({ outline: allFormat }).problems.join(" ")).toMatch(/only 0 of 4 body H2s advance a spine claim/);
+    const badRef = GOOD_OUTLINE.replace("Advances: spine #3", "Advances: spine #9");
+    expect(outlineGate({ outline: badRef }).problems.join(" ")).toMatch(/spine #9, which is not in the Argument Spine/);
+  });
+
+  it("requires each planned citation to name the spine claim it supports (D60)", () => {
+    const g = outlineGate({ outline: GOOD_OUTLINE.replace("supports spine #3, in section", "used in section") });
+    expect(g.problems.join(" ")).toMatch(/must name the spine claim it supports/);
+  });
+
+  it("requires an Action on procedure steps and Specifics on examples (D60)", () => {
+    const page = (researchMode: string, slug: string) =>
+      ({ format: { researchMode, slug }, routing: false }) as unknown as import("./pageRules.js").PageRules;
+    const steps = GOOD_OUTLINE.replace("### H2: The Four Layers", "### H2: Step 1: Map the Four Layers");
+    expect(outlineGate({ outline: steps, page: page("procedure", "how-to-guide") }).problems.join(" ")).toMatch(
+      /Step "Step 1: Map the Four Layers" has no "- Action:"/,
+    );
+    const withAction = steps.replace("- Claim: answer quality", "- Action: `kubectl get pods`\n- Claim: answer quality");
+    expect(outlineGate({ outline: withAction, page: page("procedure", "how-to-guide") }).problems).toEqual([]);
+    expect(outlineGate({ outline: GOOD_OUTLINE, page: page("catalog", "examples") }).problems.join(" ")).toMatch(
+      /0 example section\(s\) carry "- Specifics:"/,
+    );
   });
 
   it("fails without a thesis (D33)", () => {

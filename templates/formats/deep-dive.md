@@ -7,7 +7,7 @@
 ## Structure
 
 1. **H1:** the specific question or topic, close to how it's searched.
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44). Paragraph 1 answers the precise long-tail question within its first 60–80 words. If the H1 asks what causes X, it lists the causes. Paragraph 2 gives the why-now with sourced specifics.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60). Paragraph 1 answers the precise long-tail question within its first 60–80 words. If the H1 asks what causes X, it lists the causes. Paragraph 2 says why it matters now, in terms of the thesis: sourced specifics, not a threat-report figure.
 3. **Key Takeaways:** the count in page.md, each a technical claim with a specific (a technique ID, an attribute, a number).
 4. **Background:** at most about 150 words of the context a reader needs. Link out rather than re-explain, especially to the Definition page for each term of art.
 5. **The substance:** 4–8 declarative H2 sections of 250–450 words each, each advancing the thesis. Put the technical specifics here: commands, attribute names, permission strings, MITRE ATT&CK technique IDs, event IDs, actual values. Use a table or diagram for anything structural.

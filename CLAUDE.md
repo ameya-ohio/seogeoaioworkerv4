@@ -33,7 +33,7 @@ Before any phase runs, do these in order:
    python scripts/new_article.py "<slug>"
    ```
    …which scaffolds `article.md`, `meta.json`, `research-notes.md`, and `outline.md` from the template, **or** create the folder + empty stub files manually if the script is unavailable.
-4. Decide the page's **facets** (D45): page role (`pillar`/`hub`/`cluster`), article type (a format in **`standards/formats.json`**), search intent, funnel. Take them from the user's request or a plan row; otherwise choose them from the topic and confirm them in the Strategist's `## Page Facets`. Write `articles/YYYY-MM-DD-slug/page.md` with the facets, the rules they resolve to in formats.json (length band, Key Takeaways count, FAQ range, schema types, the funnel's CTA from `config/company.yaml` → `ctas`), and the format guide from `templates/formats/<slug>.md` (`generic.md` if none). The worker does this step itself; in terminal mode you do it. Every phase reads page.md. For a plan page, add its **link inventory** (D53): the parent, grandparent and sibling pages with their full `/learn/` URLs and what each covers. Links follow `standards/quality-bar.md` → *Internal linking*.
+4. Decide the page's **facets** (D45): page role (`pillar`/`hub`/`cluster`), article type (a format in **`standards/formats.json`**), search intent, funnel. Take them from the user's request or a plan row; otherwise choose them from the topic and confirm them in the Strategist's `## Page Facets`. Write `articles/YYYY-MM-DD-slug/page.md` with the facets, the rules they resolve to in formats.json (length band, Key Takeaways count, FAQ range, schema types, the funnel's CTA from `config/company.yaml` → `ctas`), and the format guide from `templates/formats/<slug>.md` (`generic.md` if none). The worker does this step itself; in terminal mode you do it. Every phase reads page.md. For a plan page, add its **link inventory** (D53): the parent, grandparent and sibling pages with their full `/learn/` URLs and what each covers. Links follow `standards/quality-bar.md` → *Internal linking*. Then write `research-brief.md` (D60): the facets, what the page must cover (the brief's required passages, else the format's), the brief's evidence requirements and company position, the neighbouring pages under *Owned by other pages*, the research playbook for the format's `researchMode` (`templates/research/<mode>.md`), and the matching sections of `templates/research/modifiers.md` (Role, Funnel, Intent).
 5. Tell the user the folder path before starting Phase 1.
 
 The article folder is the single source of truth for the run. **Every phase reads from and writes to that folder.** Do not let phase outputs live in your head — persist them.
@@ -50,9 +50,11 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
 - **Inputs to load:**
   - The user's prompt (topic, outline, any keywords)
   - `agents/researcher.md`
-- **Action:** Conduct deep, multi-source web research. Use `WebSearch` and `WebFetch` extensively. Minimum **8 distinct sources**, biased toward primary/authoritative.
+  - `articles/YYYY-MM-DD-slug/research-brief.md` (D60): what this page is researching **for**. The playbook it carries (the "quiver", one per research mode: procedure, mechanism, catalog, comparison, measurement, argument, data, pillar, commercial) says what to gather.
+  - `page.md` and `brief.md` (when present)
+- **Action:** Research the material this page is built from (the playbook's *Subject Material*: the procedure and its commands, the mechanism, the example bank, the deciding dimensions, the measures), then form 2–3 **candidate positions** it supports and bank the evidence each needs, tagged by position. Use `WebSearch` and `WebFetch` extensively. Minimum **8 distinct sources**, biased toward primary documentation and standards. The Researcher doesn't write intro copy or pick the thesis.
 - **Output:** `articles/YYYY-MM-DD-slug/research-notes.md`, in the exact section format specified in `agents/researcher.md`.
-- **Gate:** Research notes file exists, contains all required sections, has ≥ 8 cited sources, and includes at least one named statistic, one named entity, and one explicit content gap. No head-to-head competitor is listed as a source, statistic or quote (their executives' bylines elsewhere included). Check it with:
+- **Gate:** Research notes file exists, contains all required sections (Subject Material and Candidate Positions included), has ≥ 8 cited sources, Subject Material is substantive, there are 2+ candidate positions, every banked statistic or quote is tagged `supports: P<n>` (or the notes say `None needed:`), and it includes one named entity and one explicit content gap. No head-to-head competitor is listed as a source, statistic or quote (their executives' bylines elsewhere included). Check it with:
   ```bash
   python3 scripts/competitor_checks.py --research articles/YYYY-MM-DD-slug/research-notes.md
   ```
@@ -65,15 +67,15 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   - `articles/YYYY-MM-DD-slug/research-notes.md`
   - **All files in** `standards/` (`seo-checklist.md`, `geo-checklist.md`, `aio-checklist.md`, `schema-spec.md`, `quality-bar.md`)
   - Relevant `context/` folders: `context/brand/`, `context/marketing/`, `context/sales/`, `context/case-studies/` (skip `README.md`, `_template.md`, and files marked `Permission: internal only`). Skip empty folders silently and proceed with sensible defaults.
-- **Action:** Convert research into a winning angle and a detailed outline. Decide keywords, intent, word-count target, GEO/AIO angle, target entities, FAQ candidates, citations, internal-link opportunities, intro strategy (built from the research Topic Summary), and CTA.
+- **Action:** Decide what the article argues, then plan how each section proves it (D60): the thesis (from the research's Candidate Positions), a 3–5 claim **Argument Spine** with each claim's proof, the angle as a claim about the subject, and 3–5 banked statistics assigned to spine claims. Every body H2 names the spine claim it advances (or the format requirement it serves), its claim, and its proof; procedure steps carry the exact `Action:`, and examples carry their `Specifics:`. Then keywords, intent, word count, GEO/AIO, entities, FAQ, internal links, the intro strategy (built from the thesis), and the CTA.
 - **Output:** `articles/YYYY-MM-DD-slug/outline.md`.
-- **Gate:** Outline exists; primary keyword chosen; FAQ section has 3–7 candidate questions; H2/H3 outline contains at least 4 H2 sections; all entities and citations to use are listed by name with sources.
+- **Gate:** Outline exists; primary keyword chosen; FAQ count in page.md's range; at least 4 H2 sections; a real thesis; a 3–5 claim Argument Spine, every claim advanced by an H2 and at least half the body H2s advancing one; `Advances:` and `Claim:` on every body H2; each External Citation names the spine claim it supports (or is marked "mechanism"); procedure steps have an `Action:`, and an Examples page has 3+ examples with `Specifics:`, each advancing a spine claim.
 
 ### Phase 2.5 — Expert Interview (D59)
 
 - **Sub-agent specs:** `agents/interviewer.md` (the interview), `agents/interview-refiner.md` (the outline rewrite)
 - **Why:** research finds the open wedge; only the company's expert can say what they'd argue about it. Without this phase, drafts define the topic instead of arguing the title, string statistics together, and comment on other writing.
-- **Inputs:** `outline.md`, `research-notes.md` (Topic Summary, Content Gaps, Debates), `context/case-studies/`, `context/sales/proof-points.md` (`Citable: yes` rows), `context/brand/positioning.md`, `context/sales/value-props.md`.
+- **Inputs:** `outline.md`, `research-notes.md` (Topic Summary, Candidate Positions, Content Gaps, Debates), `context/case-studies/`, `context/sales/proof-points.md` (`Citable: yes` rows), `context/brand/positioning.md`, `context/sales/value-props.md`.
 - **Action (terminal mode):** you are the interviewer. Run the beats in `agents/interviewer.md` with the user in this chat, one question per message: frame the wedge, offer 2–3 candidate angles to react to, get the thesis in their words and the strongest objection, validate or replace the real-world anchor (with its publishing boundary), ask what the product sees and which proof point (if any) fits, then play it back. If the user says skip, skip the phase. Save the transcript to `interview.md`, then apply `agents/interview-refiner.md`: write `pov.md` and rewrite `outline.md`.
 - **Action (worker):** the run stops after the outline with status `awaiting_input`; the operator answers in the web app (Production → *Needs you*), and Finish (or Skip) requeues it. A plan or `config/company.yaml` → `pipeline.interview: skip` turns the stop off.
 - **Output:** `interview.md`, `pov.md`, the revised `outline.md`.
@@ -104,7 +106,7 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   - `standards/geo-checklist.md`
   - `standards/aio-checklist.md`
   - The current `article.md`
-- **Action:** Run `python scripts/seo_audit.py` on the draft first and fix every FAIL it reports (banned phrases and the machine-checked style limits in `standards/quality-bar.md` included), and apply `agents/technical-reviewer.md` to the draft. Then walk every checklist item explicitly (pass/fail/notes). Edit `article.md` in place to fix all failures. Strip every banned phrase. Verify every citation traces back to `research-notes.md`. Append an HTML-comment edit summary to the bottom of `article.md`.
+- **Action:** Run `python scripts/seo_audit.py` on the draft first and fix every FAIL it reports (banned phrases and the machine-checked style limits in `standards/quality-bar.md` included), and apply `agents/technical-reviewer.md` to the draft (accuracy, plus the D60 substance kinds: steps with no action, generic examples, claims the section doesn't prove). Then walk every checklist item explicitly (pass/fail/notes). Edit `article.md` in place to fix all failures. Strip every banned phrase. Verify every citation traces back to `research-notes.md`. Append an HTML-comment edit summary to the bottom of `article.md`.
 - **Output:** Updated `articles/YYYY-MM-DD-slug/article.md` + edit summary as `<!-- EDIT SUMMARY: ... -->`.
 - **Gate:** Zero banned phrases; all checklist items pass or have a documented justified exception; meta description 140–160 chars; title 50–60 chars; primary keyword present in first 100 words.
 
@@ -228,7 +230,8 @@ standards/
   quality-bar.md      Banned phrases, voice, fact-check
   formats.json        Format registry (D45): the 23 article types — length,
                       schema, header pattern, FAQ/takeaway rules, competitor
-                      mode, sign-off, fact-sheet requirements
+                      mode, sign-off, fact-sheet requirements, and the
+                      research mode each one researches in (D60)
 
 config/
   company.yaml        Single company config surface (identity, blog, author,
@@ -242,6 +245,9 @@ templates/
   article-template.md     Frontmatter + body skeleton
   schema-template.json    Base @graph skeleton
   formats/<slug>.md       Writing guide per article type (D45); generic.md fallback
+  research/<mode>.md      Research playbook per research mode (D60, the "quiver");
+                          formats.json maps each article type to a mode.
+                          research/modifiers.md adjusts by role, funnel, intent
 
 scripts/
   new_article.py      Scaffold a new article folder

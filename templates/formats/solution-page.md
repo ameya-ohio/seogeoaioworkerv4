@@ -6,7 +6,7 @@
 
 ## Structure
 1. **H1:** the solution in the buyer's words.
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block says what it does, for whom, with what outcome, in 50 words.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60); paragraph 1 carries the answer block below within its first 60–80 words, and paragraph 2 says why it matters now: a change or a consequence that supports the thesis, with at most one figure and only one the argument turns on. The answer block says what it does, for whom, with what outcome, in 50 words.
 3. The problem, in the buyer's language.
 4. 3–5 capability blocks, each framed as an outcome.
 5. Proof: named customers where the fact sheet permits, with quantified outcomes.

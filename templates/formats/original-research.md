@@ -6,7 +6,7 @@
 
 ## Structure
 1. **H1:** the headline finding, stated as a finding.
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block gives the top finding with its number and sample size ("Analysis of N environments found X% of Y — [Company], 2026.").
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60); paragraph 1 carries the answer block below within its first 60–80 words, and paragraph 2 says why it matters now: a change or a consequence that supports the thesis, with at most one figure and only one the argument turns on. The answer block gives the top finding with its number and sample size ("Analysis of N environments found X% of Y — [Company], 2026.").
 3. **Key Takeaways as key findings:** page.md's count (5–8), each a standalone claim with its figure.
 4. Methodology, early and detailed: sample, population, period, collection method, limitations.
 5. One H2 per finding, 300–500 words: the finding, the data, interpretation, why it matters.

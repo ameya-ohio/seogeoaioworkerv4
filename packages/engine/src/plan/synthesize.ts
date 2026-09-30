@@ -11,6 +11,7 @@ import {
   formatBySlug,
   isRoutingRole,
   lengthBandForFormat,
+  researchModeFor,
   schemaTypesForFormat,
   takeawaysFor,
   type FormatRegistry,
@@ -286,37 +287,39 @@ function evidenceFor(
     }
   }
 
+  // D60: the requirements come from the format's research mode — what THIS
+  // kind of page is built from. The old pair ("a dated statistic about X",
+  // "a source that corroborates the central claim") sent every page, how-tos
+  // included, looking for a threat-report number.
+  const format = formatOf(row, ctx);
+  const mode = researchModeFor(ctx.formats, format);
+  const vars = { subject, title: row.title };
+  const external = mode.briefEvidence.map((r) => ({ requirement: fillPassage(r, vars) }));
   return {
     proprietary,
     // Requirements only — never a statistic, never a URL. The Researcher
     // sources these live and D34 verifies each against the page it cites.
-    external: [
-      {
-        requirement:
-          `A dated, attributable statistic about ${subject} from a primary or recognised source, ` +
-          `cited to the page that states it (never to a third party quoting it).`,
-      },
-      {
-        requirement:
-          `At least one independent source that corroborates the article's central claim about ${subject}.`,
-      },
-    ],
+    external: external.length
+      ? external
+      : [{ requirement: `The primary documentation or standard that explains how ${subject} works, cited to the page that states it.` }],
     quotableStatCandidate:
-      `A single quotable sentence about ${subject} that ${ctx.companyName} can stand behind — ` +
-      `the Researcher must source and verify it; do not invent a number.`,
+      `Only if the argument turns on a number: one figure about ${subject} that ${ctx.companyName} can stand behind, ` +
+      `sourced and verified by the Researcher. Leave it out rather than decorate.`,
   };
 }
 
-function differentiationFor(row: NormalizedPlanRow, ctx: SynthesisContext): string {
+/**
+ * D60: the pillar's positioning and the operator's tie-ins are the COMPANY's
+ * position, not this page's angle. The page's angle is a claim about its
+ * subject, which enrichment proposes and the Strategist decides from research.
+ */
+function companyPositionFor(row: NormalizedPlanRow, ctx: SynthesisContext): string {
   const parts: string[] = [];
   const pillar = ctx.pillars.get(row.pillarId);
   if (pillar?.whyWeCanOwnIt) parts.push(pillar.whyWeCanOwnIt);
   if (row.tieIn) parts.push(row.tieIn);
   const sub = row.subtopicId ? ctx.subtopics.get(row.subtopicId) : undefined;
   if (sub?.tieIn && sub.tieIn !== row.tieIn) parts.push(sub.tieIn);
-  if (parts.length === 0) {
-    return `${ctx.companyName}'s own position on ${subjectOf(row)} — state it plainly and back it.`;
-  }
   return parts.join(" ");
 }
 
@@ -402,7 +405,8 @@ export function synthesizeBrief(
         : []),
     ],
     evidence: evidenceFor(row, ctx),
-    differentiationAngle: differentiationFor(row, ctx),
+    differentiationAngle: "",
+    ...(companyPositionFor(row, ctx) ? { companyPosition: companyPositionFor(row, ctx) } : {}),
     internalLinks: internalLinksFor(row, ctx.rows),
     lengthBand: lengthBandFor(row, ctx.formats),
     schemaTypes: schemaTypesFor(row, ctx.formats, opts),

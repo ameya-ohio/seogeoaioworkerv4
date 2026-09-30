@@ -4,7 +4,7 @@
 
 ## Structure
 1. **H1:** the argument as a claim, never a question ("Identity Is the Primary Attack Surface").
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block asserts the thesis plainly in 50–60 words.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60); paragraph 1 carries the answer block below within its first 60–80 words, and paragraph 2 says why it matters now: a change or a consequence that supports the thesis, with at most one figure and only one the argument turns on. The answer block asserts the thesis plainly in 50–60 words.
 3. Why the conventional view persists: steelman it properly (the concede-then-pivot arc).
 4. The argument: 3–5 declarative H2 sections, each one supporting pillar backed by data, incidents or named mechanisms.
 5. The counter-argument, taken seriously, then answered.

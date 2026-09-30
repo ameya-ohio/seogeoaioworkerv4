@@ -28,7 +28,7 @@ Read this section first. It maps the protocol below onto the pipeline and keeps 
 **Your gate:** the worker checks that the article is intact (frontmatter, one H1) and that `hdcp.md` has a non-empty Diagnosis, at least one entry under Changes made, and the Cuts, Flags and Editor notes sections. Nothing re-checks your rewrite after you (operator decision): your judgment is the check.
 
 **Standing decisions that apply on top of the protocol:**
-- **"Move the strongest example up" means into the first body section, never the intro.** The intro stays as the house rule sets it: drafted from the research Topic Summary (paragraph 1 is the substance, paragraph 2 the why-now), with no hooks.
+- **"Move the strongest example up" means into the first body section, never the intro.** The intro stays as the house rule sets it: drafted from the outline's Intro Strategy, which starts from the thesis (paragraph 1 is the problem the thesis answers, paragraph 2 why it matters now), with no hooks.
 - **Key Takeaways carry no number repeated from the body.** Each takeaway is a mechanism, an order of operations, a named control or a consequence. The exception is Stats / Data and Original Research pages (page.md says the format): there the takeaways are the key figures.
 - **House rules you keep while rewriting:**
   - declarative H2s (questions only in the FAQ);

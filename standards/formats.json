@@ -1,5 +1,5 @@
 {
-  "_comment": "Format registry (D45) — the single source of truth for Article Type. Read by packages/engine/src/formats.ts, scripts/formats.py and the web app. Each format's writing guidance lives in templates/formats/<slug>.md (templates/formats/generic.md until one is written). Precedence for FAQ counts (D49): page role (pillar/hub) > the format's own faq > the funnel rule > defaults. Page role also wins the length band for hubs (routing pages, D47). Passages are coverage requirements, not an outline (D33); {subject} and {title} are filled per row.",
+  "_comment": "Format registry (D45) — the single source of truth for Article Type. Read by packages/engine/src/formats.ts, scripts/formats.py and the web app. Each format's writing guidance lives in templates/formats/<slug>.md (templates/formats/generic.md until one is written). Precedence for FAQ counts (D49): page role (pillar/hub) > the format's own faq > the funnel rule > defaults. Page role also wins the length band for hubs (routing pages, D47). Passages are coverage requirements, not an outline (D33); {subject} and {title} are filled per row. researchMode (D60) picks the research playbook, templates/research/<mode>.md; researchModes[mode].briefEvidence seeds a plan brief's evidence requirements.",
   "version": 1,
   "defaults": {
     "takeaways": { "min": 3, "max": 3 },
@@ -12,6 +12,77 @@
   "funnelRules": {
     "bofu": { "faq": { "min": 4, "max": 6 } }
   },
+  "researchModes": {
+    "procedure": {
+      "label": "Procedure", "playbook": "templates/research/procedure.md",
+      "briefEvidence": [
+        "The official documentation for each step in {title}: the exact command, API call, query or console path, cited to the vendor or standards page that documents it.",
+        "The permissions, roles and access level each step needs, from the platform documentation.",
+        "How a practitioner confirms each step worked (the expected output or state), and the common ways it fails."
+      ]
+    },
+    "mechanism": {
+      "label": "Mechanism", "playbook": "templates/research/mechanism.md",
+      "briefEvidence": [
+        "The primary technical documentation or standard that defines how {subject} works, cited to the page that states it.",
+        "A documented incident, advisory or technique reference (a named breach write-up, an ATT&CK entry) that shows {subject} in practice.",
+        "The point where practitioners disagree about {subject}, with a named source for each side."
+      ]
+    },
+    "catalog": {
+      "label": "Catalog", "playbook": "templates/research/catalog.md",
+      "briefEvidence": [
+        "For each example in {title}: the exact attribute, permission, setting or command involved, cited to the platform documentation or technique reference that describes it.",
+        "For each example: how it is detected (log source, event ID, query) and how it is fixed, from vendor or standards documentation.",
+        "At least one documented incident or advisory in which an example of this kind was abused."
+      ]
+    },
+    "comparison": {
+      "label": "Comparison", "playbook": "templates/research/comparison.md",
+      "briefEvidence": [
+        "The authoritative definition of each side of {title}, cited to the standard or documentation that defines it.",
+        "Where the two differ in practice (the data, the owner, the trigger, the outcome), with a source for each difference that is not self-evident.",
+        "A documented case where treating one as the other caused a concrete failure."
+      ]
+    },
+    "measurement": {
+      "label": "Measurement", "playbook": "templates/research/measurement.md",
+      "briefEvidence": [
+        "How each metric or criterion in {title} is defined and computed, and the data it is computed from, cited to documentation or a published methodology.",
+        "Published benchmarks or thresholds for these measures, cited to the page that states them, or an explicit note that none exist.",
+        "The known ways these measures mislead (gaming, blind spots), from a named source."
+      ]
+    },
+    "argument": {
+      "label": "Argument", "playbook": "templates/research/argument.md",
+      "briefEvidence": [
+        "The strongest published version of the conventional position on {subject}, from a named expert or organization.",
+        "Evidence that bears directly on whether that position holds, cited to the page that states it.",
+        "A documented case or incident that tests the position in practice."
+      ]
+    },
+    "data": {
+      "label": "Data", "playbook": "templates/research/data.md",
+      "briefEvidence": [
+        "Primary datasets and reports on {subject}, each with its methodology (sample, date, definitions), cited to the publisher.",
+        "Where published figures on {subject} conflict, and why (methodology, population, definitions)."
+      ]
+    },
+    "pillar": {
+      "label": "Pillar", "playbook": "templates/research/pillar.md",
+      "briefEvidence": [
+        "For each sub-theme of {subject}: its defining mechanism and the primary documentation or standard behind it.",
+        "The position that ties the sub-themes of {subject} into one argument, and the evidence that bears on it."
+      ]
+    },
+    "commercial": {
+      "label": "Commercial", "playbook": "templates/research/commercial.md",
+      "briefEvidence": [
+        "The buyer's problem this page answers, with a documented case or advisory that shows its cost.",
+        "The company proof points and case studies that apply (from context/, never invented)."
+      ]
+    }
+  },
   "formats": [
     {
       "slug": "pillar-guide", "label": "Pillar Guide", "aliases": ["pillar", "pillar page", "complete guide", "ultimate guide"],
@@ -19,7 +90,7 @@
       "allowedRoles": ["pillar"],
       "lengthBand": { "min": 3000, "max": 5000 },
       "schema": ["Article", "BreadcrumbList", "DefinedTerm"],
-      "headerPattern": "report-cover",
+      "headerPattern": "report-cover", "researchMode": "pillar",
       "passages": [
         "A 50–80 word answer defining {subject} that can be lifted verbatim",
         "A full definition of {subject}, self-sufficient even though a child definition page exists",
@@ -34,7 +105,7 @@
       "allowedRoles": ["hub", "cluster"], "allowedFunnels": ["tofu", "mofu"],
       "lengthBand": { "min": 900, "max": 1800 },
       "schema": ["Article", "BreadcrumbList", "DefinedTerm"],
-      "headerPattern": "clean-light",
+      "headerPattern": "clean-light", "researchMode": "mechanism",
       "passages": [
         "A 40–60 word definition of {subject} that is extractable with zero surrounding context",
         "How {subject} differs from the nearest neighbouring term",
@@ -48,7 +119,7 @@
       "allowedRoles": ["cluster", "hub"],
       "lengthBand": { "min": 1800, "max": 2800 },
       "schema": ["TechArticle", "BreadcrumbList"],
-      "headerPattern": "auto",
+      "headerPattern": "auto", "researchMode": "mechanism",
       "passages": [
         "A 60–80 word answer to \"{title}\" that answers the precise long-tail question",
         "Technical specifics a generalist could not produce: commands, attribute names, permission strings, MITRE technique IDs, event IDs",
@@ -62,7 +133,7 @@
       "allowedRoles": ["cluster", "hub"],
       "lengthBand": { "min": 1200, "max": 2000 },
       "schema": ["Article", "BreadcrumbList", "HowTo"],
-      "headerPattern": "auto",
+      "headerPattern": "auto", "researchMode": "procedure",
       "passages": [
         "The whole procedure for {title} compressed to 60 words, or the step count plus the outcome",
         "Prerequisites: permissions, tools and access level",
@@ -76,7 +147,7 @@
       "allowedRoles": ["cluster", "hub"],
       "lengthBand": { "min": 2000, "max": 3000 },
       "schema": ["Article", "BreadcrumbList", "DefinedTerm"],
-      "headerPattern": "auto",
+      "headerPattern": "auto", "researchMode": "measurement",
       "passages": [
         "The framework in 60 words: its stable name, its stages, and what it is for",
         "A table of stages, then one section per stage: what it is, what you do, what you produce, how you know you're done",
@@ -90,7 +161,7 @@
       "allowedRoles": ["cluster"],
       "lengthBand": { "min": 800, "max": 1200 },
       "schema": ["Article", "BreadcrumbList", "DigitalDocument"],
-      "headerPattern": "auto",
+      "headerPattern": "auto", "researchMode": "procedure",
       "passages": [
         "What the template contains, as a list",
         "The template rendered in full on the page as a table or structured list, not only a download",
@@ -104,7 +175,7 @@
       "allowedRoles": ["cluster"],
       "lengthBand": { "min": 1000, "max": 1600 },
       "schema": ["Article", "BreadcrumbList", "ItemList"],
-      "headerPattern": "auto",
+      "headerPattern": "auto", "researchMode": "procedure",
       "passages": [
         "The item count, what the checklist covers and who it is for",
         "The checklist grouped into 4–8 named sections; every item a yes/no imperative with one line of why",
@@ -118,7 +189,7 @@
       "allowedRoles": ["cluster"],
       "lengthBand": { "min": 1200, "max": 1800 },
       "schema": ["Article", "BreadcrumbList"],
-      "headerPattern": "question-hook",
+      "headerPattern": "question-hook", "researchMode": "comparison",
       "passages": [
         "The distinction in one or two sentences, stated outright",
         "A comparison table high on the page: 6–10 rows of real dimensions, substantive cells, never checkmarks",
@@ -132,7 +203,7 @@
       "allowedRoles": ["cluster"], "allowedFunnels": ["bofu", "mofu"],
       "lengthBand": { "min": 1800, "max": 2500 },
       "schema": ["Article", "BreadcrumbList"],
-      "headerPattern": "question-hook",
+      "headerPattern": "question-hook", "researchMode": "comparison",
       "competitorMode": "vendor", "signoff": true,
       "passages": [
         "Who each vendor is genuinely best for, with a real concession",
@@ -147,7 +218,7 @@
       "allowedRoles": ["cluster", "hub"],
       "lengthBand": { "min": 2000, "max": 3000 },
       "schema": ["Article", "BreadcrumbList", "ItemList"],
-      "headerPattern": "auto",
+      "headerPattern": "auto", "researchMode": "comparison",
       "competitorMode": "vendor", "signoff": true,
       "passages": [
         "The shortlist named, with a one-line reason for each",
@@ -162,7 +233,7 @@
       "allowedRoles": ["cluster", "hub"],
       "lengthBand": { "min": 1500, "max": 2200 },
       "schema": ["Article", "BreadcrumbList", "ItemList"],
-      "headerPattern": "auto",
+      "headerPattern": "auto", "researchMode": "argument",
       "passages": [
         "The practices named and numbered in 60–80 words",
         "One section per practice: the imperative, why it works, how to implement and verify it, what it costs",
@@ -176,7 +247,7 @@
       "allowedRoles": ["cluster", "hub"],
       "lengthBand": { "min": 1500, "max": 2200 },
       "schema": ["Article", "BreadcrumbList", "HowTo"],
-      "headerPattern": "auto",
+      "headerPattern": "auto", "researchMode": "measurement",
       "passages": [
         "What an assessment of {subject} covers and produces, in 60 words",
         "The assessment as numbered phases: scope, collect, analyse, score, prioritise, report",
@@ -190,7 +261,7 @@
       "allowedRoles": ["cluster"],
       "lengthBand": { "min": 2500, "max": 3500 },
       "schema": ["Article", "BreadcrumbList", "ItemList"],
-      "headerPattern": "report-cover",
+      "headerPattern": "report-cover", "researchMode": "comparison",
       "passages": [
         "The evaluation criteria named, in 60–80 words",
         "Who needs this category and who does not, placed early",
@@ -204,7 +275,7 @@
       "allowedRoles": ["cluster", "hub"],
       "lengthBand": { "min": 1500, "max": 2200 },
       "schema": ["Article", "BreadcrumbList", "DefinedTerm"],
-      "headerPattern": "auto",
+      "headerPattern": "auto", "researchMode": "measurement",
       "passages": [
         "The metrics named, in 60–80 words",
         "Why the obvious metrics mislead",
@@ -220,7 +291,7 @@
       "takeaways": { "min": 8, "max": 12 },
       "faq": { "min": 0, "max": 0 },
       "schema": ["Article", "BreadcrumbList", "Dataset"],
-      "headerPattern": "stat-highlight",
+      "headerPattern": "stat-highlight", "researchMode": "data",
       "passages": [
         "The 3–5 headline figures on {subject}, stated outright with sources named inline",
         "Key statistics as standalone sentences, each with the number, subject, source and year",
@@ -235,7 +306,7 @@
       "lengthBand": { "min": 2500, "max": 4000 },
       "takeaways": { "min": 5, "max": 8 },
       "schema": ["Article", "BreadcrumbList", "Dataset"],
-      "headerPattern": "report-cover",
+      "headerPattern": "report-cover", "researchMode": "data",
       "requires": { "dataset": "context/research/{slug}.md" },
       "passages": [
         "The headline finding with its number and sample size",
@@ -250,7 +321,7 @@
       "allowedRoles": ["cluster", "hub"],
       "lengthBand": { "min": 1200, "max": 1800 },
       "schema": ["Article", "BreadcrumbList", "ItemList"],
-      "headerPattern": "auto",
+      "headerPattern": "auto", "researchMode": "catalog",
       "passages": [
         "The example categories named, in 60 words",
         "A quick-reference table: example, environment, mechanism, impact, fix",
@@ -265,7 +336,7 @@
       "lengthBand": { "min": 1200, "max": 1800 },
       "faq": { "min": 0, "max": 0 },
       "schema": ["Article", "BreadcrumbList"],
-      "headerPattern": "contrarian",
+      "headerPattern": "contrarian", "researchMode": "argument",
       "passages": [
         "The thesis asserted plainly in 50–60 words",
         "Why the conventional view persists, steelmanned properly",
@@ -279,7 +350,7 @@
       "allowedRoles": ["cluster"],
       "lengthBand": { "min": 2000, "max": 3000 },
       "schema": ["Article", "BreadcrumbList", "ItemList"],
-      "headerPattern": "auto",
+      "headerPattern": "auto", "researchMode": "comparison",
       "competitorMode": "vendor", "signoff": true,
       "passages": [
         "The tools named, with a one-line reason for each",
@@ -294,7 +365,7 @@
       "allowedRoles": ["cluster"],
       "lengthBand": { "min": 800, "max": 1200 },
       "schema": ["Service", "BreadcrumbList"],
-      "headerPattern": "clean-light",
+      "headerPattern": "clean-light", "researchMode": "commercial",
       "requires": { "factSheet": "context/product/solution-page/{slug}.md" },
       "passages": [
         "What the solution does, for whom, with what outcome, in 50 words",
@@ -309,7 +380,7 @@
       "allowedRoles": ["cluster", "hub"],
       "lengthBand": { "min": 900, "max": 1400 },
       "schema": ["Article", "BreadcrumbList"],
-      "headerPattern": "clean-light",
+      "headerPattern": "clean-light", "researchMode": "catalog",
       "requires": { "factSheet": "context/product/use-case/{slug}.md" },
       "passages": [
         "The specific problem this segment has and the outcome, in 50–60 words",
@@ -324,7 +395,7 @@
       "allowedRoles": ["cluster"],
       "lengthBand": { "min": 700, "max": 1100 },
       "schema": ["SoftwareApplication", "BreadcrumbList", "HowTo"],
-      "headerPattern": "clean-light",
+      "headerPattern": "clean-light", "researchMode": "procedure",
       "requires": { "factSheet": "context/product/integration-page/{slug}.md" },
       "passages": [
         "What the integration does and what it requires, in 50 words",
@@ -340,7 +411,7 @@
       "lengthBand": { "min": 500, "max": 900 },
       "faq": { "min": 0, "max": 0 },
       "schema": ["WebPage"],
-      "headerPattern": "clean-light",
+      "headerPattern": "clean-light", "researchMode": "commercial",
       "producible": false,
       "passages": []
     }

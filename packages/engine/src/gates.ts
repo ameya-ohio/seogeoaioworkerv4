@@ -68,6 +68,8 @@ const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const RESEARCH_SECTIONS = [
   "Topic Summary",
+  "Subject Material",
+  "Candidate Positions",
   "Target Keyword Analysis",
   "Top Ranking Pages",
   "Authoritative Sources",
@@ -76,6 +78,17 @@ const RESEARCH_SECTIONS = [
   "Questions People Are Asking",
   "Content Gaps (Opportunities)",
 ];
+
+const MIN_SUBJECT_MATERIAL_WORDS = 150;
+
+/** D60: the Researcher's `### P1: <claim>` entries under ## Candidate Positions. */
+export function candidatePositions(notes: string): { id: string; claim: string }[] {
+  const out: { id: string; claim: string }[] = [];
+  for (const m of sectionBody(notes, "Candidate Positions").matchAll(/^###\s+(P\d+)\s*[:.—-]\s*(.+)$/gim)) {
+    out.push({ id: (m[1] ?? "").toUpperCase(), claim: (m[2] ?? "").trim() });
+  }
+  return out;
+}
 
 export function researchGate(files: GateFiles): GateResult {
   const problems: string[] = [];
@@ -93,8 +106,39 @@ export function researchGate(files: GateFiles): GateResult {
   if (urls.length < 8) {
     problems.push(`Only ${urls.length} distinct source URLs found; need >= 8`);
   }
-  if (countWords(sectionBody(notes, "Statistics & Data Points")) < 10) {
-    problems.push("Statistics & Data Points section is empty — need at least one named statistic");
+  // D60: the material the page is built from, per the research playbook.
+  if (hasSection(notes, "Subject Material") && countWords(sectionBody(notes, "Subject Material")) < MIN_SUBJECT_MATERIAL_WORDS) {
+    problems.push(
+      `Subject Material has ${countWords(sectionBody(notes, "Subject Material"))} words — gather the playbook's material (the procedure, mechanism, example bank, dimensions or measures in research-brief.md), with specifics and sources (need >= ${MIN_SUBJECT_MATERIAL_WORDS} words)`,
+    );
+  }
+  const positions = candidatePositions(notes);
+  if (hasSection(notes, "Candidate Positions") && positions.length < 2) {
+    problems.push(
+      `Candidate Positions lists ${positions.length} position(s) — need 2-3, each as \`### P1: <claim>\` with its support, strongest objection and what the article would argue`,
+    );
+  }
+  const stats = sectionBody(notes, "Statistics & Data Points");
+  if (countWords(stats) < 10 && !/none needed/i.test(stats)) {
+    problems.push(
+      "Statistics & Data Points is empty — bank the figures a position needs, or write `None needed:` and why this page's argument doesn't turn on one",
+    );
+  }
+  // D60: every banked figure or quote names the position it serves; a figure
+  // that serves no position is decoration, and the Strategist can't place it.
+  if (positions.length) {
+    const known = new Set(positions.map((p) => p.id));
+    for (const section of ["Statistics & Data Points", "Quotes Worth Including"]) {
+      for (const line of sectionBody(notes, section).split("\n")) {
+        if (!/^\s*-\s+\S/.test(line) || !/source(?:\s+citation)?\s*#?\s*\d+/i.test(line)) continue;
+        const tag = /supports:\s*(P\d+)/i.exec(line);
+        if (!tag?.[1]) {
+          problems.push(`${section}: "${line.trim().slice(2, 90)}" is not tagged with the position it supports (add "supports: P1")`);
+        } else if (!known.has(tag[1].toUpperCase())) {
+          problems.push(`${section}: "${line.trim().slice(2, 90)}" supports ${tag[1]}, which is not a Candidate Position`);
+        }
+      }
+    }
   }
   if (countWords(sectionBody(notes, "Key Entities")) < 5) {
     problems.push("Key Entities section is empty — need at least one named entity");
@@ -102,12 +146,13 @@ export function researchGate(files: GateFiles): GateResult {
   if (countWords(sectionBody(notes, "Content Gaps (Opportunities)")) < 10) {
     problems.push("Content Gaps section is empty — need at least one explicit gap");
   }
-  // D37 claim budget: 3–5 load-bearing attributed claims, never a dump —
-  // every claim is a verification roll, and dozens make the gate a lottery.
+  // D37/D60 claim budget: an evidence bank of at most MAX_ATTRIBUTED_CLAIMS
+  // tagged candidates (the Strategist uses 3–5) — every claim is a
+  // verification roll, and dozens make the gate a lottery.
   const claimCount = parseResearchCitations(notes).claims.length;
   if (claimCount > MAX_ATTRIBUTED_CLAIMS) {
     problems.push(
-      `${claimCount} attributed claims — trim to the 3–5 load-bearing statistics the article will actually cite (hard ceiling ${MAX_ATTRIBUTED_CLAIMS}); list other sources without Key claim lines`,
+      `${claimCount} attributed claims — the evidence bank holds at most ${MAX_ATTRIBUTED_CLAIMS} (the Strategist uses 3–5); keep the ones a position turns on and list other sources without Key claim lines`,
     );
   }
   // Competitor ban (quality-bar → Competitor handling): a head-to-head vendor is
@@ -193,7 +238,131 @@ export function outlineGate(files: GateFiles): GateResult {
       problems.push(`Missing required section: ## ${s}`);
     }
   }
+  problems.push(...argumentProblems(outline, files.page));
   return result(problems);
+}
+
+// ── D60: the argument has to be built into the outline ─────────────────────
+
+export interface OutlineBlock {
+  level: "H2" | "H3";
+  heading: string;
+  body: string;
+}
+
+/** The `### H2:` / `#### H3:` blocks of `## Full Outline`, in order. */
+export function outlineBlocks(outline: string): OutlineBlock[] {
+  const full = sectionBody(outline, "Full Outline");
+  const re = /^#{3,4}\s+(H2|H3):\s*(.+)$/gim;
+  const heads = [...full.matchAll(re)];
+  return heads.map((m, i) => {
+    const start = (m.index ?? 0) + m[0].length;
+    const end = heads[i + 1]?.index ?? full.length;
+    // A block also ends at the next non-H2/H3 heading (### Closing, ### Key Takeaways).
+    const raw = full.slice(start, end);
+    const stop = /^#{3,4}\s+(?!H[23]:)\S/m.exec(raw);
+    return {
+      level: (m[1] ?? "H2").toUpperCase() as "H2" | "H3",
+      heading: (m[2] ?? "").replace(/\s*\(≈[^)]*\)/, "").replace(/\s*\[[^\]]*\]\s*$/, "").trim(),
+      body: stop ? raw.slice(0, stop.index) : raw,
+    };
+  });
+}
+
+/** The numbered claims under `## Argument Spine`. */
+export function argumentSpine(outline: string): string[] {
+  return (sectionBody(outline, "Argument Spine").match(/^\s*\d+[.)]\s+\S.*$/gm) ?? []).map((l) =>
+    l.replace(/^\s*\d+[.)]\s+/, "").trim(),
+  );
+}
+
+function lineValue(body: string, key: string): string | null {
+  const m = new RegExp(`^\\s*-\\s*\\**${key}\\**\\s*:\\s*(.*)$`, "im").exec(body);
+  return m ? (m[1] ?? "").trim() : null;
+}
+
+const isFaqHeading = (h: string) => /frequently asked|^faqs?\b/i.test(h);
+
+/**
+ * D60 outline checks: a 3–5 claim Argument Spine; every body H2 names the
+ * spine claim it advances (or the format requirement it serves); every claim
+ * is advanced; each planned citation names the claim it supports; and the
+ * research mode's own requirements (a procedure's steps carry an action; an
+ * examples page's examples carry specifics and prove the thesis).
+ */
+export function argumentProblems(outline: string, page?: PageRules): string[] {
+  const problems: string[] = [];
+  if (!hasSection(outline, "Argument Spine")) {
+    return ["Missing required section: ## Argument Spine (3-5 numbered claims that build the thesis, each with its proof)"];
+  }
+  const spine = argumentSpine(outline);
+  if (spine.length < 3 || spine.length > 5) {
+    problems.push(`Argument Spine has ${spine.length} claim(s); need 3-5, numbered, each a step in the argument with its proof`);
+  }
+  const blocks = outlineBlocks(outline);
+  const body = blocks.filter((b) => b.level === "H2" && !isFaqHeading(b.heading));
+  const advanced = new Set<number>();
+  let advancing = 0;
+  for (const b of body) {
+    const adv = lineValue(b.body, "Advances");
+    if (adv === null || !adv) {
+      problems.push(`H2 "${b.heading}" has no "- Advances:" line — name the spine claim it advances ("spine #2") or the format requirement it serves ("format — prerequisites")`);
+      continue;
+    }
+    if (/spine/i.test(adv)) {
+      const nums = [...adv.matchAll(/(?:#|spine\s+)\s*(\d+)/gi)].map((m) => Number(m[1]));
+      const bad = nums.filter((n) => n < 1 || n > spine.length);
+      if (!nums.length || bad.length) {
+        problems.push(`H2 "${b.heading}" advances ${nums.length ? `spine #${bad.join(", #")}` : "no numbered claim"}, which is not in the Argument Spine`);
+      } else {
+        advancing++;
+        for (const n of nums) advanced.add(n);
+      }
+    } else if (!/format/i.test(adv)) {
+      problems.push(`H2 "${b.heading}": "Advances: ${adv.slice(0, 60)}" must name a spine claim ("spine #N") or a format requirement ("format — …")`);
+    }
+    if (!lineValue(b.body, "Claim")) {
+      problems.push(`H2 "${b.heading}" has no "- Claim:" line — say what the reader should believe or do after the section`);
+    }
+  }
+  // A routing hub's child sections exist to route, so the majority rule doesn't apply to it.
+  if (!page?.routing && body.length && advancing * 2 < body.length) {
+    problems.push(
+      `only ${advancing} of ${body.length} body H2s advance a spine claim — at least half must; a section that only covers a subtopic needs a claim or should go`,
+    );
+  }
+  for (let n = 1; n <= spine.length; n++) {
+    if (!advanced.has(n)) problems.push(`Argument Spine claim #${n} is not advanced by any H2 — give it a section or cut it`);
+  }
+  for (const line of sectionBody(outline, "External Citations to Use").split("\n")) {
+    if (!/^\s*\d+[.)]\s+\S/.test(line)) continue;
+    if (!/supports\s+spine\s*#?\s*\d+|mechanism/i.test(line)) {
+      problems.push(`External Citations: "${line.trim().slice(0, 90)}" must name the spine claim it supports ("supports spine #N") or be marked "mechanism"`);
+    }
+  }
+
+  const mode = page?.format.researchMode;
+  if (mode === "procedure") {
+    for (const b of blocks.filter((x) => /^step\b/i.test(x.heading))) {
+      const action = lineValue(b.body, "Action");
+      if (!action || /^(none|n\/a|tbd)\b/i.test(action)) {
+        problems.push(`Step "${b.heading}" has no "- Action:" — plan the exact command, API call, query or console path from Subject Material`);
+      }
+    }
+  }
+  if (mode === "catalog") {
+    const examples = body.filter((b) => lineValue(b.body, "Specifics"));
+    const min = page?.format.slug === "examples" ? 3 : 1;
+    if (examples.length < min) {
+      problems.push(`${examples.length} example section(s) carry "- Specifics:"; need >= ${min} — each example names its exact attribute, permission, setting or command`);
+    }
+    for (const b of examples) {
+      if (!/spine/i.test(lineValue(b.body, "Advances") ?? "")) {
+        problems.push(`Example "${b.heading}" doesn't advance a spine claim — the examples are the thesis's proof`);
+      }
+    }
+  }
+  return problems;
 }
 
 const REQUIRED_FRONTMATTER = [

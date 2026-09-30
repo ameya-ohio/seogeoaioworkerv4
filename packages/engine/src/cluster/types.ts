@@ -159,7 +159,15 @@ export interface SpokeBrief {
     external: { requirement: string; sourceUrl?: string }[];
     quotableStatCandidate: string;
   };
+  /** What this page says that the current top results don't: a claim about the subject (set by enrichment). */
   differentiationAngle: string;
+  /**
+   * D60: the company's position on the pillar (the operator's "why we can
+   * own it" and tie-ins). Context for the Researcher and Strategist, never
+   * this page's angle — before D60 it was pasted into differentiationAngle,
+   * and a how-to page got told to "own the definitional SERP".
+   */
+  companyPosition?: string;
   /**
    * `hub` is the page above (empty for a pillar page, which has none),
    * `siblings` are peers, and `children` are the pages a ROUTING page must

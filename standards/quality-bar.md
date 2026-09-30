@@ -309,7 +309,7 @@ Returning to the opening image at the close to "bring the piece full circle." Fe
 
 Opening with a performance instead of the subject. The pattern: a lone statistic, then a dramatic fragment ("The attacker used a valid identity and walked in the front door."), then a paragraph commenting on the opening ("That number should reframe how teams talk about X, but mostly it hasn't."), then a set-piece about terms ("They aren't the same word, and the gap between them is where remediation effort goes to die."), then a threat ("Confuse the two, and you'll spend a sprint fixing the wrong things."). Each move delays the substance and leaves the reader less informed than a plain statement would.
 
-**Fix:** Start from the research notes' Topic Summary, paragraphs 1–2. Paragraph 1 names the subject, states the distinction or problem, defines it, and says what getting it wrong costs. Paragraph 2 says what changed, in one to three sentences, with at most one sourced figure (*Argument over evidence*). A statistic belongs inside a sentence that makes a claim ("…CrowdStrike's 2026 Global Threat Report found 82% of detections were malware-free, meaning…"). It shouldn't stand alone as the opener.
+**Fix:** Start from the outline's Intro Strategy and the thesis (D60). Paragraph 1 names the subject, states the problem the thesis answers in the thesis's terms, and says what getting it wrong costs. Paragraph 2 says what changed, in one to three sentences, with at most one sourced figure (*Argument over evidence*). A statistic belongs inside a sentence that makes a claim ("…CrowdStrike's 2026 Global Threat Report found 82% of detections were malware-free, meaning…"). It shouldn't stand alone as the opener.
 
 
 ## AI Marketing Slop Vocabulary

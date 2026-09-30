@@ -6,7 +6,7 @@
 
 ## Structure
 1. **H1:** "[Topic] Metrics" or "How to Measure [Topic]".
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block names the metrics.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60); paragraph 1 carries the answer block below within its first 60–80 words, and paragraph 2 says why it matters now: a change or a consequence that supports the thesis, with at most one figure and only one the argument turns on. The answer block names the metrics.
 3. Why the obvious metrics mislead.
 4. One H2 per metric, 200–300 words: definition, **the formula**, data required, how to interpret it, benchmark range, how it gets gamed.
 5. A metrics table: metric, formula, data source, target, review cadence.

@@ -341,6 +341,7 @@ export type PlanEventType =
   // import + enrichment
   | "plan.created"
   | "plan.committed"
+  | "plan.enrich.queued"
   | "plan.enrich.started"
   | "plan.enrich.progress"
   | "plan.enrich.succeeded"

@@ -6,7 +6,7 @@
 
 ## Structure
 1. **H1:** "[Topic] Statistics [Year]".
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block states the 3–5 headline figures outright, sources named inline.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60); paragraph 1 carries the answer block below within its first 60–80 words, and paragraph 2 says why it matters now: a change or a consequence that supports the thesis, with at most one figure and only one the argument turns on. The answer block states the 3–5 headline figures outright, sources named inline.
 3. **Key Takeaways as the key statistics:** page.md's count (8–12). Each is a complete standalone sentence with the number, the subject, the source and the year.
 4. Sections grouped by theme, each with its numbers.
 5. A data table: statistic, figure, source, year, sample or methodology.

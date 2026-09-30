@@ -40,7 +40,8 @@ export type NotReadyReason =
   | "children_unapproved"
   | "not_before"
   | "terminal"
-  | "attempts_exhausted";
+  | "attempts_exhausted"
+  | "awaiting_enrichment";
 
 export interface ReadinessItem {
   /** Stable identity within the plan (the item's _id hex, or its externalId). */
@@ -56,6 +57,8 @@ export interface ReadinessItem {
   held?: boolean | undefined;
   /** Current stage of the article this item produced, when one exists. */
   articleStage?: Stage | undefined;
+  /** D60: brief enrichment state — a pending brief is not built until enriched. */
+  enrichment?: "pending" | "done" | "failed" | "skipped" | undefined;
 }
 
 export interface ReadinessOptions {
@@ -99,6 +102,10 @@ export function isEligible(item: ReadinessItem, opts: ReadinessOptions): Readine
   if (item.status === "failed" && item.retryAfter && item.retryAfter > opts.now) {
     return { ready: false, reason: "not_before" };
   }
+  // D60: the Researcher and Strategist build on the brief; a placeholder
+  // brief sends every page looking for the same generic statistic. Wait for
+  // enrichment (a failed enrichment falls back to the deterministic brief).
+  if (item.enrichment === "pending") return { ready: false, reason: "awaiting_enrichment" };
   return { ready: true };
 }
 
@@ -209,5 +216,7 @@ export function explainNotReady(reason: NotReadyReason): string {
       return "already produced, skipped, or quarantined";
     case "attempts_exhausted":
       return "out of retry attempts — quarantined until an operator intervenes";
+    case "awaiting_enrichment":
+      return "waiting for its brief to be enriched (queued automatically)";
   }
 }

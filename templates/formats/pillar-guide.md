@@ -7,7 +7,7 @@
 ## Structure
 
 1. **H1:** the head term, phrased plainly ("Identity Exposure Management: The Complete Guide").
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44). The first 50–80 words define the head term in one sentence, then state the two or three things the reader most needs to know. Write it so it can be lifted verbatim into an AI Overview.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60). The first 50–80 words define the head term in one sentence, then state the two or three things the reader most needs to know. Write it so it can be lifted verbatim into an AI Overview.
 3. **Key Takeaways:** the count in page.md.
 4. **A table of contents** with jump links to each H2.
 5. **What [head term] is:** a full definition, even though a child Definition page exists. The pillar must stand on its own. Where a hub merged into this pillar (the brief says so), this section answers that hub's query completely.
@@ -24,7 +24,7 @@
 
 ## The company's thesis
 
-The pillar's "why the company can own it" angle (in the brief's differentiation angle) is the positioning thesis, and it must be visible on the page, not just in the plan.
+The pillar's "why the company can own it" position (the brief's Company position) is the positioning thesis, and it must be visible on the page, not just in the plan.
 
 ## Linking
 

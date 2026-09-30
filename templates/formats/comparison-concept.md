@@ -7,7 +7,7 @@
 ## Structure
 
 1. **H1:** "[X] vs [Y]: [what actually differs]".
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44). The first 40–60 words state the distinction outright, e.g. "Identity exposure is the condition; identity risk is the quantified likelihood and impact of that condition being exploited." Don't build up to it. Paragraph 2 gives the sourced why-now.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60). The first 40–60 words state the distinction outright, e.g. "Identity exposure is the condition; identity risk is the quantified likelihood and impact of that condition being exploited." Don't build up to it. Paragraph 2 says why the distinction matters now, in terms of the thesis: at most one figure, and only one the argument turns on.
 3. **Key Takeaways:** the count in page.md.
 4. **The comparison table, high on the page:** 6–10 rows of real dimensions (purpose, scope, data required, who owns it, when to use it, what it misses). Substantive cells, never a checkmark grid. Use a real markdown table so it renders as `<table>` with `<th>`.
 5. **What [X] is:** about 150 words, pointing to X's Definition page.

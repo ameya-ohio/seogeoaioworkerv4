@@ -43,6 +43,8 @@ export interface FormatSpec {
   /** Schema.org types beyond the Organization/Person/WebPage/ImageObject every page gets. */
   schema: string[];
   headerPattern: string;
+  /** D60: which research playbook (templates/research/<mode>.md) gathers this page's material. */
+  researchMode: string;
   competitorMode: CompetitorMode;
   /** Human sign-off required before export; never produced by the scheduler (D51). */
   signoff: boolean;
@@ -53,8 +55,22 @@ export interface FormatSpec {
   passages: string[];
 }
 
+/**
+ * D60: a research mode — the playbook the Researcher follows for every format
+ * that names it, and the evidence requirements a plan brief starts from.
+ */
+export interface ResearchMode {
+  slug: string;
+  label: string;
+  /** Repo-relative path of the playbook markdown. */
+  playbook: string;
+  /** Brief evidence requirements ({subject}/{title} filled per row). */
+  briefEvidence: string[];
+}
+
 export interface FormatRegistry {
   version: number;
+  researchModes: Record<string, ResearchMode>;
   defaults: { takeaways: Range; faq: FaqRange };
   roleRules: Partial<Record<PageRole, { faq?: FaqRange; lengthBand?: Range; routing?: boolean }>>;
   funnelRules: Partial<Record<FunnelStage, { faq?: FaqRange }>>;
@@ -63,6 +79,19 @@ export interface FormatRegistry {
 
 /** The format a page falls back to when its label resolves to nothing. */
 export const GENERIC_FORMAT_SLUG = "generic";
+
+/** The research mode for the generic format and for a registry that predates D60. */
+export const GENERIC_RESEARCH_MODE = "mechanism";
+
+const FALLBACK_RESEARCH_MODE: ResearchMode = {
+  slug: GENERIC_RESEARCH_MODE,
+  label: "Mechanism",
+  playbook: "templates/research/mechanism.md",
+  briefEvidence: [
+    "The primary technical documentation or standard that defines how {subject} works, cited to the page that states it.",
+    "A documented incident, advisory or technique reference that shows {subject} in practice.",
+  ],
+};
 
 const GENERIC: FormatSpec = {
   slug: GENERIC_FORMAT_SLUG,
@@ -74,6 +103,7 @@ const GENERIC: FormatSpec = {
   lengthBand: { min: 800, max: 2000 },
   schema: ["Article", "BreadcrumbList"],
   headerPattern: "auto",
+  researchMode: GENERIC_RESEARCH_MODE,
   competitorMode: "strict",
   signoff: false,
   producible: true,
@@ -111,10 +141,23 @@ export function parseFormatRegistry(raw: unknown): FormatRegistry {
       takeaways: asRange(defaults["takeaways"] ?? { min: 3, max: 3 }, "defaults.takeaways"),
       faq: asFaq(defaults["faq"] ?? { min: 3, max: 5, optional: true }, "defaults.faq"),
     },
+    researchModes: {},
     roleRules: {},
     funnelRules: {},
     formats: [],
   };
+  for (const [slug, m] of Object.entries((obj["researchModes"] ?? {}) as Record<string, Record<string, unknown>>)) {
+    const playbook = String(m["playbook"] ?? "").trim();
+    if (!playbook) throw new Error(`formats.json: researchModes.${slug}.playbook missing`);
+    reg.researchModes[slug] = {
+      slug,
+      label: String(m["label"] ?? slug),
+      playbook,
+      briefEvidence: Array.isArray(m["briefEvidence"]) ? (m["briefEvidence"] as unknown[]).map(String) : [],
+    };
+  }
+  // A registry from before D60 has no modes: every format researches as a mechanism page.
+  if (!reg.researchModes[GENERIC_RESEARCH_MODE]) reg.researchModes[GENERIC_RESEARCH_MODE] = FALLBACK_RESEARCH_MODE;
   for (const [role, rule] of Object.entries((obj["roleRules"] ?? {}) as Record<string, Record<string, unknown>>)) {
     reg.roleRules[role as PageRole] = {
       ...(rule["faq"] ? { faq: asFaq(rule["faq"], `roleRules.${role}.faq`) } : {}),
@@ -141,6 +184,7 @@ export function parseFormatRegistry(raw: unknown): FormatRegistry {
       lengthBand: asRange(f["lengthBand"], `${slug}.lengthBand`),
       schema: Array.isArray(f["schema"]) ? (f["schema"] as unknown[]).map(String) : ["Article"],
       headerPattern: String(f["headerPattern"] ?? "auto"),
+      researchMode: String(f["researchMode"] ?? GENERIC_RESEARCH_MODE),
       competitorMode: f["competitorMode"] === "vendor" ? "vendor" : "strict",
       signoff: f["signoff"] === true,
       producible: f["producible"] !== false,
@@ -151,6 +195,9 @@ export function parseFormatRegistry(raw: unknown): FormatRegistry {
     if (f["takeaways"]) spec.takeaways = asRange(f["takeaways"], `${slug}.takeaways`);
     if (f["faq"]) spec.faq = asFaq(f["faq"], `${slug}.faq`);
     if (f["requires"]) spec.requires = f["requires"] as FormatSpec["requires"];
+    if (!reg.researchModes[spec.researchMode]) {
+      throw new Error(`formats.json: ${slug}.researchMode "${spec.researchMode}" is not in researchModes`);
+    }
     reg.formats.push(spec);
   }
   return reg;
@@ -252,6 +299,21 @@ export function facetWarnings(
 /** Fill {subject}/{title} in a passage template. */
 export function fillPassage(template: string, vars: { subject: string; title: string }): string {
   return template.replace(/\{subject\}/g, vars.subject).replace(/\{title\}/g, vars.title);
+}
+
+/** D60: the research mode a format researches in (the generic mode when unknown). */
+export function researchModeFor(reg: FormatRegistry, format: FormatSpec): ResearchMode {
+  return reg.researchModes[format.researchMode] ?? reg.researchModes[GENERIC_RESEARCH_MODE] ?? FALLBACK_RESEARCH_MODE;
+}
+
+/** Workspace path of a research playbook (repo-relative path from the registry). */
+export function researchPlaybookPath(repoRoot: string, mode: ResearchMode): string {
+  return join(repoRoot, mode.playbook);
+}
+
+/** Workspace path of the role/funnel/intent modifiers every research brief carries. */
+export function researchModifiersPath(repoRoot: string): string {
+  return join(repoRoot, "templates", "research", "modifiers.md");
 }
 
 /** Workspace path of a format's writing template, with the generic fallback. */

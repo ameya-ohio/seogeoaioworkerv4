@@ -456,6 +456,9 @@ const KIND_LABEL: Record<TechnicalIssue["kind"], string> = {
   contradiction: "Contradiction",
   outdated: "Outdated",
   unsupported_number: "Unsupported number",
+  not_actionable: "Not actionable",
+  generic_example: "Generic example",
+  thesis_unsupported: "Claim not proven",
 };
 
 function TechReviewPanel({

@@ -255,10 +255,20 @@ describe("synthesizeBrief", () => {
     }
   });
 
-  it("carries the pillar's differentiation angle and the row's tie-in", () => {
+  it("carries the pillar's position and the row's tie-in as company position, not the page's angle (D60)", () => {
     const { brief } = synthesizeBrief(byId("P01-S01-A02"), ctx);
-    expect(brief.differentiationAngle).toContain("own category");
-    expect(brief.differentiationAngle).toContain("Core H1");
+    expect(brief.companyPosition).toContain("own category");
+    expect(brief.companyPosition).toContain("Core H1");
+    expect(brief.differentiationAngle).toBe("");
+    expect(brief.markdown).toContain("## Company position");
+    expect(brief.markdown).toMatch(/## Differentiation angle\n\nNot set/);
+  });
+
+  it("takes evidence requirements from the format's research mode, not a generic statistic (D60)", () => {
+    const { brief } = synthesizeBrief(byId("P01-S01-A02"), ctx);
+    const reqs = brief.evidence.external.map((e) => e.requirement).join(" ");
+    expect(reqs).not.toMatch(/A dated, attributable statistic/);
+    expect(brief.evidence.external.length).toBeGreaterThan(0);
   });
 
   it("draws proprietary evidence only from the tie-ins and the concepts sheet", () => {

@@ -1,7 +1,7 @@
 import { ObjectId } from "mongodb";
 import type { EngineDb } from "../db.js";
 import { emitPlanEvent } from "../dal/planEvents.js";
-import { releaseMetHolds } from "../dal/plans.js";
+import { ensurePlanEnrichment, releaseMetHolds } from "../dal/plans.js";
 import type { PageRole, PlanItemDoc } from "../plan/types.js";
 import { itemKey, loadPlanGraph, type PlanGraph } from "./graph.js";
 import { isReady } from "./readiness.js";
@@ -158,6 +158,15 @@ export async function queueBuild(
         (where ? ` (${where}${summary.subtopics.length > 4 ? ", …" : ""})` : ""),
       data: { count: ids.length, byRole: summary.byRole },
     });
+    // D60: the build waits for these pages' briefs to be enriched; start that now.
+    if (await ensurePlanEnrichment(db, p.planId)) {
+      await emitPlanEvent(db, {
+        companyId: p.companyId,
+        planId: p.planId,
+        type: "plan.enrich.queued",
+        message: "Brief enrichment queued: queued pages wait for their briefs before they build",
+      });
+    }
   }
   return summary;
 }
@@ -295,6 +304,7 @@ async function sweepPlan(
     (i) => i.buildQueuedAt && CANDIDATE.has(i.status) && !i.held,
   );
 
+  let enrichmentRequested = false;
   for (const item of candidates) {
     if (budget <= 0) break;
     const ready = isReady(graph.readiness(item), graph.children(item), enqueuedThisTick, {
@@ -303,6 +313,11 @@ async function sweepPlan(
       now,
     });
     if (!ready.ready) {
+      // D60: items queued before auto-enrichment existed still need their pass.
+      if (ready.reason === "awaiting_enrichment" && !enrichmentRequested) {
+        enrichmentRequested = true;
+        if (await ensurePlanEnrichment(db, planId)) log(`plan ${planId.toHexString()}: queued brief enrichment (D60)`);
+      }
       if (ready.reason === "attempts_exhausted" && item.status === "failed") {
         await db.planItems.updateOne(
           { _id: item._id },

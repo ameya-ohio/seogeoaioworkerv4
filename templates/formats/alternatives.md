@@ -6,7 +6,7 @@
 
 ## Structure
 1. **H1:** "[N] Best [Competitor] Alternatives in [Year]".
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block names the alternatives ("The leading alternatives to X are A, B, C, D and E").
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60); paragraph 1 carries the answer block below within its first 60–80 words, and paragraph 2 says why it matters now: a change or a consequence that supports the thesis, with at most one figure and only one the argument turns on. The answer block names the alternatives ("The leading alternatives to X are A, B, C, D and E").
 3. A summary table: vendor, best for, deployment model, differentiator, pricing model.
 4. Why teams look for alternatives: real, sourced reasons (documented gaps, review-site themes), never invented grievances.
 5. One H2 per alternative, 250–400 words, identical sub-structure: what it is, best for, strengths, limitations, pricing model, verdict. The company is one entry in a consistent slot.

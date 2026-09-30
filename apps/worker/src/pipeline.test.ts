@@ -110,6 +110,20 @@ const RESEARCH = `# Research Notes: test
 ## Topic Summary
 Enough substantial words to look like a real researched summary of the topic.
 
+## Subject Material
+### Mechanism
+${"Retrieval returns chunks ranked by similarity; the window caps how many fit, so chunk size sets recall. ".repeat(10)}
+
+## Candidate Positions
+### P1: Context failures, not model quality, explain most AI SDR underperformance
+- Supported by: Mechanism
+- Strongest objection: newer models tolerate noise — recall still caps quality
+- The article would argue: fix context before the model
+### P2: Chunk size is the most under-tuned setting
+- Supported by: Mechanism
+- Strongest objection: defaults work — not for call notes
+- The article would argue: tune chunking per document type
+
 ## Target Keyword Analysis
 Primary candidate: context engineering. Informational intent.
 
@@ -149,6 +163,11 @@ const OUTLINE = `# Strategy & Outline: Test Article
 ## Thesis
 Context failures, not model quality, explain most AI SDR underperformance, so fixing the context layer beats upgrading the model.
 
+## Argument Spine
+1. Retrieval recall caps answer quality — proof: mechanism
+2. Recall is set by chunking and format — proof: reasoning
+3. So the context layer is the cheaper fix — proof: reasoning
+
 ## Keywords
 - Primary: context engineering
 - Secondary: [ai sdr architecture]
@@ -174,7 +193,7 @@ informational — evaluating architectures
 - /blog/example — intro
 
 ## External Citations to Use
-1. Citation #1 — section "Layers"
+1. Citation #1 — supports spine #1, in section "Layers"
 
 ## Quotable Sound Bites
 - Context beats cleverness.
@@ -200,16 +219,20 @@ Hook.
 Bullets.
 
 ### H2: The Four Layers (≈ 300 words)
-- Coverage
+- Advances: spine #1
+- Claim: retrieval caps quality
 
 ### H2: The Six Artifacts (≈ 300 words)
-- Coverage
+- Advances: format — the reference list
+- Claim: six artifacts make up the context layer
 
 ### H2: Markdown Over PDFs (≈ 250 words)
-- Coverage
+- Advances: spine #2
+- Claim: format changes recall
 
 ### H2: Chunk-Size Math (≈ 250 words)
-- Coverage
+- Advances: spine #3
+- Claim: chunk tuning is the cheapest fix
 
 ### H2: Frequently Asked Questions
 - Q1
@@ -329,6 +352,8 @@ const SCHEMA = {
 /** Fake invoker: writes what a well-behaved phase agent would produce. */
 class FakeInvoker implements AgentInvoker {
   calls: { phase: string; prompt: string }[] = [];
+  /** D60: research-brief.md as the Researcher found it when it started. */
+  researchBrief: string | undefined;
   /** Phases that should write junk on their first attempt (gate-retry test). */
   flakyOnce = new Set<string>();
 
@@ -346,6 +371,9 @@ class FakeInvoker implements AgentInvoker {
 
     switch (phase) {
       case "Researcher":
+        this.researchBrief = existsSync(join(dir, "research-brief.md"))
+          ? readFileSync(join(dir, "research-brief.md"), "utf-8")
+          : undefined;
         if (this.flakyOnce.delete("research")) {
           writeFileSync(join(dir, "research-notes.md"), "# thin\n");
           return ok();
@@ -476,6 +504,10 @@ describe("runPipeline end-to-end (fake agents, real gates + python checks)", () 
       "Schema Builder",
       "Header Designer",
     ]);
+    // D60: the Researcher reads what it's researching for, first.
+    expect(invoker.calls[0]?.prompt).toContain("research-brief.md");
+    expect(invoker.researchBrief).toMatch(/## Research playbook: /);
+    expect(invoker.researchBrief).toContain("## Adjustments for this page");
 
     const doc = await db.articles.findOne({ _id: article._id });
     expect(doc?.stage).toBe("review");

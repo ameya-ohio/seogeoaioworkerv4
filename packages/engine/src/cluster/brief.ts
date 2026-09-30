@@ -54,7 +54,7 @@ export function renderBriefMarkdown(brief: Omit<SpokeBrief, "markdown">): string
     lines.push(...brief.evidence.proprietary.map((p) => `- ${p}`), ``);
   }
   if (brief.evidence.external.length > 0) {
-    lines.push(`**External statistics (source URLs required — never fabricate):**`, ``);
+    lines.push(`**External evidence to find (source URLs required — never fabricate):**`, ``);
     lines.push(
       ...brief.evidence.external.map(
         (e) => `- ${e.requirement}${e.sourceUrl ? ` (${e.sourceUrl})` : ""}`,
@@ -67,11 +67,19 @@ export function renderBriefMarkdown(brief: Omit<SpokeBrief, "markdown">): string
     ``,
     `## Differentiation angle`,
     ``,
-    brief.differentiationAngle,
-    ``,
-    `## Internal links`,
+    brief.differentiationAngle.trim() ||
+      `Not set. The Strategist decides it from the research: what this page says about the subject that the current top results don't.`,
     ``,
   );
+  if (brief.companyPosition?.trim()) {
+    lines.push(
+      `## Company position (the pillar's, context for this page, not its angle)`,
+      ``,
+      brief.companyPosition.trim(),
+      ``,
+    );
+  }
+  lines.push(`## Internal links`, ``);
   // D53: no site-structure labels ("hub", "spoke") — the Writer repeated them
   // to readers. page.md's link inventory has each page's URL and what it covers.
   lines.push(`Pages this one should connect to (URLs and what each covers are in page.md's link inventory):`, ``);

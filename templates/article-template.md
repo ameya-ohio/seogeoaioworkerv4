@@ -22,7 +22,7 @@ reading_time_minutes: 0
 
 # [H1 Title]
 
-[Intro: 2–3 paragraphs built from the research notes' Topic Summary, paragraphs 1–2. Paragraph 1 names the subject and states and defines the core distinction or problem, plus what getting it wrong costs. Paragraph 2 is why now, with sourced specifics attributed inline. End with the thesis preview. No hook moves (a lone-stat opener, a dramatic fragment, commentary on the opening) and no banned phrase from `standards/quality-bar.md`.]
+[Intro: 2–3 paragraphs built from the outline's Intro Strategy, which starts from the thesis. Paragraph 1 names the subject and states the problem the thesis answers, in the thesis's terms. Paragraph 2 is why it matters now, with at most one figure, attributed inline. End with the thesis preview. No hook moves (a lone-stat opener, a dramatic fragment, commentary on the opening) and no banned phrase from `standards/quality-bar.md`.]
 
 ## Key Takeaways
 

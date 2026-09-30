@@ -6,7 +6,7 @@
 
 ## Structure
 1. **H1:** "The [Name] Framework". Keep the name identical everywhere on the site.
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block gives the framework's name, its stages and what it is for.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60); paragraph 1 carries the answer block below within its first 60–80 words, and paragraph 2 says why it matters now: a change or a consequence that supports the thesis, with at most one figure and only one the argument turns on. The answer block gives the framework's name, its stages and what it is for.
 3. The problem it solves, and why existing approaches fall short.
 4. The framework at a glance: a table of stages.
 5. One H2 per stage, 300–450 words each: what it is, why it matters, what you do, what you produce, how you know you're done.

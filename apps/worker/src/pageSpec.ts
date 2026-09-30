@@ -11,6 +11,10 @@ import {
   loadFormatRegistry,
   mergeCtaSettings,
   renderPageSpec,
+  renderResearchBrief,
+  researchModeFor,
+  researchModifiersPath,
+  researchPlaybookPath,
   resolvePageRules,
   stampFrontmatter,
   type ArticleDoc,
@@ -100,6 +104,40 @@ export async function materializePageSpec(
     : "_No format guide yet — follow the rules above and the Writer spec._";
   const links = renderLinkInventory(inventory);
   await writeFile(join(dir, "page.md"), renderPageSpec(rules, guide) + (links ? `\n${links}` : ""), "utf-8");
+}
+
+/**
+ * research-brief.md (D60): the page, its research playbook (chosen by the
+ * article type's research mode), the role/funnel/intent adjustments, what the
+ * brief asks for, and the neighbouring pages that own their own topics.
+ * Written before the Researcher runs; the research prompt reads it first.
+ */
+export async function materializeResearchBrief(
+  cfg: WorkerConfig,
+  article: ArticleDoc,
+  rules: PageRules,
+  formats: FormatRegistry,
+  inventory: LinkTarget[] = [],
+): Promise<void> {
+  const dir = articleDir(cfg, article);
+  await mkdir(dir, { recursive: true });
+  const mode = researchModeFor(formats, rules.format);
+  const readIf = async (path: string) => (existsSync(path) ? await readFile(path, "utf-8") : "");
+  const playbook =
+    (await readIf(researchPlaybookPath(cfg.repoRoot, mode))) ||
+    `_No playbook file for research mode "${mode.slug}" (${mode.playbook}). Follow your spec's process._`;
+  const md = renderResearchBrief({
+    title: article.topic,
+    targetKeyword: article.targetKeyword,
+    rules,
+    mode,
+    playbook,
+    modifiers: await readIf(researchModifiersPath(cfg.repoRoot)),
+    formatGuide: await readIf(formatTemplatePath(cfg.repoRoot, rules.format.slug)),
+    brief: article.brief?.spec,
+    inventory,
+  });
+  await writeFile(join(dir, "research-brief.md"), md, "utf-8");
 }
 
 /**

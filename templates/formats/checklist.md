@@ -6,7 +6,7 @@
 
 ## Structure
 1. **H1:** "[Topic] Checklist".
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block says "This checklist covers N items across M areas: …" and who it is for.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60); paragraph 1 carries the answer block below within its first 60–80 words, and paragraph 2 says why it matters now: a change or a consequence that supports the thesis, with at most one figure and only one the argument turns on. The answer block says "This checklist covers N items across M areas: …" and who it is for.
 3. How to use it: scoring, and what a pass looks like.
 4. **The checklist, grouped into 4–8 named sections.** Each item is a yes/no imperative with one line of why, pointing to the page that explains it.
 5. Priority tiers: critical, important, recommended.

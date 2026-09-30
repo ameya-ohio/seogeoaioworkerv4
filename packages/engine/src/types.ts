@@ -92,7 +92,16 @@ export interface GateResult {
   checkedAt: Date;
 }
 
-export type TechnicalIssueKind = "technical_error" | "contradiction" | "outdated" | "unsupported_number";
+export type TechnicalIssueKind =
+  | "technical_error"
+  | "contradiction"
+  | "outdated"
+  | "unsupported_number"
+  // D60 substance: accurate but useless — a step with no action, a generic
+  // example, a claim with no mechanism or evidence behind it.
+  | "not_actionable"
+  | "generic_example"
+  | "thesis_unsupported";
 
 export interface TechnicalIssue {
   kind: TechnicalIssueKind;

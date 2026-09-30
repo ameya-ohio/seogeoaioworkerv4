@@ -104,7 +104,7 @@ FAQ_ECHO_OVERLAP = 0.75       # FAIL: an FAQ question that restates a body H2 (D
 MAX_PARAGRAPH_WORDS = 60      # WARN only — one claim per paragraph (D48); the intro is exempt (D44)
 
 # Hook moves in the intro (quality-bar "Hook-Shaped Intros"). The intro is drafted
-# from the research Topic Summary; these are the performances that replace it.
+# from the outline's Intro Strategy (the thesis); these are the performances that replace it.
 _INTRO_HOOKS = re.compile(
     r"\bgo(?:es)? to die\b"
     r"|\b(?:that|this|the|those|these) (?:number|stat(?:istic)?|figure|finding|data point)s? "
@@ -359,8 +359,8 @@ def check_intro_hooks(intro: str) -> Finding | None:
         return None
     return Finding(
         "fail",
-        "Style: hook-shaped intro — rebuild it from the research Topic Summary paragraphs 1–2: name the subject "
-        "and state the distinction first, then why now with sourced specifics inside claims",
+        "Style: hook-shaped intro — rebuild it from the outline's Intro Strategy: name the subject and state the "
+        "problem the thesis answers first, then why it matters now, with any figure inside a claim",
         hits,
     )
 

@@ -46,6 +46,7 @@ export function buildPlanGraph(items: PlanItemDoc[], stageOf: Map<string, Stage>
       parentKey: item.parentItemId?.toHexString() ?? null,
       articleStage: stage,
       held: Boolean(item.held),
+      enrichment: item.enrichment,
     };
   };
   return {

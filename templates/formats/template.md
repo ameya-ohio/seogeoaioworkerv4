@@ -6,7 +6,7 @@
 
 ## Structure
 1. **H1:** "[Thing] Template".
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block lists what the template contains and what formats it comes in.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60); paragraph 1 carries the answer block below within its first 60–80 words, and paragraph 2 says why it matters now: a change or a consequence that supports the thesis, with at most one figure and only one the argument turns on. The answer block lists what the template contains and what formats it comes in.
 3. **The template rendered in full on the page** as a real table or structured list. A download alone is invisible to crawlers and models.
 4. Download links, ungated (a soft email gate for the editable file is acceptable only if the full content stays visible).
 5. How to use it: a short numbered walkthrough.

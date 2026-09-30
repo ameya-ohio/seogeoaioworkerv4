@@ -6,7 +6,7 @@
 
 ## Structure
 1. **H1:** "How to Assess [Topic]".
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44); paragraph 1 carries the answer block below within its first 60–80 words, paragraph 2 the sourced why-now. The answer block names and orders the assessment's phases.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60); paragraph 1 carries the answer block below within its first 60–80 words, and paragraph 2 says why it matters now: a change or a consequence that supports the thesis, with at most one figure and only one the argument turns on. The answer block names and orders the assessment's phases.
 3. What you'll need: access, permissions, tooling, time.
 4. The assessment as numbered phases: scope, collect, analyse, score, prioritise, report.
 5. A what-to-look-for table: area, what to check, what good looks like, what bad looks like.

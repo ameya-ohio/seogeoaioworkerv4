@@ -17,7 +17,7 @@ Polish the draft, fact-check structure, and verify SEO/GEO/AIO compliance. You a
 6.4. (Reference, not edited) `context/sales/competitive-landscape.md` — the head-to-head vs. complementary vendor list, for Pass 7's competitor check
 6.5. (Reference, not edited) `context/case-studies/` — facts in the real-world example trace here, and must stay inside the file's *Publishing boundary*
 6.6. (Reference, not edited, when present) `pov.md` and `interview.md` — the Expert POV brief and the interview transcript (D59). The expert's statements, story and quotes trace here, and the thesis and Argument Spine in pov.md are locked: fix how the article argues them, never which claim it argues
-7. (Reference, not edited) `articles/YYYY-MM-DD-slug/outline.md` — to confirm the article actually delivered the strategy
+7. (Reference, not edited) `articles/YYYY-MM-DD-slug/outline.md` — to confirm the article actually delivered the strategy: its thesis, Argument Spine and each H2's `- Claim:` line (Pass 6.6)
 
 ---
 
@@ -75,7 +75,7 @@ Walk every item. Specifically:
 - Direct factual answer in the first sentence under each `[answer-first]` H2 (per the outline); `[argument]` sections open with the finding, example or turn — cut any one-line restatement of the heading.
 - **Quotable** standalone sentences: 2–4, arising from the argument, none a restated thesis.
 - Formal definitions (`**X** is …`): **at most two**, for the terms the argument depends on; rewrite the rest as in-passing explanations.
-- Intro passes the hook-shaped-intro machine check (`scripts/style_checks.py`), and it reads at the register of the research notes' Topic Summary, paragraphs 1–2: the subject is named in the first sentence, the core distinction is stated and defined directly, and a short why-now paragraph says what changed, with at most one sourced figure. Put the intro next to those two paragraphs. If it is less informative, or it leans on hook moves (a lone-stat opener with a dramatic fragment, "That number should…", "X and Y aren't the same", "…goes to die", "Confuse the two, and you'll…"), rewrite it from the Topic Summary.
+- Intro passes the hook-shaped-intro machine check (`scripts/style_checks.py`), and it follows the outline's Intro Strategy: the subject is named in the first sentence, paragraph 1 states the problem the thesis answers in the thesis's terms, and a short paragraph 2 says why it matters now, with at most one figure and only one assigned to a spine claim. If it is less informative than that plan, or it leans on hook moves (a lone-stat opener with a dramatic fragment, "That number should…", "X and Y aren't the same", "…goes to die", "Confuse the two, and you'll…"), rewrite it from the Intro Strategy and the thesis.
 - Key Takeaways carry specifics (mechanisms, controls, orders, consequences; never a number or statistic repeated from the body (Stats / Data and Original Research pages excepted: there the takeaways are the key figures)); none repeats the intro's thesis sentence.
 - Author and publisher authority signals visible (frontmatter `author`, `author_bio_url`).
 - Original insight or perspective present (the article's wedge from the Strategist's angle).
@@ -99,6 +99,16 @@ Walk every item. Specifically:
 - Sections open with their point, not with "According to…" or "X's report found…". No H2 is named for a report.
 - Never add a statistic or source to "support" a sound point. A correct mechanism or a reasoned conclusion stands on its own, stated plainly and without a hedge.
 - Stats / Data and Original Research pages are exempt.
+
+### Pass 6.6 — Substance (D60)
+
+The article has to be usable by the practitioner it's written for. The pre-audit's technical-review findings of kind `not_actionable`, `generic_example` and `thesis_unsupported` land here, and so does anything you find yourself on the same test:
+
+- **Procedure pages** (How-to, Checklist, Template, Integration): every step names its action (the command, API call, query, console path or setting), per platform where they differ. Take it from `research-notes.md` → *Subject Material*, or write it from standard practice when a senior practitioner would state it without a citation. A step you can't make concrete is merged or cut.
+- **Examples and Use Case pages**: every example names its exact attribute, permission, setting or command, and how it's detected and fixed. Same sources; an example you can't make specific is cut.
+- **Every page**: each section proves the claim the outline's `- Claim:` line gives it, by mechanism, evidence or reasoning. A statistic offered as proof of a claim it doesn't bear on is cut, and the claim stands on its mechanism instead.
+
+You may add mechanism and practice detail here: how a thing works, the exact command or setting, the logical step between two claims. That needs no citation (`standards/quality-bar.md` → *Argument over evidence*), but the technical reviewer's standard applies: it must be correct. You never add a statistic, quote, dated event or source.
 
 ### Pass 7 — Fact check
 

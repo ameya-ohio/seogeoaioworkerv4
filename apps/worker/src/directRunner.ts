@@ -389,6 +389,8 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           inFolder("page.md"),
           inFolder("article.md"),
           inFolder("research-notes.md"),
+          // D60 Pass 6.6: each H2's Claim line is what the section has to prove.
+          inFolder("outline.md"),
           ...(article.artifacts.pov ? [inFolder("pov.md"), inFolder("interview.md")] : []),
         ]),
         task: [

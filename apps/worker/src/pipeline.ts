@@ -18,6 +18,7 @@ import {
   markFailed,
   nextStage,
   pushPhaseResult,
+  refreshPlanBrief,
   setRunPhase,
   runSchemaValidation,
   runSeoAudit,
@@ -43,7 +44,7 @@ import {
   type LinkTarget,
   type PageRules,
 } from "@blogagent/engine";
-import { materializePageSpec, pageRulesFor, stampArticleFrontmatter } from "./pageSpec.js";
+import { materializePageSpec, materializeResearchBrief, pageRulesFor, stampArticleFrontmatter } from "./pageSpec.js";
 import type { AgentInvoker, AgentRunOutcome } from "./agentRunner.js";
 import type { WorkerConfig } from "./config.js";
 import type { DirectPhaseRunner } from "./directRunner.js";
@@ -243,6 +244,8 @@ async function runTechnicalReview(deps: PipelineDeps, article: ArticleDoc): Prom
   const review = await deps.techReviewer.review({
     articleMd: await read("article.md"),
     researchNotes: await read("research-notes.md"),
+    pageMd: await read("page.md"),
+    outline: await read("outline.md"),
     onProgress: (t) => deps.log(`[${article.slug}/tech-review] ${t}`),
   });
   if (article._id) {
@@ -387,6 +390,7 @@ async function executePhase(
   // chose for a page that had none reach the Writer.
   const page = await pageRulesFor(db, cfg, article);
   await materializePageSpec(cfg, article, page.rules, page.inventory);
+  if (phase === "research") await materializeResearchBrief(cfg, article, page.rules, page.formats, page.inventory);
   if (phase === "hdcp") await materializeHdcpInputs(cfg, article, page.inventory);
 
   // Edit pre-audit: run the edit gate's own checks on the incoming draft so
@@ -655,8 +659,12 @@ export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<"com
   const { db, cfg } = deps;
   const runId = run._id;
   if (!runId) throw new Error("run missing _id");
-  const article = await getArticle(db, run.articleId);
-  if (!article) throw new Error(`article ${run.articleId} not found`);
+  const loaded = await getArticle(db, run.articleId);
+  if (!loaded) throw new Error(`article ${run.articleId} not found`);
+  // D60: a run that starts from research picks up the plan item's current
+  // (enriched) brief instead of the one copied at first enqueue.
+  const article =
+    (run.currentPhase ?? run.fromStage) === "research" ? await refreshPlanBrief(db, loaded) : loaded;
   const articleId = article._id as NonNullable<ArticleDoc["_id"]>;
 
   await emitEvent(db, {

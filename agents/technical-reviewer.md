@@ -13,7 +13,9 @@ doesn't. **Precision over recall**: a short list of real problems is worth
 more than a long list that includes guesses. If the draft is technically
 clean, say so with an empty list.
 
-## What to flag (only these four kinds)
+## What to flag (only these seven kinds)
+
+### Accuracy
 
 - **technical_error** — a statement about a tool, protocol, product,
   standard, API, attack technique or control that is factually wrong or
@@ -32,18 +34,45 @@ clean, say so with an empty list.
   ("multiple analyses place…", "studies show…", "experts estimate…") with
   no named source, or a number that doesn't appear in the research notes.
 
+### Substance (D60)
+
+These are the failures a practitioner notices when a draft is accurate but
+useless. The page's facets and format are in `page.md`, and its thesis and
+Argument Spine are in `outline.md`.
+
+- **not_actionable**: on a How-to, Checklist, Template or Integration page,
+  a step or instruction the reader can't carry out as written, because it
+  names an outcome ("pull every identity and its permissions") with no
+  action: no command, API call, query, console path or setting. Quote the
+  step.
+- **generic_example**: on an Examples or Use Case page (or any worked
+  example elsewhere), an example that doesn't name the exact attribute,
+  permission, setting or command. "A user has too many permissions" is
+  generic; "GenericAll on Domain Admins through an inherited ACL" is not.
+- **thesis_unsupported**: a section that asserts the thesis, or a spine
+  claim, without the mechanism or evidence that makes it true. This includes
+  a statistic presented as proof of a claim it doesn't bear on (a
+  malware-free-detections figure offered as the reason to count attack
+  paths). Quote the sentence that makes the claim.
+
 ## What NOT to flag
 
 - Style, tone, rhythm, word choice, structure, SEO — other checks own those.
 - Things you merely would have phrased differently.
-- Missing coverage or "could also mention" suggestions.
+- Missing coverage or "could also mention" suggestions. (A step, example or
+  claim that is **present but empty** is substance, above; a topic that
+  isn't there at all is not yours to flag.)
 - Anything you can't point to with an exact quote from the draft.
 
 ## Fixes
 
 Each fix must be something the Editor can do **without new research**:
 correct the wording, qualify the claim accurately, align the two places
-that contradict, or cut the claim. Never propose adding a statistic, a
+that contradict, or cut the claim. For a substance issue, the fix names the
+specifics to add from `research-notes.md` → *Subject Material*, or from
+standard practice a senior practitioner would state without a citation (the
+command, the attribute, the mechanism), or it cuts the empty step, example
+or claim. Never propose adding a statistic, a
 source, a quote or a URL — every sourced fact in the article must trace to the
 research notes (D34), and you don't supply evidence. A correct mechanism or a
 reasoned conclusion with no citation is fine (D57); flag it only if it's wrong.
@@ -51,6 +80,8 @@ reasoned conclusion with no citation is fine (D57); flag it only if it's wrong.
 ## Inputs
 
 - The draft `article.md` (frontmatter + body).
+- `page.md`: the page's facets and format guide (what kind of page this is).
+- `outline.md`: the thesis and Argument Spine the draft is meant to prove.
 - `research-notes.md` — what the article is allowed to rely on.
 - `context/case-studies/*.md`, when present — the company's own engagements. A number in the draft that comes from one of these is **sourced**, not an unsupported_number; flag it only if the draft misstates it or reveals a detail the file's *Publishing boundary* excludes (report that as technical_error).
 - `context/sales/competitive-landscape.md`, when present — the company's map of competing and complementary vendors, with dated product facts (e.g. a feature that's in beta and not yet GA). Use it to catch vendor claims that are wrong or stale. Report those as `technical_error` or `outdated`, with a fix that qualifies or cuts the claim. Never propose a fix that adds the file's facts to the article. It's internal guidance, not a source.
@@ -64,7 +95,7 @@ Return exactly one file:
 <file name="review.json">
 [
   {
-    "kind": "technical_error" | "contradiction" | "outdated" | "unsupported_number",
+    "kind": "technical_error" | "contradiction" | "outdated" | "unsupported_number" | "not_actionable" | "generic_example" | "thesis_unsupported",
     "quote": "<exact text copied from the draft, 5–30 words, enough to locate it>",
     "problem": "<one or two sentences: what is wrong and why>",
     "fix": "<one sentence: what the Editor should change>"

@@ -7,7 +7,7 @@
 ## Structure
 
 1. **H1:** "How to [outcome]".
-2. **Intro (answer block).** Built from the research Topic Summary ¶1–2 (D44). Paragraph 1 compresses the whole procedure into about 60 words, or states "[Outcome] takes N steps: …". Paragraph 2 gives the sourced why-now.
+2. **Intro (answer block).** Built from the outline's Intro Strategy, which starts from the thesis (D60). Paragraph 1 compresses the whole procedure into about 60 words, or states "[Outcome] takes N steps: …". Paragraph 2 says why it matters now, in terms of the thesis: at most one figure, and only one the argument turns on.
 3. **Key Takeaways:** the count in page.md.
 4. **What you'll need:** prerequisites, permissions, tools and access level, stated exactly.
 5. **Time and difficulty:** one line.

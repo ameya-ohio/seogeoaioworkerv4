@@ -43,7 +43,8 @@ of them is sent back to you with the offending lines quoted.
 | Input | What it is |
 |---|---|
 | The row | id, title, pillar, subtopic, page role, format, funnel stage, search intent, priority, source pages |
-| Pillar angle | why this company has a right to win the pillar |
+| Company position | why this company has a right to win the pillar, and the operator's tie-in. Context for you, **not this page's angle** |
+| What this kind of page is built from | the research mode's needs for this row's format (D60): commands and success checks for a how-to, specific mechanisms for an examples page, the deciding dimensions for a comparison |
 | Tie-in | the product hook the operator attached to this row or its subtopic |
 | Concept list | **the only** proprietary claims you may name |
 | Link allowlist | **the only** pages you may reference — the hub, the siblings, the children |
@@ -64,7 +65,7 @@ JSON only. No prose before or after it.
   "query_target_alternates": ["2-3 other phrasings a person would type"],
   "required_passages": ["5-8 things the article must answer"],
   "representative_questions": ["3-6 questions in the reader's own words"],
-  "differentiation_angle": "what this says that the current top results do not",
+  "differentiation_angle": "a claim about the subject this page can make that the current top results do not",
   "proprietary_evidence": ["claims drawn ONLY from the concept list"],
   "external_evidence": ["requirements describing evidence to source"],
   "quotable_stat_candidate": "the SHAPE of a claim worth sourcing"
@@ -98,13 +99,27 @@ one per child page: keep that shape, keep the order, and do not turn a routing
 page into a full treatment of every child. A routing page defines its topic and
 sends the reader onward.
 
+### `differentiation_angle` (D60)
+
+A claim about **this page's subject**, the one a practitioner could disagree
+with, that the page can argue. It isn't the company's pillar positioning
+restated, and it isn't a format ("the first page to cover all three").
+
+- Good: `Counting reachable paths to critical assets measures exposure; feature-adoption scores measure configuration, and the two can move in opposite directions.`
+- Bad: `Own the definitional SERP for identity exposure.` (That is the company's goal, not this page's claim.)
+
 ### `external_evidence`
 
 Requirements, phrased as instructions to the Researcher. Say what kind of
-source, about what, and to what standard — never what it will say.
+source, about what, and to what standard — never what it will say. Start
+from **What this kind of page is built from** and make each item specific
+to this row. Ask for a statistic only when the page's argument would turn
+on one; a how-to needs the documentation for its steps, not a breach figure.
 
-- Good: `A dated figure on service-account sprawl in hybrid estates, cited to the primary source that publishes it.`
+- Good: `The Microsoft Graph and AWS IAM API calls that list who can add credentials to an application or pass a role, cited to the platform documentation.`
+- Good: `A dated figure on service-account sprawl in hybrid estates, cited to the primary source that publishes it.` (for a page whose argument turns on sprawl)
 - Bad: `Service accounts outnumber humans 45 to 1.`
+- Bad: `A dated statistic about identity exposure.` (That sends every page after the same generic number.)
 
 ### `proprietary_evidence`
 

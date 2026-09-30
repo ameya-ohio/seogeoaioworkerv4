@@ -6,10 +6,15 @@ import {
   completePlanEnrichment,
   emitPlanEvent,
   failPlanEnrichment,
+  fillPassage,
+  formatBySlug,
+  loadFormatRegistry,
   parsePlanEnrichment,
+  researchModeFor,
   renderBriefMarkdown,
   type EngineDb,
   type EnrichmentAllowlist,
+  type FormatRegistry,
   type PlanDoc,
   type PlanItemDoc,
 } from "@blogagent/engine";
@@ -39,8 +44,22 @@ export interface PlanDeps {
 
 const SPEC_FILE = "agents/plan-brief-enricher.md";
 
-function buildPrompt(item: PlanItemDoc, allowed: EnrichmentAllowlist): string {
+/**
+ * D60: what this page's research mode says it is built from — so the
+ * enricher's external_evidence requirements describe commands for a how-to
+ * and mechanisms for an explainer, not "a dated statistic" for everything.
+ */
+export function researchNeedsFor(item: PlanItemDoc, formats: FormatRegistry | undefined): { mode: string; needs: string[] } | null {
+  if (!formats) return null;
+  const format = formatBySlug(formats, item.brief.page?.articleType ?? item.articleType);
+  const mode = researchModeFor(formats, format);
+  const vars = { subject: item.subtopicName ?? item.pillarName, title: item.title };
+  return { mode: mode.label, needs: mode.briefEvidence.map((r) => fillPassage(r, vars)) };
+}
+
+function buildPrompt(item: PlanItemDoc, allowed: EnrichmentAllowlist, formats?: FormatRegistry): string {
   const brief = item.brief;
+  const research = researchNeedsFor(item, formats);
   return [
     `Enrich the brief for this planned article. Return JSON only.`,
     ``,
@@ -56,9 +75,19 @@ function buildPrompt(item: PlanItemDoc, allowed: EnrichmentAllowlist): string {
     `- priority: P${item.priority}`,
     ...(item.sourcePages.length ? [`- source pages: ${item.sourcePages.join(", ")}`] : []),
     ``,
-    `## Pillar angle`,
-    brief.differentiationAngle || "(none supplied)",
+    `## Company position (the pillar's — context, not this page's angle)`,
+    // Briefs synthesized before D60 carried the pillar text in differentiationAngle.
+    brief.companyPosition || brief.differentiationAngle || "(none supplied)",
     ``,
+    ...(research
+      ? [
+          `## What this kind of page is built from (research mode: ${research.mode})`,
+          `Base external_evidence on these, made specific to this row. Ask for a statistic only where the`,
+          `page's argument would turn on one.`,
+          ...research.needs.map((n) => `- ${n}`),
+          ``,
+        ]
+      : []),
     `## Concept list — the ONLY proprietary claims you may name`,
     ...(allowed.concepts.length
       ? allowed.concepts.map((c) => `- ${c}`)
@@ -90,6 +119,7 @@ async function enrichOne(
   plan: PlanDoc,
   item: PlanItemDoc,
   spec: string,
+  formats?: FormatRegistry,
 ): Promise<{ inputTokens: number; outputTokens: number; calls: number }> {
   const itemId = item._id as ObjectId;
   const allowed: EnrichmentAllowlist = {
@@ -108,8 +138,8 @@ async function enrichOne(
   // same budget the pipeline's gates use.
   for (let attempt = 1; attempt <= 2; attempt++) {
     const prompt = feedback
-      ? `${buildPrompt(item, allowed)}\n\n## Your previous answer was rejected\n${feedback}\n\nFix these and return JSON only.`
-      : buildPrompt(item, allowed);
+      ? `${buildPrompt(item, allowed, formats)}\n\n## Your previous answer was rejected\n${feedback}\n\nFix these and return JSON only.`
+      : buildPrompt(item, allowed, formats);
 
     const res = await deps.llm.complete({
       model: deps.cfg.plan.enrichModel,
@@ -176,6 +206,12 @@ export async function runPlanEnrichment(deps: PlanDeps, plan: PlanDoc): Promise<
   await applyRepoFiles(deps.db, plan.companyId, deps.cfg.repoRoot);
   const spec = await readFile(join(deps.cfg.repoRoot, SPEC_FILE), "utf-8");
   const concurrency = Math.max(1, deps.cfg.plan.concurrency);
+  let formats: FormatRegistry | undefined;
+  try {
+    formats = loadFormatRegistry(deps.cfg.repoRoot);
+  } catch {
+    formats = undefined; // the enricher still runs, without the research-mode hints
+  }
 
   await emitPlanEvent(deps.db, {
     companyId: plan.companyId,
@@ -189,16 +225,17 @@ export async function runPlanEnrichment(deps: PlanDeps, plan: PlanDoc): Promise<
 
   try {
     for (;;) {
-      // Resume IS this query: whatever is still pending, in plan order.
+      // Resume IS this query: whatever is still pending. D60: items queued
+      // for build go first (they wait on this), then plan order.
       const batch = await deps.db.planItems
         .find({ planId, enrichment: "pending" })
-        .sort({ sequence: 1 })
+        .sort({ buildQueuedAt: -1, sequence: 1 })
         .limit(concurrency)
         .toArray();
       if (batch.length === 0) break;
 
       const results = await Promise.allSettled(
-        batch.map((item) => enrichOne(deps, plan, item, spec)),
+        batch.map((item) => enrichOne(deps, plan, item, spec, formats)),
       );
       for (const [i, r] of results.entries()) {
         if (r.status === "fulfilled") {

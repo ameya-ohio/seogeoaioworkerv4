@@ -248,3 +248,24 @@ export async function enqueueRerun(
   });
   return run;
 }
+
+/**
+ * D60: an article copies its plan item's brief when it is enqueued. A page
+ * built before enrichment (or re-run after it) would otherwise keep the
+ * placeholder brief forever. Called when a run starts from research: the
+ * brief is refreshed from the plan item if the item's has changed since.
+ * Returns the article as it now stands.
+ */
+export async function refreshPlanBrief(db: EngineDb, article: ArticleDoc): Promise<ArticleDoc> {
+  if (!article._id || !article.planItemId || article.brief?.source !== "plan") return article;
+  const item = await db.planItems.findOne({ _id: article.planItemId });
+  if (!item || item.brief.markdown === article.brief.markdown) return article;
+  const brief: ArticleDoc["brief"] = {
+    ...article.brief,
+    markdown: item.brief.markdown,
+    lengthBand: item.brief.lengthBand,
+    spec: item.brief,
+  };
+  await db.articles.updateOne({ _id: article._id }, { $set: { brief, updatedAt: new Date() } });
+  return { ...article, brief };
+}
