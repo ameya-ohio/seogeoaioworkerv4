@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import {
   DataForSeoClient,
   WORK_STAGES,
+  closeInterview,
   enqueueRerun,
   SlugTakenError,
   acceptSpokeBrief,
@@ -53,6 +54,7 @@ import {
 import { SdkAgentInvoker } from "./agentRunner.js";
 import { DirectPhaseRunner, SdkDirectLlm } from "./directRunner.js";
 import { LlmTechReviewer } from "./techReview.js";
+import { LlmInterviewOpener } from "./interviewOpener.js";
 import { startClusterQueue } from "./clusterQueue.js";
 import type { ClusterDeps } from "./clusterRunner.js";
 import { loadWorkerConfig, type WorkerConfig } from "./config.js";
@@ -209,6 +211,11 @@ async function cmdStart(argv: string[]): Promise<void> {
         new LlmLinkRelevanceJudge(new AnthropicLlmClient(), cfg.verifierModel, log),
       ),
       techReviewer: new LlmTechReviewer(new SdkDirectLlm(), cfg),
+      interviewer: new LlmInterviewOpener(
+        new SdkDirectLlm(),
+        cfg,
+        cfgGet<string | undefined>(company, "company.description", undefined),
+      ),
       companyName,
       log,
     };
@@ -251,7 +258,12 @@ async function cmdEnqueue(argv: string[]): Promise<void> {
   const { flags } = parseFlags(argv);
   const topic = typeof flags["topic"] === "string" ? (flags["topic"] as string) : undefined;
   if (!topic) {
-    console.error('Usage: enqueue --topic "…" [--keyword "…"] [--slug s] [--from-stage research]');
+    console.error('Usage: enqueue --topic "…" [--keyword "…"] [--slug s] [--from-stage research] [--interview pause|skip]');
+    process.exit(2);
+  }
+  const interview = flags["interview"];
+  if (interview !== undefined && interview !== "pause" && interview !== "skip") {
+    console.error("--interview must be pause or skip");
     process.exit(2);
   }
   const { cfg, db, companyId } = await setup();
@@ -265,6 +277,7 @@ async function cmdEnqueue(argv: string[]): Promise<void> {
       ...(typeof flags["slug"] === "string" ? { slug: flags["slug"] as string } : {}),
       fromStage,
       maxAttempts: cfg.maxRunAttempts,
+      ...(interview ? { interview } : {}),
     });
     console.log(
       JSON.stringify(
@@ -327,7 +340,7 @@ async function cmdStatus(): Promise<void> {
       .aggregate([{ $group: { _id: "$stage", n: { $sum: 1 } } }, { $sort: { n: -1 } }])
       .toArray();
     const runs = await db.runs
-      .find({ status: { $in: ["queued", "running"] } })
+      .find({ status: { $in: ["queued", "running", "awaiting_input"] } })
       .sort({ queuedAt: 1 })
       .toArray();
     console.log("Articles by stage:");
@@ -370,6 +383,64 @@ async function cmdRerun(argv: string[]): Promise<void> {
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));
     process.exitCode = 1;
+  } finally {
+    await db.close();
+  }
+}
+
+/**
+ * D59: skip an open expert interview from the terminal, so a run waiting on
+ * it resumes at the Writer. Answering happens in the web app (or, in
+ * terminal mode, in the Claude chat per CLAUDE.md).
+ */
+async function cmdInterviewSkip(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const ref = typeof flags["article"] === "string" ? (flags["article"] as string) : undefined;
+  if (!ref) {
+    console.error("Usage: interview-skip --article <id|slug|folder>");
+    process.exit(2);
+  }
+  const { db, companyId } = await setup();
+  try {
+    const article = ObjectId.isValid(ref) && ref.length === 24
+      ? await db.articles.findOne({ _id: new ObjectId(ref), companyId })
+      : await db.articles.findOne({ companyId, $or: [{ slug: ref }, { folder: ref }] });
+    if (!article) {
+      console.error(`No article matches ${ref}`);
+      process.exitCode = 1;
+      return;
+    }
+    const run = await closeInterview(db, article, "skipped");
+    console.log(`Interview skipped for ${article.folder}${run ? `: run ${run._id?.toHexString()} requeued at the Writer` : " (no waiting run)"}`);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exitCode = 1;
+  } finally {
+    await db.close();
+  }
+}
+
+/** D59: whether a plan's articles stop for the expert interview. */
+async function cmdPlanInterview(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const planRef = typeof flags["plan"] === "string" ? (flags["plan"] as string) : undefined;
+  const mode = flags["mode"];
+  if (!planRef || !ObjectId.isValid(planRef) || (mode !== "pause" && mode !== "skip")) {
+    console.error("Usage: plan-interview --plan <id> --mode pause|skip");
+    process.exit(2);
+  }
+  const { db, companyId } = await setup();
+  try {
+    const res = await db.plans.updateOne(
+      { _id: new ObjectId(planRef), companyId },
+      { $set: { interview: mode, updatedAt: new Date() } },
+    );
+    if (res.matchedCount !== 1) {
+      console.error(`No plan ${planRef}`);
+      process.exitCode = 1;
+      return;
+    }
+    console.log(`Plan ${planRef}: articles queued from now on ${mode === "pause" ? "stop for" : "skip"} the expert interview`);
   } finally {
     await db.close();
   }
@@ -1136,13 +1207,15 @@ Commands:
                                      Run the queue worker (article pipeline, cluster, scrape, plan
                                      enrichment; the cadence scheduler needs SCHEDULER_ENABLED=1)
   enqueue --topic "…"                Queue an article run
-          [--keyword "…"] [--slug s] [--from-stage research|outline|write|edit|hdcp|schema|design]
+          [--keyword "…"] [--slug s] [--from-stage research|outline|interview|write|edit|hdcp|schema|design]
+          [--interview pause|skip]   (default: the plan's setting, else company.yaml pipeline.interview)
   import-articles [--dry-run]        Backfill articles/ folders into Mongo
           [--stage published] [--update] [--audit]
           [--only <folder>,<folder>]  (full YYYY-MM-DD-slug names)
   status                             Articles by stage + active runs
   rerun --article <id|slug|folder>   Re-run an existing article from a phase (default research)
-          [--from research|outline|write|edit|hdcp|schema|design]
+          [--from research|outline|interview|write|edit|hdcp|schema|design]
+  interview-skip --article <ref>     Skip an open expert interview; the run resumes at the Writer
   events --run <id> [--follow]       Print a run's event stream
   cluster-enqueue --seed "…" [--k 5] Queue a Topic & Cluster Generator run
   cluster-status [--id <id>]         List cluster runs, or themes for one
@@ -1166,6 +1239,8 @@ Commands:
           [--status planned|done|failed|…] [--limit N]
   plan-enrich --plan <id>            Queue the brief-enrichment pass [--only-failed]
   plan-events --plan <id>            Print a plan's event stream
+  plan-interview --plan <id> --mode pause|skip
+                                     Whether the plan's articles stop for the expert interview
 
   schedule-create --plan <id>        Create a cadence (starts PAUSED)
           [--days 1,2,3,4,5] [--time 07:00] [--tz Europe/Zurich] [--batch 1]
@@ -1185,6 +1260,7 @@ Commands:
 
 Env: MONGODB_URI, MONGODB_DB, ANTHROPIC_API_KEY, WORKER_CONCURRENCY,
      PHASE_MODEL_DEFAULT / PHASE_MODEL_<PHASE>, STORAGE_DRIVER (local|s3),
+     INTERVIEW_OPEN_MODEL, INTERVIEW_OPEN_EFFORT (D59 interview opening call),
      CLUSTER_MODEL, CLUSTER_FANOUT_MODEL, CLUSTER_FANOUT_K, CLUSTER_MAX_VALIDATIONS,
      GEMINI_API_KEY (observed fan-out), DATAFORSEO_LOGIN/PASSWORD (+_SANDBOX=1),
      SCRAPER_PYTHON, SCRAPE_MAX_ATTEMPTS, SCRAPE_TIMEOUT_MS,
@@ -1207,6 +1283,10 @@ async function main(): Promise<void> {
       return cmdRerun(rest);
     case "events":
       return cmdEvents(rest);
+    case "interview-skip":
+      return cmdInterviewSkip(rest);
+    case "plan-interview":
+      return cmdPlanInterview(rest);
     case "cluster-enqueue":
       return cmdClusterEnqueue(rest);
     case "cluster-status":

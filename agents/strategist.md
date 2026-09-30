@@ -112,7 +112,7 @@ LLMs love clean, citable, standalone sentences. List 2–4 that fall out of the 
 
 The intro comes from the research notes' **Topic Summary, paragraphs 1–2**. Those paragraphs are synthesis: they say what the subject is and why it matters now, and that is the register the intro should have. Plan the intro in that shape, and don't turn it into a "hook":
 
-- **Paragraph 1: the substance.** Name the subject in the first sentence and state the problem or distinction directly. Define the core terms in a sentence each, and say what getting it wrong costs. Concede-then-pivot (see `context/author-style/`) happens inside this paragraph ("the terms get used interchangeably; they name different layers"), with no warm-up before it.
+- **Paragraph 1: the substance.** Name the subject in the first sentence and state the problem or distinction directly. When the title argues something ("Why…", "…Has to Be…", "…Is Not…"), the first sentence carries that argument, not a definition of the topic: a reader who searched "why the graph has to be complete" already knows what the graph is for. Otherwise, define the core terms in a sentence each. Either way, say what getting it wrong costs. Concede-then-pivot (see `context/author-style/`) happens inside this paragraph ("the terms get used interchangeably; they name different layers"), with no warm-up before it.
 - **Paragraph 2: why now.** Say what changed, in one to three sentences, with at most one sourced figure. Don't list a figure per driver.
 - **Optional short paragraph 3:** the thesis preview, if paragraph 1 doesn't already carry it.
 
@@ -130,7 +130,7 @@ For a **routing page** (a hub), the close is navigational first: send the reader
 
 ### 13. Thesis (D33 — this is the article's spine)
 
-One or two sentences stating the argument the whole article makes — not the topic, the *claim*. The research notes' discourse analysis (who says what, what nobody combines) is where the thesis comes from; if research surfaced a genuine gap in the conversation, the thesis is your side of that gap. Every H2 section must advance this thesis; the closing must crystallize it into one clean distinction. An article without a thesis is an answer farm — the gate rejects an outline without one.
+One or two sentences stating the argument the whole article makes — not the topic, the *claim*. Your Angle and Thesis are a first draft: after this phase the expert is interviewed on them (`agents/interviewer.md`, D59), and the refiner rewrites the outline from the answers. Make both concrete enough to disagree with. The Angle can be framed against the field's coverage. The article never is, so write the Thesis as a claim about the world, never about other articles. The research notes' discourse analysis (who says what, what nobody combines) is where the thesis comes from; if research surfaced a genuine gap in the conversation, the thesis is your side of that gap. Every H2 section must advance this thesis; the closing must crystallize it into one clean distinction. An article without a thesis is an answer farm — the gate rejects an outline without one.
 
 ### 13.5. Real-world anchor
 
@@ -179,6 +179,8 @@ Write to `articles/YYYY-MM-DD-slug/outline.md` using this structure:
 > [One-sentence angle: "Unlike X, this article does Y by Z."]
 
 **Why this angle:** [1–3 sentence reasoning.]
+
+_Internal: the reader never hears about other articles._
 
 ## Thesis
 [1–2 sentences: the claim the article argues, drawn from the research's discourse analysis. Every section advances it; the close crystallizes it.]

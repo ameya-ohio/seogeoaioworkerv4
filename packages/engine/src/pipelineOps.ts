@@ -1,9 +1,9 @@
 import type { ObjectId } from "mongodb";
 import type { EngineDb } from "./db.js";
 import { createArticle, getArticleBySlug } from "./dal/articles.js";
-import { enqueueRun } from "./dal/runs.js";
+import { cancelRun, enqueueRun } from "./dal/runs.js";
 import { emitEvent } from "./dal/events.js";
-import type { ArticleBrief, ArticleDoc, ArticleFacets, RunDoc, WorkStage } from "./types.js";
+import type { ArticleBrief, ArticleDoc, ArticleFacets, InterviewMode, RunDoc, WorkStage } from "./types.js";
 import { GENERIC_FORMAT_SLUG } from "./formats.js";
 
 /** Mirrors scripts/new_article.py slug rules (lowercase, hyphenated, ≤ 60). */
@@ -39,6 +39,11 @@ export interface EnqueueArticleInput {
   /** Operator- or keyword-supplied facets; a brief's own facets win over these. */
   facets?: ArticleFacets;
   planItemId?: ObjectId;
+  /**
+   * D59: pause for the expert interview or skip it. Unset: the plan's
+   * setting for plan items, else company.yaml `pipeline.interview`, else pause.
+   */
+  interview?: InterviewMode;
   /** Extra provenance for the run.queued event (plan id, sequence, fire). */
   eventData?: Record<string, unknown>;
 }
@@ -156,6 +161,7 @@ export async function enqueueArticlePipeline(
     }
   }
 
+  const interviewMode = input.interview ?? (await defaultInterviewMode(db, input.companyId, planId));
   const date = new Date().toISOString().slice(0, 10);
   const article = await createArticle(db, {
     companyId: input.companyId,
@@ -170,6 +176,7 @@ export async function enqueueArticlePipeline(
     ...(trail ? { trail } : {}),
     ...(planId ? { planId } : {}),
     ...(input.planItemId ? { planItemId: input.planItemId } : {}),
+    interviewMode,
   });
   const run = await enqueueRun(db, {
     companyId: input.companyId,
@@ -188,6 +195,24 @@ export async function enqueueArticlePipeline(
   return { article, run };
 }
 
+/**
+ * D59: the interview mode an article gets when the caller doesn't choose:
+ * its plan's setting, then company.yaml `pipeline.interview`, then pause.
+ */
+export async function defaultInterviewMode(
+  db: EngineDb,
+  companyId: string,
+  planId?: ObjectId,
+): Promise<InterviewMode> {
+  if (planId) {
+    const plan = await db.plans.findOne({ _id: planId }, { projection: { interview: 1 } });
+    if (plan?.interview) return plan.interview;
+  }
+  const company = await db.companies.findOne({ companyId }, { projection: { config: 1 } });
+  const pipeline = (company?.config?.["pipeline"] ?? {}) as Record<string, unknown>;
+  return pipeline["interview"] === "skip" ? "skip" : "pause";
+}
+
 /** Queue a re-run of an existing article from a given phase (Review tab). */
 export async function enqueueRerun(
   db: EngineDb,
@@ -203,6 +228,10 @@ export async function enqueueRerun(
   });
   if (active) {
     throw new Error(`Article already has an active run (${active.status}).`);
+  }
+  // D59: a run parked at the interview is superseded by the re-run.
+  for (const waiting of await db.runs.find({ articleId, status: "awaiting_input" }).toArray()) {
+    if (waiting._id) await cancelRun(db, waiting._id);
   }
   const run = await enqueueRun(db, {
     companyId: article.companyId,

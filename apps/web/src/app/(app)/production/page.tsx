@@ -23,6 +23,7 @@ const BOARD_STAGES: Stage[] = [
   "queued",
   "research",
   "outline",
+  "interview",
   "write",
   "edit",
   "hdcp",
@@ -60,7 +61,7 @@ async function WorkTab({ stageFilter }: { stageFilter: string }) {
     .toArray();
 
   const runs = await db.runs
-    .find({ companyId, status: { $in: ["queued", "running"] } })
+    .find({ companyId, status: { $in: ["queued", "running", "awaiting_input"] } })
     .sort({ queuedAt: 1 })
     .toArray();
   const runByArticle = new Map(runs.map((r) => [r.articleId.toHexString(), toUiRun(r)]));
@@ -172,7 +173,16 @@ function ArticleCard({ article, run }: { article: UiArticleSummary; run?: UiRun 
           <FacetBadges typeLabel={article.facets.typeLabel} funnel={article.facets.funnel} />
         </div>
       )}
-      {run && (
+      {run?.status === "awaiting_input" && (
+        <Link
+          href={`/production/interview/${article.slug}`}
+          className="mt-2 flex items-center justify-between rounded-md bg-orange-50 px-2.5 py-1.5 text-xs font-medium text-orange-800 hover:bg-orange-100"
+        >
+          Needs you: expert interview
+          <span aria-hidden>→</span>
+        </Link>
+      )}
+      {run && run.status !== "awaiting_input" && (
         <p className="mt-2 text-xs text-slate-500">
           run {run.status}
           {run.currentPhase ? ` · ${run.currentPhase}` : ""} · attempt {run.attempts}/{run.maxAttempts}

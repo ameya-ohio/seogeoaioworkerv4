@@ -27,8 +27,12 @@ async function processRun(deps: PipelineDeps, run: RunDoc): Promise<void> {
     });
   }, cfg.heartbeatMs);
   try {
-    await runPipeline(deps, run);
-    deps.log(`run ${runId.toHexString()} succeeded`);
+    const outcome = await runPipeline(deps, run);
+    deps.log(
+      outcome === "awaiting_input"
+        ? `run ${runId.toHexString()} is waiting for the expert interview`
+        : `run ${runId.toHexString()} succeeded`,
+    );
   } catch (err) {
     deps.log(`run ${runId.toHexString()} errored: ${err instanceof Error ? err.message : err}`);
   } finally {

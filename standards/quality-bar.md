@@ -98,6 +98,7 @@ the rules further down say *why* each pattern reads as generated.
 | Prose sentences over 30 words (operator register rule 2) | 0 — split them | WARN |
 | Sections whose first sentence restates their own heading | 2 | WARN |
 | Paragraphs opening with a signpost ("That's why…", "This is also why…") | 3 | WARN |
+| Commentary on other writing ("most of what's written", "most guides", "top-ranking pages", "search results", "nobody talks about this") | 0 — state the article's own view (D59) | FAIL |
 
 The thesis belongs in the intro and the conclusion. Key Takeaways and FAQ
 answers support it with specifics; they don't repeat it.
@@ -451,13 +452,19 @@ Banned outright. Acceptable only for genuine acronyms (LLM, RAG, CRM, GTM). Neve
 ## Fact-check rules (absolute)
 
 ### Every statistic traces to research-notes.md
-- The number, the date, the publisher, the URL — all must come from `research-notes.md`.
+- The number, the date, the publisher, the URL — all must come from `research-notes.md` (company numbers: `context/sales/proof-points.md`, `Citable: yes` rows).
 - The one exception is the real-world example: facts from the case study the outline names (`context/case-studies/`) are sourced — they are the company's own engagements — as long as they stay inside that file's *Publishing boundary*.
 - If the article cites a number not in research notes, the Editor either (a) removes it, (b) replaces it with a sourced one, or (c) escalates back to Phase 1 with `[NEEDS RESEARCH: <claim>]`.
 
 ### Every quote traces to research-notes.md
 - Exact wording, attribution to the right speaker, attribution to the right publication.
 - Quotes that can't be sourced are stripped.
+
+### Expert statements trace to interview.md (D59)
+- When the article was interviewed, the expert's point of view, their story and their quotes are sourced to `interview.md` (the transcript) and `pov.md` (the brief the refiner wrote from it), not to the research notes.
+- Quotes from the expert are verbatim from the transcript, attributed by name and title only when `pov.md` records that the expert opted in. Otherwise they stay unattributed or become the article's own voice.
+- The expert's story keeps the publishing boundary `pov.md` records (named, anonymized, or background only).
+- A company number the expert gave is printed only if it is a `Citable: yes` proof point. The interview never makes a number citable.
 
 ### Never invent sources
 - "A recent study" is not a citation. Either the study is named with publisher and year, or the claim doesn't appear in the article.

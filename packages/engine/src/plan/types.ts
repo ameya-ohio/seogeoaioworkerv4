@@ -203,6 +203,8 @@ export interface PlanDoc {
   itemCount?: number;
   /** Why the build sweep is not queuing this plan's builds, while it isn't. */
   buildHold?: string;
+  /** D59: whether this plan's articles stop for the expert interview (unset: company default). */
+  interview?: "pause" | "skip";
   usage: PlanUsage;
   error?: string;
   createdAt: Date;

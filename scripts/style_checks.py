@@ -73,6 +73,22 @@ _HYPOTHETICAL = re.compile(
     re.I,
 )
 
+# The article commenting on other writing (D59): "most of what's written about
+# it hasn't caught up", "unlike the top-ranking guides". The angle may be built
+# against the field's coverage; the article states its own view and never
+# refers to what other articles say or miss.
+_META_COMMENTARY = re.compile(
+    r"\b(?:most|much|little|some) of what(?:'s|’s| is| has been| gets)? (?:been )?(?:written|published|said)\b"
+    r"|\bwhat(?:'s|’s| is| has been) (?:been )?written (?:about|on)\b"
+    r"|\b(?:most|many|existing|other|typical|competing|popular|standard)\s+"
+    r"(?:guides|articles|blog posts|posts|explainers|write-ups|writeups|glossar(?:y|ies)(?: pages| entries)?|vendor pages|listicles)\b"
+    r"|\b(?:the )?(?:current|existing|prevailing|popular) (?:discourse|coverage|literature on)\b"
+    r"|\btop[- ](?:ranking|ranked|\d+|ten) (?:results|pages|articles|guides|posts)\b"
+    r"|\b(?:search results|the serp|serps)\b"
+    r"|\b(?:nobody|no one|few|none of them)\s+(?:else\s+)?(?:is\s+)?(?:writes?|writing|talks?|talking|explains?|explaining|covers?|covering)\s+(?:about\s+)?(?:this|it|that)\b",
+    re.I,
+)
+
 _FAQ_FILLER = re.compile(r"\b(?:actual(?:ly)?|really|exactly|truly|even|honestly|literally)\b", re.I)
 _DEFINITION = re.compile(
     r"\*\*([^*\n]{2,60})\*\*\s*(?:\([^)\n]{1,40}\)\s*)?(?:is|are|refers to|means|describes)\s+(?:a|an|the|when|how)\b",
@@ -245,6 +261,18 @@ def check_hypotheticals(blocks: list[str]) -> Finding | None:
         "fail",
         "Style: invented scenario — anchor the example on a case study from context/case-studies/ "
         "or a cited incident from the research notes, or cut it",
+        hits,
+    )
+
+
+def check_meta_commentary(blocks: list[str]) -> Finding | None:
+    hits = [_snip(b, m.start(), m.end(), 50) for b in blocks for m in _META_COMMENTARY.finditer(b)]
+    if not hits:
+        return None
+    return Finding(
+        "fail",
+        "Style: the article comments on other writing — state the article's own view; never say what "
+        "other articles, guides or search results say or miss (D59)",
         hits,
     )
 
@@ -608,6 +636,7 @@ def run_all(
         check_contrasts(blocks, word_count),
         *check_repetition(blocks),
         check_hypotheticals(blocks),
+        check_meta_commentary(blocks),
         check_hedges(prose, word_count),
         check_triads(prose, word_count),
         check_rhythm(prose),

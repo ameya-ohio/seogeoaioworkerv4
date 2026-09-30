@@ -288,3 +288,30 @@ class EvidenceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MetaCommentaryTests(unittest.TestCase):
+    """D59: the article states its own view, never a review of other writing."""
+
+    FLAGGED = [
+        "The discipline is only as good as the identities its graph counts, and most of what's written about it hasn't caught up to that data.",
+        "Unlike most guides, this one treats machine identities as nodes.",
+        "The top-ranking pages define the term and stop.",
+        "Existing articles model attack paths around Active Directory alone.",
+        "Nobody else is writing about this yet.",
+    ]
+    CLEAN = [
+        "A graph that counts only human accounts will call an environment safe while service accounts carry the path.",
+        "See the other pages in this hub for how choke points are scored.",
+        "NIST's existing guidance covers credential rotation.",
+    ]
+
+    def test_flags_commentary_on_other_writing(self):
+        for text in self.FLAGGED:
+            found = [f for f in run(text) if "comments on other writing" in f.message]
+            self.assertEqual(len(found), 1, text)
+            self.assertEqual(found[0].level, "fail")
+
+    def test_leaves_the_articles_own_claims_alone(self):
+        for text in self.CLEAN:
+            self.assertFalse([f for f in run(text) if "comments on other writing" in f.message], text)

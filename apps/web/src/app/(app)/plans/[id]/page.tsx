@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import {
   PLAN_FIELD_SPECS,
   assignColumns,
+  defaultInterviewMode,
   getPlan,
   getSchedule,
   articlesToReexport,
@@ -30,6 +31,7 @@ import { PlanItemStatusBadge, PlanStatusBadge, ScheduleStatusBadge, describeCade
 import { PlanMapper, type MapperField, type UnresolvedValue } from "@/components/plan-mapper";
 import { PlanReport } from "@/components/plan-report";
 import { PlanSchedule } from "@/components/plan-schedule";
+import { PlanInterviewToggle } from "@/components/plan-interview";
 import { PlanItemsTable } from "@/components/plan-items";
 import { PlanReleases, type UiRelease } from "@/components/plan-releases";
 
@@ -194,8 +196,10 @@ async function BoardTab({
     .sort({ sequence: 1 })
     .toArray();
   const awaitingReview = await db.articles.countDocuments({ companyId, stage: "review" });
+  const openInterviews = await db.articles.countDocuments({ companyId, planId, "interview.status": "open" });
 
   const plan = await db.plans.findOne({ _id: planId }, { projection: { buildHold: 1 } });
+  const interviewMode = await defaultInterviewMode(db, companyId, planId);
   const building = await db.planItems.countDocuments({
     planId,
     buildQueuedAt: { $exists: true },
@@ -218,11 +222,13 @@ async function BoardTab({
           <Stat label="Blocked" value={blocked.length} tone={blocked.length ? "warn" : undefined} />
           <Stat label="Skipped" value={counts.byStatus.skipped ?? 0} />
           <Stat label="Awaiting your review" value={awaitingReview} />
+          <Stat label="Interviews waiting" value={openInterviews} tone={openInterviews ? "warn" : undefined} />
           <Stat label="Queued for build" value={building} />
         </div>
         {plan?.buildHold && (
           <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">{plan.buildHold}</p>
         )}
+        <PlanInterviewToggle planId={planId.toHexString()} mode={interviewMode} />
       </Card>
 
       <div className="grid gap-5 lg:grid-cols-2">

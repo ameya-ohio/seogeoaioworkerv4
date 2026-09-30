@@ -242,10 +242,56 @@ export async function failRun(
   return "failed";
 }
 
+/**
+ * D59: stop a run for operator input. It leaves the queue (claimRun only
+ * takes queued runs and expired running ones), keeps its attempts, and
+ * resumes at `resumeFrom` once resumeRun puts it back. Only the worker
+ * holding the lease can park it.
+ */
+export async function awaitInput(
+  db: EngineDb,
+  runId: ObjectId,
+  workerId: string,
+  resumeFrom: WorkStage,
+): Promise<boolean> {
+  const res = await db.runs.updateOne(
+    { _id: runId, status: "running", workerId },
+    {
+      $set: { status: "awaiting_input", fromStage: resumeFrom, currentPhase: resumeFrom, updatedAt: new Date() },
+      $unset: { leaseUntil: "", workerId: "" },
+    },
+  );
+  return res.modifiedCount === 1;
+}
+
+/**
+ * D59: put a run that was waiting for input back in the queue. The wait
+ * doesn't count against it: the attempt it was claimed with is refunded,
+ * like a release on shutdown. Returns the requeued run, or null when the
+ * run wasn't waiting (already resumed, canceled).
+ */
+export async function resumeRun(db: EngineDb, runId: ObjectId): Promise<RunDoc | null> {
+  const now = new Date();
+  return db.runs.findOneAndUpdate(
+    { _id: runId, status: "awaiting_input" },
+    [
+      {
+        $set: {
+          status: "queued",
+          queuedAt: now,
+          updatedAt: now,
+          attempts: { $max: [{ $subtract: ["$attempts", 1] }, 0] },
+        },
+      },
+    ],
+    { returnDocument: "after" },
+  );
+}
+
 export async function cancelRun(db: EngineDb, runId: ObjectId): Promise<void> {
   const now = new Date();
   await db.runs.updateOne(
-    { _id: runId, status: { $in: ["queued", "running"] } },
+    { _id: runId, status: { $in: ["queued", "running", "awaiting_input"] } },
     {
       $set: { status: "canceled", endedAt: now, updatedAt: now },
       $unset: { leaseUntil: "", workerId: "" },

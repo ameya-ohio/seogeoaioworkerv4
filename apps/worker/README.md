@@ -20,7 +20,8 @@ enqueue → runs (queued) ──claim/lease──▶ worker
                                           │      retry the phase with GATE FEEDBACK appended
                                           │   5. persist artifacts to Mongo, advance stage
                                           ▼
-        research → outline → write → edit → hdcp → schema → design → review
+        research → outline → interview → write → edit → hdcp → schema → design → review
+                                  (waits for the expert)
 ```
 
 - **Mongo is the system of record**; the article folder is a scratch workspace
@@ -74,6 +75,23 @@ enqueue → runs (queued) ──claim/lease──▶ worker
   fallbacks). Everything found is handed to the Editor with quoted context;
   the review result is stored as `articles.technicalReview` and never blocks
   a run (`TECH_REVIEW=0` turns it off).
+- **Expert interview** (D59, Phase 2.5): after the outline, the worker opens
+  the interview. One call to `agents/interviewer.md` (`INTERVIEW_OPEN_MODEL`,
+  default `claude-opus-5-5`) writes the interview plan and the first message
+  to `articles.interview`. The run then parks as `awaiting_input`: it keeps
+  its attempts, has no lease, and `claimRun` never takes it. The operator
+  answers in the web app. Finish or Skip (`closeInterview`, or
+  `interview-skip` from the CLI) requeues it at `interview` with the claim's
+  attempt refunded (`resumeRun`). Finished, the refiner
+  (`agents/interview-refiner.md`, `PHASE_MODEL_INTERVIEW`, default
+  `claude-opus-5-5`) writes `pov.md` and rewrites `outline.md`, and
+  `interviewGate` re-runs the outline gate and checks pov.md. Skipped, the
+  stage passes straight to the Writer. Write gets `pov.md`, and Edit and HDCP
+  also get the transcript (`interview.md`). An article's `interviewMode`
+  comes from the enqueue call (`--interview pause|skip`), else its plan
+  (`plan-interview`), else `config/company.yaml` → `pipeline.interview`,
+  else `pause`. A re-run from outline cancels a parked run and opens a fresh
+  interview; the earlier answers ride along as context.
 - **Binary storage** (D3): header PNG/HTML go to `STORAGE_DRIVER=local|s3`
   (Railway buckets are S3-compatible).
 
@@ -81,10 +99,12 @@ enqueue → runs (queued) ──claim/lease──▶ worker
 
 ```bash
 node apps/worker/dist/cli.js start            # run the queue worker
-node apps/worker/dist/cli.js enqueue --topic "…" [--keyword "…"]
+node apps/worker/dist/cli.js enqueue --topic "…" [--keyword "…"] [--interview pause|skip]
 node apps/worker/dist/cli.js import-articles [--dry-run] [--update] [--audit]
 node apps/worker/dist/cli.js status
-node apps/worker/dist/cli.js rerun --article <id|slug|folder> [--from research|outline|write|edit|hdcp|schema|design]
+node apps/worker/dist/cli.js rerun --article <id|slug|folder> [--from research|outline|interview|write|edit|hdcp|schema|design]
+node apps/worker/dist/cli.js interview-skip --article <id|slug|folder>   # unblock a run waiting on the interview
+node apps/worker/dist/cli.js plan-interview --plan <id> --mode pause|skip
 node apps/worker/dist/cli.js events --run <runId> [--follow]
 
 # Topic & Cluster Generator (roadmap 4C — D30/D31)

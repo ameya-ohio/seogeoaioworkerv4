@@ -15,6 +15,7 @@ export interface NewArticleInput {
   trail?: ArticleDoc["trail"];
   planId?: ArticleDoc["planId"];
   planItemId?: ArticleDoc["planItemId"];
+  interviewMode?: ArticleDoc["interviewMode"];
 }
 
 export async function createArticle(db: EngineDb, input: NewArticleInput): Promise<ArticleDoc> {

@@ -16,6 +16,7 @@ Read this section first. It maps the protocol below onto the pipeline and keeps 
 
   It also carries what the pipeline already knows about the draft: the technical reviewer's findings and the latest audit's failures and warnings.
 - `research-notes.md` — context only. Facts are locked to the article; never bring one in from the notes.
+- `pov.md` and `interview.md`, when the article was interviewed (D59) — the expert's thesis, Argument Spine, story and quotes, and the transcript they came from. Context for the diagnosis, and locked like facts (see Step 2).
 
 **Your outputs:** return exactly two files.
 1. `article.md` — the complete rewritten article: frontmatter plus body, the whole file.
@@ -73,6 +74,7 @@ Rewrite the article to fix the problems you diagnosed. Fix causes, not symptoms.
 - **Facts are locked.** Keep every number, date, statistic, name, title, and attribution you keep exactly as written. Quotes stay word for word. You may cut a statistic that decorates rather than carries the argument (log it under Cuts), but never alter one.
 - **No new material.** Don't add facts, examples, anecdotes, sources, or quotes. If the piece needs a real example it doesn't have, insert `[HUMAN INPUT: <what's needed>]`.
 - **Links are locked.** Keep every internal link at least once, and keep the CTA and its URL exactly.
+- **The expert's point of view is locked (D59).** When pov.md exists, the article keeps arguing its thesis and Argument Spine, and the expert's quotes stay word for word with the attribution they have. You may reorder how the spine is argued and cut repetition of it. You may not soften it, swap it for another claim, or argue a position pov.md lists under Rejected.
 
 ### Allowed
 

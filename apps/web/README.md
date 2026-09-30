@@ -18,6 +18,15 @@ Roadmap Phase 3: the five-screen app over the engine — same Mongo, same
   article opens in a markdown editor + preview (D7) with sidebar tabs for
   research notes, outline, first draft, audit report, header image, and run
   history, plus Save / Approve-for-publish / re-run-from-phase actions.
+- **Expert interview** (D59) — `/production/interview/<slug>`. A run that
+  reaches the Interview stage waits for the operator. Its board card reads
+  *Needs you*, and the nav shows a count. The page is a streamed chat with
+  the interviewer (`agents/interviewer.md`), with the research wedge, the
+  planned angle, thesis and anchor, and a live "captured" checklist beside
+  it. **Finish** requeues the run to refine the outline from the answers;
+  **Skip** sends it on to the Writer. Review has an **Interview** tab
+  (pov.md + transcript). The Chat form can skip the interview for one
+  article, and a plan's Progress card sets it for the plan's articles.
 - **Articles** — library of everything produced (imported corpus included),
   with per-artifact tabs.
 - **Admin** — edit the engine's markdown surfaces in place (standards /
@@ -34,6 +43,10 @@ node apps/worker/dist/cli.js start  # the worker, so queued runs actually execut
 ```
 
 Auth (D5): set `APP_PASSWORD` to enable the login gate; unset = open (dev).
+The interview chat calls the Messages API from the web app, so it needs
+`ANTHROPIC_API_KEY` (or another credential the Anthropic SDK resolves).
+`INTERVIEW_CHAT_MODEL` sets the model (default `claude-sonnet-5-5`); each
+turn's estimated cost lands in `api_costs` (`endpoint: interview.turn`).
 Other env: `MONGODB_URI`, `MONGODB_DB`, `STORAGE_DRIVER` — same as the
 worker (see `.env.example`). The web app and worker must point at the same
 Mongo and the same storage.
@@ -46,6 +59,12 @@ Mongo and the same storage.
 - Client components only receive plain-JSON `Ui*` shapes (`src/lib/ui-types.ts`).
 - `/api/events` is an SSE tail of the `events` collection; the Work board
   listens and re-fetches server data on each event.
+- `/api/interview/[slug]` (POST) streams one interview turn as plain text.
+  It saves the expert's message first, holds the trailing `<captured>` block
+  back from the stream, then saves the reply, the captured state and the
+  cost. Context comes through `repoFileReader`, so Admin-saved case studies
+  and proof points count even though the web container never writes them to
+  disk.
 - `/api/storage/…` serves stored binaries (header PNGs) through the engine's
   storage adapter, so local-dir and S3 storage both work.
 - Deploy: rides in the combined post-Phase-3 Railway deploy with roadmap 2.8.

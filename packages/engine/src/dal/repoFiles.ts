@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join, normalize, sep } from "node:path";
 import type { EngineDb } from "../db.js";
@@ -104,4 +104,44 @@ export async function contextFileChecker(
     if (deleted.has(p)) return false;
     return existsSync(join(repoRoot, p));
   };
+}
+
+/**
+ * D59: read context the way the worker sees it after applyRepoFiles, for
+ * callers that never write the repo (the web app's interview chat): an
+ * Admin-saved file wins, a tombstone hides the repo copy, and a directory
+ * listing is the repo's files plus saved ones, minus tombstones.
+ */
+export async function repoFileReader(
+  db: EngineDb,
+  companyId: string,
+  repoRoot: string,
+): Promise<{
+  read(repoPath: string): Promise<string | undefined>;
+  list(dir: string): Promise<{ path: string; content: string }[]>;
+}> {
+  const saved = new Map((await listRepoFiles(db, companyId)).map((f) => [f.path, f]));
+  const read = async (repoPath: string): Promise<string | undefined> => {
+    const p = repoPath.replace(/^\/+/, "");
+    const doc = saved.get(p);
+    if (doc) return doc.deleted ? undefined : doc.content;
+    const abs = join(repoRoot, p);
+    return existsSync(abs) ? readFile(abs, "utf-8") : undefined;
+  };
+  const list = async (dir: string) => {
+    const d = dir.replace(/^\/+|\/+$/g, "");
+    const names = new Set<string>();
+    const abs = join(repoRoot, d);
+    if (existsSync(abs)) {
+      for (const n of await readdir(abs)) if (EDITABLE.test(n)) names.add(`${d}/${n}`);
+    }
+    for (const p of saved.keys()) if (p.startsWith(`${d}/`) && !p.slice(d.length + 1).includes("/")) names.add(p);
+    const out: { path: string; content: string }[] = [];
+    for (const p of [...names].sort()) {
+      const content = await read(p);
+      if (content !== undefined) out.push({ path: p, content });
+    }
+    return out;
+  };
+  return { read, list };
 }

@@ -16,10 +16,13 @@ const NAV = [
 export function SideNav({
   companyName,
   authEnabled,
+  interviews = 0,
   logout,
 }: {
   companyName: string;
   authEnabled: boolean;
+  /** D59: expert interviews waiting on the operator. */
+  interviews?: number;
   logout: () => Promise<void>;
 }) {
   const pathname = usePathname();
@@ -43,7 +46,17 @@ export function SideNav({
                   : "text-slate-300 hover:bg-slate-800 hover:text-white",
               )}
             >
-              {item.label}
+              <span className="flex items-center justify-between">
+                {item.label}
+                {item.href === "/production" && interviews > 0 && (
+                  <span
+                    title={`${interviews} expert interview${interviews === 1 ? "" : "s"} waiting`}
+                    className="rounded-full bg-orange-500 px-1.5 text-xs font-semibold text-white"
+                  >
+                    {interviews}
+                  </span>
+                )}
+              </span>
             </Link>
           );
         })}

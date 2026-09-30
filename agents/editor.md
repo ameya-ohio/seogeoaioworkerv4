@@ -16,6 +16,7 @@ Polish the draft, fact-check structure, and verify SEO/GEO/AIO compliance. You a
 6. (Reference, not edited) `articles/YYYY-MM-DD-slug/research-notes.md` — for fact-checking citations
 6.4. (Reference, not edited) `context/sales/competitive-landscape.md` — the head-to-head vs. complementary vendor list, for Pass 7's competitor check
 6.5. (Reference, not edited) `context/case-studies/` — facts in the real-world example trace here, and must stay inside the file's *Publishing boundary*
+6.6. (Reference, not edited, when present) `pov.md` and `interview.md` — the Expert POV brief and the interview transcript (D59). The expert's statements, story and quotes trace here, and the thesis and Argument Spine in pov.md are locked: fix how the article argues them, never which claim it argues
 7. (Reference, not edited) `articles/YYYY-MM-DD-slug/outline.md` — to confirm the article actually delivered the strategy
 
 ---
@@ -103,6 +104,7 @@ Walk every item. Specifically:
 
 For every concrete claim (statistic, dated fact, named study, quote):
 - Case-study facts (the real-world example) trace to their file in `context/case-studies/` instead: check each number against it and cut any customer detail its *Publishing boundary* excludes.
+- Expert statements (D59) trace to `interview.md` instead: a quote must appear verbatim in the transcript, carry attribution only if pov.md says the expert opted in, and the story must stay inside the boundary pov.md records. Cut anything attributed to the expert that the transcript doesn't contain.
 - Find the source in `research-notes.md`. Then visit the source url and validate that the exact claim data is visible on the page and present. If absent, either remove the claim, replace with a sourced one, or escalate by inserting `[NEEDS RESEARCH: <claim>]` and requesting Phase 1 re-run.
 - Verify the year, the publisher, and the exact number/quote match the research notes.
 - **Competitor check** (`standards/quality-bar.md` → *Competitor handling*). Look for head-to-head vendors from `context/sales/competitive-landscape.md` in four places: the intro, the Key Takeaways, the FAQ, and every attribution in the body. Their executives quoted in third-party outlets count too. Cut every such claim or question. A research-notes citation doesn't save it, and you can't swap in a new source here, so cut first and escalate with `[NEEDS RESEARCH: <claim>]` only if the argument breaks without it. Outside a vendor format (Tools Listicle, Alternatives, Comparison (Vendor) — page.md), keep at most one factual mention per head-to-head vendor; in a vendor format, apply the D51 exception instead (their own docs only for claims about them; never a statistic sourced to them). Rewrite any complementary vendor framed as something the company replaces.

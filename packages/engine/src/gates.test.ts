@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { editGate, outlineGate, researchGate, writeGate } from "./gates.js";
+import { editGate, interviewGate, outlineGate, researchGate, writeGate } from "./gates.js";
 import { parseScriptOutput } from "./scriptRunner.js";
 import type { CitationCheckResult, CitationReport, LinkReport } from "./citations.js";
 
@@ -345,5 +345,56 @@ describe("parseScriptOutput + editGate", () => {
     expect(g.problems.join(" ")).toContain("unverified.example.com");
     expect(g.problems.join(" ")).toContain("not-published-yet");
     expect(g.problems.join(" ")).toMatch(/link inventory/);
+  });
+});
+
+const GOOD_POV = `# Expert POV: Test Article
+
+## Thesis
+Attack path analysis fails when its graph counts only human accounts, because the paths that reach a domain controller now cross service accounts.
+
+## Argument Spine
+1. The graph decides what the analysis can see — expert reasoning
+2. Machine identities are now an entry point of comparable size — research #3
+3. The dangerous paths cross between human and machine identities — anchor
+
+## Objection & Answer
+Objection: machine identities are too many to model. Answer: you only model the ones with a path to tier zero.
+
+## Real-World Anchor
+context/case-studies/hospital-and-healthcare.md — the service account that reached the EHR admin group. Boundary: anonymized.
+
+## Company Role
+In "The dangerous paths cross", as the worked mechanism. No proof point.
+
+## Approved Quotes
+none
+
+## Rejected
+- Starting path analysis from machine identities only.
+`;
+
+describe("interviewGate", () => {
+  it("passes a skipped interview without looking at anything", () => {
+    expect(interviewGate({ interviewSkipped: true }).ok).toBe(true);
+  });
+
+  it("passes a revised outline that still passes the outline gate, plus a complete pov.md", () => {
+    const g = interviewGate({ outline: GOOD_OUTLINE, pov: GOOD_POV });
+    expect(g.problems).toEqual([]);
+  });
+
+  it("fails a missing pov.md and a broken revised outline", () => {
+    const g = interviewGate({ outline: GOOD_OUTLINE.replace(/^## Thesis[\s\S]*?(?=^## )/m, ""), pov: "" });
+    expect(g.ok).toBe(false);
+    expect(g.problems.some((p) => p.startsWith("revised outline: No thesis"))).toBe(true);
+    expect(g.problems).toContain("pov.md missing or still a stub");
+  });
+
+  it("names each missing pov section and a spine outside 3-5 claims", () => {
+    const pov = GOOD_POV.replace(/## Rejected[\s\S]*$/, "").replace(/^3\. .*$/m, "");
+    const g = interviewGate({ outline: GOOD_OUTLINE, pov });
+    expect(g.problems).toContain("pov.md is missing ## Rejected (or it is empty)");
+    expect(g.problems).toContain("pov.md Argument Spine has 2 numbered claim(s); need 3-5");
   });
 });

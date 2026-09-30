@@ -1,9 +1,13 @@
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   GATES,
   applyRepoFiles,
+  awaitInput,
+  defaultInterviewMode,
+  markInterviewRefined,
+  openInterview,
   MIN_VERIFIED_SOURCES,
   pruneUnverifiedCitations,
   trimExcessClaims,
@@ -43,6 +47,7 @@ import { materializePageSpec, pageRulesFor, stampArticleFrontmatter } from "./pa
 import type { AgentInvoker, AgentRunOutcome } from "./agentRunner.js";
 import type { WorkerConfig } from "./config.js";
 import type { DirectPhaseRunner } from "./directRunner.js";
+import type { InterviewOpener } from "./interviewOpener.js";
 import { PHASE_ORDER, phaseDefs, type PhaseContext } from "./phases.js";
 import { articleProse, type CitationVerifier, type LinkChecker } from "./quality.js";
 import { formatIssue, type TechReviewer } from "./techReview.js";
@@ -66,6 +71,8 @@ export interface PipelineDeps {
   linkChecker: LinkChecker;
   /** Pre-edit expert read of the draft; findings join the edit pre-audit. */
   techReviewer?: TechReviewer;
+  /** D59: opens the expert interview. Absent = interviews are skipped. */
+  interviewer?: InterviewOpener;
   companyName: string;
   log: (msg: string) => void;
 }
@@ -99,6 +106,10 @@ async function loadGateFiles(
   if (phase === "hdcp") {
     const hdcpLog = await read("hdcp.md");
     if (hdcpLog !== undefined) files.hdcpLog = hdcpLog;
+  }
+  if (phase === "interview") {
+    const pov = await read("pov.md");
+    if (pov !== undefined) files.pov = pov;
   }
   if (phase === "design") files.headerPngExists = existsSync(join(dir, "header.png"));
   if (outputs.report) files.report = outputs.report;
@@ -543,12 +554,97 @@ async function executePhase(
 }
 
 /**
+ * D59: what the interview stage does for this run.
+ * - `park`: the interview was just opened (plan + first question); the run
+ *   waits for the operator as awaiting_input.
+ * - `refine`: the operator finished this run's interview; the refiner runs.
+ * - `skip`: skipped by the operator, the plan, or company.yaml.
+ * An interview another run opened (before a re-run from outline) doesn't
+ * count: this run opens its own.
+ */
+async function interviewStep(deps: PipelineDeps, run: RunDoc, article: ArticleDoc): Promise<"park" | "refine" | "skip"> {
+  const { db, cfg } = deps;
+  const runId = run._id;
+  const articleId = article._id;
+  if (!runId || !articleId) throw new Error("run/article missing _id");
+  const tag = `[${article.slug}/interview]`;
+  const iv = article.interview;
+  if (iv?.runId?.equals(runId)) {
+    if (iv.status === "complete") return "refine";
+    if (iv.status === "skipped" || iv.status === "refined") {
+      deps.log(`${tag} ${iv.status === "skipped" ? "skipped by the operator" : "already refined"} — on to the Writer`);
+      return "skip";
+    }
+    // Opened, but the worker stopped before parking: park again.
+    await awaitInput(db, runId, cfg.workerId, "interview");
+    deps.log(`${tag} interview already open — waiting for the operator`);
+    return "park";
+  }
+  const mode = article.interviewMode ?? (await defaultInterviewMode(db, article.companyId, article.planId));
+  if (mode === "skip" || !deps.interviewer) {
+    const why = mode === "skip" ? "set to skip for this article" : "no interviewer configured";
+    deps.log(`${tag} skipped (${why})`);
+    await emitEvent(db, {
+      companyId: run.companyId,
+      runId,
+      articleId,
+      type: "interview.skipped",
+      message: `Interview skipped (${why})`,
+    });
+    return "skip";
+  }
+
+  const startedAt = new Date();
+  const opening = await deps.interviewer.open({
+    article,
+    companyName: deps.companyName,
+    onProgress: (t) => deps.log(`${tag} ${t.slice(0, 160)}`),
+  });
+  // A POV from an earlier interview no longer matches the new outline.
+  if (article.artifacts.pov) {
+    await db.articles.updateOne({ _id: articleId }, { $unset: { "artifacts.pov": "" } });
+    await rm(join(articleDir(cfg, article), "pov.md"), { force: true });
+  }
+  await openInterview(db, articleId, {
+    runId,
+    plan: opening.plan,
+    opening: opening.opening,
+    ...(opening.captured ? { captured: opening.captured } : {}),
+    ...(opening.costUsd !== undefined ? { costUsd: opening.costUsd } : {}),
+  });
+  // Recorded like a phase attempt, so run cost and the plan budget brake see it.
+  await pushPhaseResult(db, runId, {
+    phase: "interview",
+    status: "succeeded",
+    attempt: 1,
+    route: "direct",
+    startedAt,
+    endedAt: new Date(),
+    usage: { model: opening.model, numTurns: 1, ...(opening.costUsd !== undefined ? { costUsd: opening.costUsd } : {}) },
+  });
+  if (!(await awaitInput(db, runId, cfg.workerId, "interview"))) {
+    throw new Error("lost the run's lease before it could wait for the interview");
+  }
+  await emitEvent(db, {
+    companyId: run.companyId,
+    runId,
+    articleId,
+    type: "interview.opened",
+    message: "Interview open — waiting for the expert",
+  });
+  deps.log(
+    `${tag} opened (${opening.model}${opening.costUsd !== undefined ? `, $${opening.costUsd.toFixed(3)}` : ""}) — run waits for the expert`,
+  );
+  return "park";
+}
+
+/**
  * Run the pipeline for one claimed run, from run.fromStage through design.
  * Each stage persists its artifacts and records itself as run.currentPhase, so
  * a retry (failRun), a reclaim after a crash (claimRun) or a release on
  * shutdown (releaseRun) resumes at that phase; earlier phases never re-run.
  */
-export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<void> {
+export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<"completed" | "awaiting_input"> {
   const { db, cfg } = deps;
   const runId = run._id;
   if (!runId) throw new Error("run missing _id");
@@ -594,7 +690,13 @@ export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<void
       });
       // Refresh the doc so prompts see artifacts from earlier phases.
       const fresh = (await getArticle(db, articleId)) ?? article;
+      if (phase === "interview") {
+        const step = await interviewStep(deps, run, fresh);
+        if (step === "park") return "awaiting_input";
+        if (step === "skip") continue;
+      }
       await executePhase(deps, run, fresh, phase);
+      if (phase === "interview") await markInterviewRefined(db, articleId);
     }
 
     await setStage(db, articleId, "review", runId);
@@ -614,6 +716,7 @@ export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<void
       type: "run.succeeded",
       message: "Pipeline complete — article is in review",
     });
+    return "completed";
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const disposition = await failRun(db, runId, message, currentPhase);

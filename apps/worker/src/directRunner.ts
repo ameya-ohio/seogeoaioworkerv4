@@ -4,7 +4,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import Anthropic from "@anthropic-ai/sdk";
-import type { PhaseUsage } from "@blogagent/engine";
+import { estimateCostUsd, type PhaseUsage } from "@blogagent/engine";
 import type { AgentRunOutcome } from "./agentRunner.js";
 import type { DirectPhase, Effort, WorkerConfig } from "./config.js";
 import { feedback, preAuditBlock, type PhaseContext } from "./phases.js";
@@ -162,32 +162,8 @@ export class SdkDirectLlm implements DirectLlm {
   }
 }
 
-/**
- * USD per million tokens. The Agent SDK reports a cost per phase; the
- * Messages API reports tokens only, and the plan budget brake sums
- * phaseResults[].usage.costUsd — so direct phases estimate it here (cache
- * writes 1.25× input, cache reads 0.1× input). Unknown models record no cost
- * rather than a wrong one.
- */
-const PRICES: Record<string, { input: number; output: number }> = {
-  "claude-fable-5-1": { input: 10, output: 50 },
-  "claude-fable-5": { input: 10, output: 50 },
-  "claude-opus-5-5": { input: 4, output: 20 },
-  "claude-opus-5": { input: 5, output: 25 },
-  "claude-opus-4-8": { input: 5, output: 25 },
-  "claude-sonnet-5": { input: 2, output: 10 },
-  "claude-sonnet-4-6": { input: 3, output: 15 },
-  "claude-haiku-4-5": { input: 1, output: 5 },
-  "claude-haiku-4-5-20251001": { input: 1, output: 5 },
-};
-
-export function estimateCostUsd(model: string, u: DirectLlmResponse["usage"]): number | undefined {
-  const p = PRICES[model];
-  if (!p) return undefined;
-  const inputSide =
-    u.inputTokens * p.input + u.cacheCreationTokens * p.input * 1.25 + u.cacheReadTokens * p.input * 0.1;
-  return (inputSide + u.outputTokens * p.output) / 1_000_000;
-}
+/** Lives in the engine so the web interview chat prices calls the same way. */
+export { estimateCostUsd };
 
 /** Header patterns the generator accepts — mirrors PATTERN_NAMES in blogheaderimagegen/lib/patterns.py. */
 export const HEADER_PATTERNS = [
@@ -282,6 +258,28 @@ function frontmatterOf(md: string): string {
   return m ? m[0] : "";
 }
 
+/**
+ * D59: how a phase treats the Expert POV when the article was interviewed.
+ * The Writer builds on it; the Editor and HDCP keep it intact and source
+ * expert statements to the transcript.
+ */
+function povTask(article: PhaseContext["article"], downstream: boolean): string[] {
+  if (!article.artifacts.pov) return [];
+  const folder = `articles/${article.folder}`;
+  return downstream
+    ? [
+        `${folder}/pov.md is the Expert POV brief (D59) and ${folder}/interview.md its transcript. The thesis,`,
+        `argument spine, anchor and approved quotes are locked: keep them. Expert statements and anchor facts trace`,
+        `to the transcript (not the research notes) and respect the publishing boundary pov.md records.`,
+      ]
+    : [
+        `${folder}/pov.md is the Expert POV brief (D59). The article argues its thesis: the first sentence carries`,
+        `that claim, not a definition; every H2 advances a claim in its Argument Spine; every statistic sits inside`,
+        `the claim it supports. Use its approved quotes verbatim, attributed only as pov.md says. Never argue a`,
+        `position under ## Rejected, and never comment on what other articles say or miss.`,
+      ];
+}
+
 async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePlan> {
   const { cfg, article } = ctx;
   const folder = `articles/${article.folder}`;
@@ -323,6 +321,26 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
         outputs: ["outline.md"],
       };
     }
+    case "interview":
+      return {
+        reference: [
+          ...(await readAll(cfg, ["standards/quality-bar.md", "config/company.yaml"])),
+          ...(await proofPoints(cfg)),
+          ...(await caseStudies(cfg)),
+        ],
+        inputs: await readAll(cfg, [
+          inFolder("page.md"),
+          inFolder("interview.md"),
+          inFolder("outline.md"),
+          inFolder("research-notes.md"),
+        ]),
+        task: [
+          `The expert has been interviewed about this article (${inFolder("interview.md")}). Write pov.md, the Expert`,
+          `POV brief, and return the complete revised outline.md, per your spec. The transcript is the source for`,
+          `the point of view; the research notes are the only evidence you may choose from; page.md is unchanged.`,
+        ].join("\n"),
+        outputs: ["pov.md", "outline.md"],
+      };
     case "write":
       return {
         reference: [
@@ -335,6 +353,7 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
         inputs: await readAll(cfg, [
           inFolder("page.md"),
           inFolder("outline.md"),
+          ...(article.artifacts.pov ? [inFolder("pov.md")] : []),
           inFolder("research-notes.md"),
           inFolder("article.md"),
           inFolder("meta.json"),
@@ -346,6 +365,7 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           `Follow ${inFolder("page.md")}: its format guide, Key Takeaways count, FAQ range and closing CTA.`,
           `The worker stamps page_role, search_intent, article_type, funnel and canonical_url into the`,
           `frontmatter after you — leave those keys as they are.`,
+          ...povTask(article, false),
         ].join("\n"),
         outputs: ["article.md", "meta.json"],
       };
@@ -365,11 +385,17 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           ...(await proofPoints(cfg)),
           ...(await caseStudies(cfg)),
         ],
-        inputs: await readAll(cfg, [inFolder("page.md"), inFolder("article.md"), inFolder("research-notes.md")]),
+        inputs: await readAll(cfg, [
+          inFolder("page.md"),
+          inFolder("article.md"),
+          inFolder("research-notes.md"),
+          ...(article.artifacts.pov ? [inFolder("pov.md"), inFolder("interview.md")] : []),
+        ]),
         task: [
           `${inFolder("page.md")} sets this page's format guide, Key Takeaways count, FAQ range and closing CTA.`,
           `Walk every checklist item, fix every failure, and return the complete edited article.md`,
           `with the HTML-comment edit summary appended at the bottom.`,
+          ...povTask(article, true),
         ].join("\n"),
         outputs: ["article.md"],
       };
@@ -385,12 +411,14 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
           inFolder("hdcp-inputs.md"),
           inFolder("article.md"),
           inFolder("research-notes.md"),
+          ...(article.artifacts.pov ? [inFolder("pov.md"), inFolder("interview.md")] : []),
         ]),
         task: [
           `Run the Human Driven Content Protocol on ${inFolder("article.md")}: Step 1 Diagnose, then Step 2 Rewrite.`,
           `Follow "How this runs in the pipeline" in your spec; where it differs from the protocol, it wins.`,
           `${inFolder("hdcp-inputs.md")} holds target_keyword, content_role and cluster_context, plus the technical review and audit findings.`,
           `Return the complete rewritten article.md (frontmatter unchanged, no editor notes in it) and hdcp.md (the Log format, with ## Editor notes).`,
+          ...povTask(article, true),
         ].join("\n"),
         outputs: ["article.md", "hdcp.md"],
       };

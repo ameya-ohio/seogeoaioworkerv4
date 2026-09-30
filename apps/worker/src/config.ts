@@ -12,7 +12,7 @@ import type { WorkStage } from "@blogagent/engine";
  */
 export type PhaseRoute = "agent" | "direct";
 export type DirectPhase = Exclude<WorkStage, "research">;
-export const DIRECT_PHASES: readonly DirectPhase[] = ["outline", "write", "edit", "hdcp", "schema", "design"];
+export const DIRECT_PHASES: readonly DirectPhase[] = ["outline", "interview", "write", "edit", "hdcp", "schema", "design"];
 export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
 const EFFORTS: readonly Effort[] = ["low", "medium", "high", "xhigh", "max"];
 
@@ -36,6 +36,11 @@ export interface WorkerConfig {
     effort: Record<DirectPhase, Effort>;
     /** Streaming call, so a high ceiling costs nothing unless it is used. */
     maxTokens: number;
+  };
+  /** D59: the call that opens the expert interview (agents/interviewer.md). */
+  interview: {
+    openModel: string;
+    effort: Effort;
   };
   /** Pre-edit expert read of the draft (agents/technical-reviewer.md). */
   techReview: {
@@ -120,6 +125,9 @@ function phaseModels(): Record<WorkStage, string> {
   return {
     research: get("research"),
     outline: get("outline"),
+    // The interview refiner rebuilds the outline from the expert's answers:
+    // an editorial-judgment rewrite like HDCP, so Opus 5.5 unless overridden.
+    interview: process.env["PHASE_MODEL_INTERVIEW"] ?? "claude-opus-5-5",
     write: get("write"),
     edit: get("edit"),
     // HDCP is an editorial-judgment rewrite: Opus 5.5 unless overridden.
@@ -166,6 +174,7 @@ export function loadWorkerConfig(): WorkerConfig {
     maxTurns: {
       research: intEnv("PHASE_MAX_TURNS_RESEARCH", 120),
       outline: intEnv("PHASE_MAX_TURNS_OUTLINE", 40),
+      interview: intEnv("PHASE_MAX_TURNS_INTERVIEW", 40),
       write: intEnv("PHASE_MAX_TURNS_WRITE", 60),
       edit: intEnv("PHASE_MAX_TURNS_EDIT", 80),
       hdcp: intEnv("PHASE_MAX_TURNS_HDCP", 80),
@@ -173,6 +182,12 @@ export function loadWorkerConfig(): WorkerConfig {
       design: intEnv("PHASE_MAX_TURNS_DESIGN", 40),
     },
     direct: directConfig(),
+    interview: {
+      openModel: process.env["INTERVIEW_OPEN_MODEL"] ?? "claude-opus-5-5",
+      effort: EFFORTS.includes(process.env["INTERVIEW_OPEN_EFFORT"] as Effort)
+        ? (process.env["INTERVIEW_OPEN_EFFORT"] as Effort)
+        : "high",
+    },
     techReview: {
       // On by default: it's one call per article and catches what fluent drafts get wrong.
       enabled: (process.env["TECH_REVIEW"] ?? "1") !== "0",

@@ -73,6 +73,22 @@ export function feedback(ctx: PhaseContext): string {
   ].join("\n");
 }
 
+/**
+ * D59: the Expert POV inputs, when the article was interviewed. The Writer
+ * builds on pov.md; the Editor and HDCP also get the transcript, because
+ * expert statements are sourced to it rather than to the research notes.
+ */
+export function povLines(ctx: PhaseContext, withTranscript: boolean): string[] {
+  if (!ctx.article.artifacts.pov) return [];
+  return [
+    `- articles/${ctx.article.folder}/pov.md — the Expert POV brief (D59): the thesis, argument spine,`,
+    `  anchor, company role and approved quotes the article is built on. Its thesis and spine are locked.`,
+    ...(withTranscript
+      ? [`- articles/${ctx.article.folder}/interview.md — the interview transcript; expert statements trace to it`]
+      : []),
+  ];
+}
+
 export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
   return {
     research: {
@@ -134,6 +150,28 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           feedback(ctx),
         ].join("\n"),
     },
+    interview: {
+      phase: "interview",
+      title: "Interview Refiner",
+      specFile: "agents/interview-refiner.md",
+      allowedTools: FILE_TOOLS,
+      buildPrompt: (ctx) =>
+        [
+          header(ctx, 2.5, "Interview Refiner"),
+          ``,
+          `Inputs to read first:`,
+          `- articles/${ctx.article.folder}/interview.md — the expert interview transcript (the source for the POV)`,
+          `- articles/${ctx.article.folder}/outline.md — the Strategist's plan you revise`,
+          `- articles/${ctx.article.folder}/research-notes.md — the only evidence you may choose from`,
+          `- articles/${ctx.article.folder}/page.md (facets, FAQ range, CTA — unchanged by you)`,
+          `- standards/quality-bar.md, context/sales/proof-points.md (Citable: yes only)`,
+          `- context/case-studies/ (skip README.md, _template.md, and any file marked "Permission: internal only")`,
+          ``,
+          `Write the Expert POV brief to articles/${ctx.article.folder}/pov.md and rewrite`,
+          `articles/${ctx.article.folder}/outline.md in place, per your spec.`,
+          feedback(ctx),
+        ].join("\n"),
+    },
     write: {
       phase: "write",
       title: "Writer",
@@ -146,6 +184,7 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           `Inputs to read first:`,
           `- articles/${ctx.article.folder}/page.md (format guide, Key Takeaways count, FAQ range, closing CTA)`,
           `- articles/${ctx.article.folder}/outline.md`,
+          ...povLines(ctx, false),
           `- articles/${ctx.article.folder}/research-notes.md`,
           `- context/author-style/ (or your spec's default voice rules if empty)`,
           `- context/brand/ (skip if empty)`,
@@ -172,6 +211,7 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           `- standards/banned-phrases.txt and the voice rules in config/company.yaml`,
           `- articles/${ctx.article.folder}/page.md (format guide, Key Takeaways count, FAQ range, closing CTA)`,
           `- articles/${ctx.article.folder}/article.md and research-notes.md`,
+          ...povLines(ctx, true),
           `- context/sales/competitive-landscape.md (head-to-head vs. complementary vendors; skip if absent)`,
           `- context/sales/proof-points.md (company numbers: only Citable: yes entries may stay)`,
           `- context/case-studies/ — real engagements (skip README.md, _template.md, and any file marked "Permission: internal only")`,
@@ -196,6 +236,7 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           `- articles/${ctx.article.folder}/hdcp-inputs.md (target_keyword, content_role, cluster_context, technical review + audit findings)`,
           `- articles/${ctx.article.folder}/article.md (the edited draft — the fact boundary)`,
           `- articles/${ctx.article.folder}/research-notes.md (context only; never bring a fact in from it)`,
+          ...povLines(ctx, true),
           `- standards/quality-bar.md and context/sales/proof-points.md`,
           ``,
           `Diagnose, then rewrite, following "How this runs in the pipeline" in your spec. Rewrite`,
@@ -249,4 +290,4 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
   };
 }
 
-export const PHASE_ORDER: WorkStage[] = ["research", "outline", "write", "edit", "hdcp", "schema", "design"];
+export const PHASE_ORDER: WorkStage[] = ["research", "outline", "interview", "write", "edit", "hdcp", "schema", "design"];

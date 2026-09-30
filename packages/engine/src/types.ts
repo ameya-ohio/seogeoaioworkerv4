@@ -10,6 +10,9 @@ import type { FunnelStage, PageRole, SearchIntent } from "./plan/types.js";
 export const WORK_STAGES = [
   "research",
   "outline",
+  // Expert interview (agents/interviewer.md, D59): the run waits for the
+  // operator's point of view, then the outline is refined from it.
+  "interview",
   "write",
   "edit",
   // HDCP (agents/hdcp.md): editorial rewrite after the Editor, before Schema.
@@ -39,6 +42,8 @@ export function nextStage(stage: Stage): Stage | null {
     case "research":
       return "outline";
     case "outline":
+      return "interview";
+    case "interview":
       return "write";
     case "write":
       return "edit";
@@ -142,6 +147,8 @@ export interface ArticleArtifacts {
   meta?: Record<string, unknown>;
   schema?: Record<string, unknown>;
   headerHtml?: string;
+  /** D59: the Expert POV brief the interview refiner wrote (pov.md). */
+  pov?: string;
 }
 
 /**
@@ -168,6 +175,53 @@ export interface HdcpLog {
   editorNotes: string;
   /** The log exactly as returned. */
   markdown: string;
+}
+
+/** D59: whether a run stops for the expert interview after the outline. */
+export type InterviewMode = "pause" | "skip";
+
+/**
+ * D59 interview lifecycle. `open`: questions are out and the run waits
+ * (status awaiting_input). `complete`/`skipped`: the operator finished or
+ * skipped it and the run was requeued; `refined`: the refiner rewrote the
+ * outline from the answers.
+ */
+export type InterviewStatus = "open" | "complete" | "skipped" | "refined";
+
+export interface InterviewMessage {
+  role: "assistant" | "user";
+  content: string;
+  at: Date;
+}
+
+/** What the interviewer reports it has captured so far (the live checklist). */
+export interface InterviewCaptured {
+  angle?: string;
+  thesis?: string;
+  objection?: string;
+  anchor?: string;
+  product?: string;
+  quote?: string;
+  /** Name and title, only when the expert opted in to attribution. */
+  attribution?: string;
+}
+
+export interface ArticleInterview {
+  status: InterviewStatus;
+  /**
+   * The run that opened it. A later run reaching the interview stage (a
+   * re-run from outline) opens a new interview rather than reusing this one.
+   */
+  runId?: ObjectId;
+  /** The interviewer's plan (wedge, candidate positions, beats), in markdown. */
+  plan: string;
+  messages: InterviewMessage[];
+  captured: InterviewCaptured;
+  openedAt: Date;
+  completedAt?: Date;
+  refinedAt?: Date;
+  /** Summed estimate across the opening call and every chat turn. */
+  costUsd?: number;
 }
 
 export interface ArticleFacets {
@@ -243,6 +297,10 @@ export interface ArticleDoc {
   canonicalUrl?: string;
   /** D46: the page's ancestors and itself, for breadcrumbs (pillar → hub → page). */
   trail?: { name: string; path: string }[];
+  /** D59: pause for the expert interview (default) or skip it. */
+  interviewMode?: InterviewMode;
+  /** D59: the expert interview — plan, transcript, captured POV. */
+  interview?: ArticleInterview;
   /** HDCP (agents/hdcp.md): the diagnosis, cuts, flags and self-verification of the last run. */
   hdcp?: HdcpLog;
   /** D53: internal links in the body as of the last edit — the site-wide anchor registry. */
@@ -304,7 +362,11 @@ export interface ArticleDoc {
   updatedAt: Date;
 }
 
-export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "canceled";
+/**
+ * `awaiting_input` (D59): the run stopped at the interview and waits for the
+ * operator. claimRun never picks it up; resumeRun puts it back in the queue.
+ */
+export type RunStatus = "queued" | "running" | "awaiting_input" | "succeeded" | "failed" | "canceled";
 
 export interface RunDoc {
   _id?: ObjectId;
@@ -341,7 +403,10 @@ export type EventType =
   | "phase.failed"
   | "gate.passed"
   | "gate.failed"
-  | "stage.changed";
+  | "stage.changed"
+  | "interview.opened"
+  | "interview.completed"
+  | "interview.skipped";
 
 export interface EventDoc {
   _id?: ObjectId;

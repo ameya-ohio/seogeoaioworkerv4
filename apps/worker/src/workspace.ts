@@ -6,6 +6,7 @@ import {
   latestScrapesByDomain,
   ownDomainsFromConfig,
   parseArticle,
+  renderTranscript,
   saveArtifacts,
   type ArticleDoc,
   type EngineDb,
@@ -93,6 +94,12 @@ export async function materializeWorkspace(cfg: WorkerConfig, article: ArticleDo
   if (a.schema) {
     await writeIfMissing(join(dir, "schema.json"), JSON.stringify(a.schema, null, 2) + "\n");
   }
+  // D59: the Expert POV brief, and the interview transcript — rewritten from
+  // Mongo every run, since the web chat (not a phase) adds to it.
+  if (a.pov) await writeIfMissing(join(dir, "pov.md"), a.pov);
+  if (article.interview) {
+    await writeFile(join(dir, "interview.md"), renderTranscript(article.interview), "utf-8");
+  }
   // Spoke brief from the cluster agent (4.12): always rewrite from Mongo —
   // it is produced upstream of the pipeline and never edited by phases.
   if (article.brief) {
@@ -163,6 +170,12 @@ export async function persistPhaseOutputs(
     case "outline": {
       const outline = await readIfExists(join(dir, "outline.md"));
       if (outline) await saveArtifacts(db, id, { outline });
+      return;
+    }
+    case "interview": {
+      const outline = await readIfExists(join(dir, "outline.md"));
+      const pov = await readIfExists(join(dir, "pov.md"));
+      await saveArtifacts(db, id, { ...(outline ? { outline } : {}), ...(pov ? { pov } : {}) });
       return;
     }
     case "write": {

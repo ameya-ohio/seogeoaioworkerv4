@@ -326,7 +326,11 @@ async function tickBody(
   });
   // Company-wide: the human review gate is a shared resource, and an ad-hoc
   // Chat article consumes exactly the same attention a plan article does.
-  const awaitingReview = await db.articles.countDocuments({ companyId, stage: "review" });
+  // An open expert interview (D59) waits on the same people, so it counts.
+  const awaitingReview = await db.articles.countDocuments({
+    companyId,
+    $or: [{ stage: "review" }, { stage: "interview", "interview.status": "open" }],
+  });
 
   let weekCount = 0;
   if (limits.maxPerCalendarWeek !== undefined) {

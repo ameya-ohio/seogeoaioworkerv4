@@ -16,6 +16,7 @@ import {
 import type { GateResult, ScriptReport, WorkStage } from "./types.js";
 import type { FormatRegistry } from "./formats.js";
 import { parseOutlineFacets, type PageRules } from "./pageRules.js";
+import { povProblems } from "./interview.js";
 
 /**
  * Per-phase gate conditions from CLAUDE.md, enforced in code (roadmap 2.3).
@@ -44,6 +45,10 @@ export interface GateFiles {
   facetRegistry?: FormatRegistry;
   /** HDCP: the agent's hdcp.md log (raw markdown). */
   hdcpLog?: string;
+  /** Interview (D59): the refiner's Expert POV brief. */
+  pov?: string;
+  /** Interview (D59): skipped by the operator or the plan — nothing to check. */
+  interviewSkipped?: boolean;
 }
 
 function result(problems: string[]): GateResult {
@@ -408,6 +413,18 @@ export function hdcpGate(files: GateFiles): GateResult {
   return result(problems);
 }
 
+/**
+ * Interview (D59): the refiner rewrote outline.md from the expert's answers
+ * and wrote pov.md. The rewritten outline must still pass the outline gate,
+ * and the POV brief must carry every section the Writer builds on.
+ */
+export function interviewGate(files: GateFiles): GateResult {
+  if (files.interviewSkipped) return result([]);
+  const problems = outlineGate(files).problems.map((p) => `revised outline: ${p}`);
+  problems.push(...povProblems(files.pov));
+  return result(problems);
+}
+
 export function schemaGate(files: GateFiles): GateResult {
   const problems: string[] = [];
   if (!files.schemaJson) {
@@ -448,6 +465,7 @@ export function designGate(files: GateFiles): GateResult {
 export const GATES: Record<WorkStage, (files: GateFiles) => GateResult> = {
   research: researchGate,
   outline: outlineGate,
+  interview: interviewGate,
   write: writeGate,
   edit: editGate,
   hdcp: hdcpGate,

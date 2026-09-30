@@ -38,6 +38,13 @@ site:
 publish:
   target: framer-export
 
+# D59: after the outline, a run stops for the expert interview (the operator
+# answers in the web app, Production → Needs you) — pause. skip = never stop.
+# A plan's own setting (Plans → Progress) wins for its articles, and the
+# Chat form can skip it per article.
+pipeline:
+  interview: pause
+
 # D50: the closing CTA per funnel stage. These are the seed values; Admin →
 # CTAs saves overrides in Mongo (settings "cta.byFunnel"), which win.
 ctas:

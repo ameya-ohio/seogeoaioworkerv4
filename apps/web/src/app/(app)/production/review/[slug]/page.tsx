@@ -7,7 +7,14 @@ import { ReviewEditor, type ReviewArticle } from "@/components/review-editor";
 import { hubspotStatus } from "@/lib/actions/content";
 import { publishTarget } from "@/lib/actions/publishing";
 import { getFormats } from "@/lib/db";
-import { CTA_SETTINGS_KEY, formatBySlug, mergeCtaSettings, resolvePageRules, type ArticleDoc } from "@blogagent/engine";
+import {
+  CTA_SETTINGS_KEY,
+  formatBySlug,
+  mergeCtaSettings,
+  renderTranscript,
+  resolvePageRules,
+  type ArticleDoc,
+} from "@blogagent/engine";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +31,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
     .limit(5)
     .toArray();
   const runs: UiRun[] = runDocs.map(toUiRun);
+  // A run waiting at the interview isn't blocking: a re-run supersedes it (D59).
   const activeRun = runs.find((r) => r.status === "queued" || r.status === "running") ?? null;
 
   const formats = await getFormats();
@@ -68,6 +76,9 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
         }
       : null,
     editPreAudit: doc.editPreAudit?.items ?? null,
+    interview: doc.interview
+      ? { status: doc.interview.status, pov: doc.artifacts.pov ?? null, transcript: renderTranscript(doc.interview) }
+      : null,
     hdcp: doc.hdcp ? hdcpForReview(doc.hdcp) : null,
     hubspot: doc.hubspot?.postId
       ? {

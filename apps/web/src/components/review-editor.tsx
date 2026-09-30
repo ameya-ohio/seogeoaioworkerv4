@@ -45,6 +45,8 @@ export interface ReviewArticle {
   } | null;
   /** Everything handed to the Editor before its first attempt. */
   editPreAudit: string[] | null;
+  /** D59 expert interview: status, the Expert POV brief and the transcript. */
+  interview: { status: string; pov: string | null; transcript: string } | null;
   /** HDCP (agents/hdcp.md): diagnosis, changes, cuts, flags and editor notes. */
   hdcp: {
     ranAt: string;
@@ -79,7 +81,7 @@ export interface ReviewArticle {
   runs: UiRun[];
 }
 
-const PHASES = ["research", "outline", "write", "edit", "hdcp", "schema", "design"];
+const PHASES = ["research", "outline", "interview", "write", "edit", "hdcp", "schema", "design"];
 
 /** Body only: frontmatter, json-ld fence, and HTML comments stripped. */
 function previewBody(markdown: string): string {
@@ -89,7 +91,18 @@ function previewBody(markdown: string): string {
     .replace(/<!--[\s\S]*?-->/g, "");
 }
 
-type SideTab = "preview" | "facets" | "research" | "outline" | "draft" | "audit" | "review" | "hdcp" | "header" | "runs";
+type SideTab =
+  | "preview"
+  | "facets"
+  | "research"
+  | "outline"
+  | "interview"
+  | "draft"
+  | "audit"
+  | "review"
+  | "hdcp"
+  | "header"
+  | "runs";
 
 export function ReviewEditor({ article }: { article: ReviewArticle }) {
   const router = useRouter();
@@ -131,6 +144,7 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
     { key: "facets", label: "Facets" },
     { key: "research", label: "Research", disabled: !article.researchNotes },
     { key: "outline", label: "Outline", disabled: !article.outline },
+    { key: "interview", label: "Interview", disabled: !article.interview },
     { key: "draft", label: "First draft", disabled: !article.draft },
     { key: "audit", label: "Audit", disabled: !article.audit && !article.citations },
     { key: "review", label: "Tech review", disabled: !article.technicalReview && !article.editPreAudit },
@@ -338,6 +352,19 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
             {tab === "research" && article.researchNotes && (
               <div className="prose-article">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.researchNotes}</ReactMarkdown>
+              </div>
+            )}
+            {tab === "interview" && article.interview && (
+              <div className="prose-article">
+                {article.interview.status === "open" && (
+                  <p>
+                    <a href={`/production/interview/${article.slug}`}>The interview is open — continue it →</a>
+                  </p>
+                )}
+                {article.interview.pov && (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.interview.pov}</ReactMarkdown>
+                )}
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.interview.transcript}</ReactMarkdown>
               </div>
             )}
             {tab === "outline" && article.outline && (

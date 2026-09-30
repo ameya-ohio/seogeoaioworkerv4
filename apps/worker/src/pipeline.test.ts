@@ -5,7 +5,9 @@ import { MongoMemoryServer } from "mongodb-memory-server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   LocalStorage,
+  appendExpertMessage,
   claimRun,
+  closeInterview,
   connect,
   createArticle,
   enqueueRun,
@@ -26,6 +28,7 @@ import {
 } from "./directRunner.js";
 import { runPipeline, type PipelineDeps } from "./pipeline.js";
 import type { TechReviewer } from "./techReview.js";
+import type { InterviewOpener } from "./interviewOpener.js";
 import type { CitationVerifier, LinkChecker } from "./quality.js";
 
 const REAL_REPO = join(import.meta.dirname, "..", "..", "..");
@@ -61,18 +64,20 @@ beforeAll(async () => {
     models: {
       research: "m",
       outline: "m",
+      interview: "m",
       write: "m",
       edit: "m",
       hdcp: "m",
       schema: "m",
       design: "m",
     },
-    maxTurns: { research: 1, outline: 1, write: 1, edit: 1, hdcp: 1, schema: 1, design: 1 },
+    maxTurns: { research: 1, outline: 1, interview: 1, write: 1, edit: 1, hdcp: 1, schema: 1, design: 1 },
     direct: {
-      routes: { outline: "agent", write: "agent", edit: "agent", hdcp: "agent", schema: "agent", design: "agent" },
-      effort: { outline: "high", write: "high", edit: "high", hdcp: "high", schema: "high", design: "high" },
+      routes: { outline: "agent", interview: "agent", write: "agent", edit: "agent", hdcp: "agent", schema: "agent", design: "agent" },
+      effort: { outline: "high", interview: "high", write: "high", edit: "high", hdcp: "high", schema: "high", design: "high" },
       maxTokens: 64_000,
     },
+    interview: { openModel: "fake-interviewer", effort: "high" },
     techReview: { enabled: false, model: "fake-reviewer", effort: "high" },
     verifierModel: "fake-verifier",
     plan: { enrichModel: "fake-enrich", concurrency: 2, maxAttempts: 2 },
@@ -429,10 +434,11 @@ const noDirectLlm: DirectLlm = {
 
 function makeDeps(
   invoker: AgentInvoker,
-  opts: { cfg?: WorkerConfig; direct?: DirectPhaseRunner; techReviewer?: TechReviewer } = {},
+  opts: { cfg?: WorkerConfig; direct?: DirectPhaseRunner; techReviewer?: TechReviewer; interviewer?: InterviewOpener } = {},
 ): PipelineDeps {
   return {
     ...(opts.techReviewer ? { techReviewer: opts.techReviewer } : {}),
+    ...(opts.interviewer ? { interviewer: opts.interviewer } : {}),
     db,
     cfg: opts.cfg ?? cfg,
     storage: new LocalStorage(join(repoRoot, "storage")),
@@ -565,6 +571,7 @@ class FakeDirectLlm implements DirectLlm {
     const file = (name: string, content: string) => `<file name="${name}">\n${content}\n</file>`;
     const bodies: Record<string, string> = {
       outline: file("outline.md", OUTLINE),
+      interview: file("pov.md", POV) + "\n" + file("outline.md", OUTLINE.replace(/## Thesis\n[^\n]+/, `## Thesis\n${POV_THESIS}`)),
       // Fenced on purpose: the runner must unwrap a code-fenced file body.
       write:
         file("article.md", "```markdown\n" + ARTICLE + "\n```") +
@@ -601,6 +608,50 @@ class FakeDirectLlm implements DirectLlm {
   }
 }
 
+const POV_THESIS =
+  "Context engineering fails when teams treat retrieval as the whole context layer, because the failures that matter come from what never reaches the model.";
+
+const POV = `# Expert POV: Test Article
+
+## Thesis
+${POV_THESIS}
+
+## Argument Spine
+1. The context layer decides what the model can know — expert reasoning
+2. Retrieval covers only part of that layer — research #1
+3. The costly failures come from the part retrieval never sees — expert reasoning
+
+## Objection & Answer
+Objection: better models close the gap. Answer: a model can't reason about context it never received.
+
+## Real-World Anchor
+none — the expert offered none and the planned anchor was a documented incident they rejected
+
+## Company Role
+In the third section, as the mechanism that assembles the missing context. No proof point.
+
+## Approved Quotes
+- "Context beats cleverness." — unattributed
+
+## Rejected
+- Upgrading the model as the first fix.
+`;
+
+/** Records every open call; answers with a fixed plan and first question. */
+class FakeInterviewer implements InterviewOpener {
+  calls = 0;
+  async open() {
+    this.calls += 1;
+    return {
+      plan: "## Wedge\nRetrieval and context are treated as the same thing.",
+      opening: "People treat retrieval as the whole context layer. Which is closest to what you'd argue: A, B or C?",
+      captured: {},
+      model: "fake-interviewer",
+      costUsd: 0.05,
+    };
+  }
+}
+
 /** Stub the Chromium render; record what the runner asked for. */
 function fakeRenderer(choices: { pattern: string }[]): HeaderRenderer {
   return async (c, folder, choice) => {
@@ -617,6 +668,7 @@ function directCfg(): WorkerConfig {
     models: {
       research: "m",
       outline: "claude-sonnet-5",
+      interview: "claude-sonnet-5",
       write: "claude-sonnet-5",
       edit: "claude-sonnet-5",
       hdcp: "claude-opus-5-5",
@@ -625,7 +677,7 @@ function directCfg(): WorkerConfig {
     },
     direct: {
       ...cfg.direct,
-      routes: { outline: "direct", write: "direct", edit: "direct", hdcp: "direct", schema: "direct", design: "direct" },
+      routes: { outline: "direct", interview: "direct", write: "direct", edit: "direct", hdcp: "direct", schema: "direct", design: "direct" },
     },
   };
 }
@@ -899,5 +951,121 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
       expect(reference, phase).not.toContain("Permission: internal only — do not use");
     }
     expect(llm.calls.find((c) => c.phase === "outline")!.req.prompt).toContain("real-world anchor");
+  }, 120_000);
+});
+
+describe("runPipeline, expert interview (D59)", () => {
+  it("parks at the interview, then refines the outline from the answers and hands pov.md on", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "interview-e2e",
+      folder: "2026-09-30-interview-e2e",
+      topic: "Context engineering basics",
+      targetKeyword: "context engineering",
+      interviewMode: "pause",
+    });
+    const id = article._id as ObjectId;
+    const run = await enqueueRun(db, { companyId: "testco", articleId: id });
+    const llm = new FakeDirectLlm();
+    const interviewer = new FakeInterviewer();
+    const deps = makeDeps(new FakeInvoker(), {
+      cfg: directCfg(),
+      direct: new DirectPhaseRunner(llm, fakeRenderer([])),
+      interviewer,
+    });
+
+    expect(await runPipeline(deps, (await claimRun(db, "test-worker", 60_000))!)).toBe("awaiting_input");
+    const parked = await db.runs.findOne({ _id: run._id });
+    expect(parked?.status).toBe("awaiting_input");
+    expect(parked?.fromStage).toBe("interview");
+    expect(parked?.phaseResults.find((p) => p.phase === "interview")?.usage?.costUsd).toBe(0.05);
+    let doc = await db.articles.findOne({ _id: id });
+    expect(doc?.stage).toBe("interview");
+    expect(doc?.interview?.status).toBe("open");
+    expect(doc?.interview?.runId?.equals(run._id as ObjectId)).toBe(true);
+    expect(doc?.interview?.messages[0]?.content).toContain("Which is closest");
+    expect(llm.calls.map((c) => c.phase)).toEqual(["outline"]);
+    // Parked runs stay out of the queue.
+    expect(await claimRun(db, "test-worker", 60_000)).toBeNull();
+
+    await appendExpertMessage(db, id, "C. The failures that matter come from what never reaches the model.");
+    await closeInterview(db, (await db.articles.findOne({ _id: id }))!, "complete");
+    const resumed = await claimRun(db, "test-worker", 60_000);
+    expect(resumed?._id?.equals(run._id as ObjectId)).toBe(true);
+    expect(resumed?.fromStage).toBe("interview");
+    expect(await runPipeline(deps, resumed!)).toBe("completed");
+
+    expect(interviewer.calls).toBe(1);
+    expect(llm.calls.map((c) => c.phase)).toEqual(["outline", "interview", "write", "edit", "hdcp", "schema", "design"]);
+    const folder = "articles/2026-09-30-interview-e2e";
+    const refine = llm.calls.find((c) => c.phase === "interview")!.req;
+    expect(refine.system[0]?.text).toContain("Interview Refiner");
+    expect(refine.prompt).toContain(`<input path="${folder}/interview.md">`);
+    expect(refine.prompt).toContain("never reaches the model");
+    const write = llm.calls.find((c) => c.phase === "write")!.req.prompt;
+    expect(write).toContain(`<input path="${folder}/pov.md">`);
+    expect(write).toContain("the first sentence carries");
+    const edit = llm.calls.find((c) => c.phase === "edit")!.req.prompt;
+    expect(edit).toContain(`<input path="${folder}/interview.md">`);
+
+    doc = await db.articles.findOne({ _id: id });
+    expect(doc?.stage).toBe("review");
+    expect(doc?.interview?.status).toBe("refined");
+    expect(doc?.artifacts.pov).toContain("## Argument Spine");
+    expect(doc?.artifacts.outline).toContain(POV_THESIS);
+    expect(doc?.gates?.interview?.ok).toBe(true);
+    const types = (await eventsAfter(db, run._id as ObjectId, 0, 500)).map((e) => e.type);
+    expect(types).toContain("interview.opened");
+    expect(types).toContain("interview.completed");
+    expect((await db.runs.findOne({ _id: run._id }))?.status).toBe("succeeded");
+  }, 120_000);
+
+  it("an operator skip resumes at the Writer without refining", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "interview-skip-op",
+      folder: "2026-09-30-interview-skip-op",
+      topic: "Skip topic",
+      targetKeyword: "context engineering",
+      interviewMode: "pause",
+    });
+    const id = article._id as ObjectId;
+    await enqueueRun(db, { companyId: "testco", articleId: id });
+    const llm = new FakeDirectLlm();
+    const deps = makeDeps(new FakeInvoker(), {
+      cfg: directCfg(),
+      direct: new DirectPhaseRunner(llm, fakeRenderer([])),
+      interviewer: new FakeInterviewer(),
+    });
+    expect(await runPipeline(deps, (await claimRun(db, "test-worker", 60_000))!)).toBe("awaiting_input");
+    await closeInterview(db, (await db.articles.findOne({ _id: id }))!, "skipped");
+    expect(await runPipeline(deps, (await claimRun(db, "test-worker", 60_000))!)).toBe("completed");
+    expect(llm.calls.map((c) => c.phase)).not.toContain("interview");
+    const doc = await db.articles.findOne({ _id: id });
+    expect(doc?.stage).toBe("review");
+    expect(doc?.artifacts.pov).toBeUndefined();
+    expect(llm.calls.find((c) => c.phase === "write")!.req.prompt).not.toContain("pov.md");
+  }, 120_000);
+
+  it("interviewMode skip never opens an interview", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "interview-skip-mode",
+      folder: "2026-09-30-interview-skip-mode",
+      topic: "Skip mode topic",
+      targetKeyword: "context engineering",
+      interviewMode: "skip",
+    });
+    const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const interviewer = new FakeInterviewer();
+    const deps = makeDeps(new FakeInvoker(), {
+      cfg: directCfg(),
+      direct: new DirectPhaseRunner(new FakeDirectLlm(), fakeRenderer([])),
+      interviewer,
+    });
+    expect(await runPipeline(deps, (await claimRun(db, "test-worker", 60_000))!)).toBe("completed");
+    expect(interviewer.calls).toBe(0);
+    const types = (await eventsAfter(db, run._id as ObjectId, 0, 500)).map((e) => e.type);
+    expect(types).toContain("interview.skipped");
   }, 120_000);
 });

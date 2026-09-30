@@ -69,6 +69,16 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
 - **Output:** `articles/YYYY-MM-DD-slug/outline.md`.
 - **Gate:** Outline exists; primary keyword chosen; FAQ section has 3–7 candidate questions; H2/H3 outline contains at least 4 H2 sections; all entities and citations to use are listed by name with sources.
 
+### Phase 2.5 — Expert Interview (D59)
+
+- **Sub-agent specs:** `agents/interviewer.md` (the interview), `agents/interview-refiner.md` (the outline rewrite)
+- **Why:** research finds the open wedge; only the company's expert can say what they'd argue about it. Without this phase, drafts define the topic instead of arguing the title, string statistics together, and comment on other writing.
+- **Inputs:** `outline.md`, `research-notes.md` (Topic Summary, Content Gaps, Debates), `context/case-studies/`, `context/sales/proof-points.md` (`Citable: yes` rows), `context/brand/positioning.md`, `context/sales/value-props.md`.
+- **Action (terminal mode):** you are the interviewer. Run the beats in `agents/interviewer.md` with the user in this chat, one question per message: frame the wedge, offer 2–3 candidate angles to react to, get the thesis in their words and the strongest objection, validate or replace the real-world anchor (with its publishing boundary), ask what the product sees and which proof point (if any) fits, then play it back. If the user says skip, skip the phase. Save the transcript to `interview.md`, then apply `agents/interview-refiner.md`: write `pov.md` and rewrite `outline.md`.
+- **Action (worker):** the run stops after the outline with status `awaiting_input`; the operator answers in the web app (Production → *Needs you*), and Finish (or Skip) requeues it. A plan or `config/company.yaml` → `pipeline.interview: skip` turns the stop off.
+- **Output:** `interview.md`, `pov.md`, the revised `outline.md`.
+- **Gate:** the revised outline still passes the Phase 2 gate, and `pov.md` has Thesis, Argument Spine (3–5 claims), Objection & Answer, Real-World Anchor, Company Role, Approved Quotes and Rejected. A skipped interview passes.
+
 ### Phase 3 — Writer
 
 - **Sub-agent spec:** `agents/writer.md`
@@ -79,6 +89,7 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   - `context/author-style/` (or default voice rules from `agents/writer.md` if empty)
   - `context/brand/` (or skip if empty)
   - the `context/case-studies/` file the outline's Real-World Anchor names (if any)
+  - `articles/YYYY-MM-DD-slug/pov.md`, when the article was interviewed: the thesis, Argument Spine, anchor, company role and approved quotes the article is built on
 - **Action:** Write the full article in markdown, following the outline section-by-section in the brand/author voice. Embed inline citations naturally. Write FAQ section verbatim using strategist's questions. Fill YAML frontmatter completely.
 - **Output:** `articles/YYYY-MM-DD-slug/article.md` (full draft). Also update `meta.json` with title/slug/meta_description/keywords/canonical.
 - **Gate:** `article.md` exists with complete frontmatter; H1 present; "Key Takeaways" block present near the top; FAQ section present; no fabricated sources (every cited claim must trace to `research-notes.md`).
@@ -167,12 +178,13 @@ Then summarize for the user:
 
 - **Always create the article folder FIRST.** Never start Phase 1 without it.
 - **Never skip phases.** Even short articles run the full pipeline.
-- **Never fabricate** statistics, quotes, or sources. Every statistic, quote, dated event and named source in the article must trace to `research-notes.md`. Mechanism, practice and reasoning are written from expertise and need no citation. Use few statistics: the article argues, and evidence supports it (`standards/quality-bar.md` → *Argument over evidence*). If research did not surface a needed source, go back to Phase 1 and search again rather than inventing one.
+- **Never fabricate** statistics, quotes, or sources. Every statistic, quote, dated event and named source in the article must trace to `research-notes.md` (the expert's own statements and story: to `interview.md`). Mechanism, practice and reasoning are written from expertise and need no citation. Use few statistics: the article argues, and evidence supports it (`standards/quality-bar.md` → *Argument over evidence*). If research did not surface a needed source, go back to Phase 1 and search again rather than inventing one.
 - **Empty context folder ≠ failure.** If `context/brand/` is empty, log it and proceed with sensible defaults from `agents/writer.md` and `standards/quality-bar.md`. Do the same for sales/marketing/finance/author-style.
 - **Author Style default** (until `context/author-style/` is populated): clear, expert, balanced — neither overly casual nor stiff. Confident voice, second-person where natural, short paragraphs (2–4 sentences), concrete examples. Avoid AI clichés (banned-phrases list lives in `standards/quality-bar.md`).
 - **Cite sources inline:** in `research-notes.md` use markdown footnote-style or numbered citations with full URLs; in `article.md` body use natural attribution ("According to a 2025 Stanford study…") plus a citation in the JSON-LD `citation` array.
 - **Do not auto-publish.** This system produces the article folder. Publishing to HubSpot is `blogsagent/`'s job and runs separately, on user request.
 - **Stop and ask** only if the user's request is genuinely ambiguous about *what topic* to cover. Otherwise, proceed.
+- **Never comment on other writing.** The article states its own view. It never says what other articles, guides or search results say or miss (the audit fails it).
 
 ---
 
@@ -182,6 +194,9 @@ Then summarize for the user:
 agents/
   researcher.md       Phase 1 spec
   strategist.md       Phase 2 spec
+  interviewer.md      Phase 2.5 spec: the expert interview (D59)
+  interview-refiner.md
+                      Phase 2.5 spec: pov.md + the outline rewritten from the answers
   writer.md           Phase 3 spec
   editor.md           Phase 4 spec
   schema-builder.md   Phase 5 spec

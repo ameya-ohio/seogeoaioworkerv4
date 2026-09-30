@@ -26,6 +26,8 @@ export async function enqueueFromChat(_prev: ChatState, formData: FormData): Pro
       companyId: getCompany().companyId,
       topic: parsed.topic,
       ...(keyword ? { keyword } : {}),
+      // Unchecked: the company default (company.yaml pipeline.interview), which is pause.
+      ...(formData.get("skipInterview") ? { interview: "skip" as const } : {}),
     });
   } catch (err) {
     if (err instanceof SlugTakenError) return { error: err.message };
