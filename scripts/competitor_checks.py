@@ -302,3 +302,115 @@ def run_all(
                 )
             )
     return findings
+
+
+# ---- research notes (research gate) -----------------------------------------
+
+# The sections that feed the article. A competitor may appear elsewhere in the
+# notes (Top Ranking Pages, the landscape map, Content Gaps) — reading them to
+# map the landscape is allowed — but never here (agents/researcher.md step 4).
+RESEARCH_CITED_SECTIONS = ("Authoritative Sources", "Statistics & Data Points", "Quotes Worth Including", "Key Claims")
+_ENTRY_START = re.compile(r"^\s{0,3}(?:\d+[.)]|[-*+])\s+")
+_DASH = re.compile(r"\s[—–]\s|\s-\s")
+
+
+def _research_entries(notes: str, section: str) -> list[tuple[str, str]]:
+    """[(first line, whole entry)] for the list entries under `## <section>`."""
+    m = re.search(rf"^##\s+{re.escape(section)}\b.*$", notes, re.M | re.I)
+    if not m:
+        return []
+    rest = notes[m.end():]
+    nxt = re.search(r"^##\s+\S", rest, re.M)
+    body = rest[: nxt.start()] if nxt else rest
+    entries: list[list[str]] = []
+    for line in body.splitlines():
+        if _ENTRY_START.match(line):
+            entries.append([line])
+        elif entries and line.strip():
+            entries[-1].append(line)
+    return [(e[0], "\n".join(e)) for e in entries]
+
+
+def _attribution(first_line: str, section: str) -> str:
+    """Who the entry says the material comes from: the text after the dash.
+
+    Sources: "**Title** — Author (Employer), Outlet, date. URL" → after the first
+    dash. Statistics and quotes: "claim — Source (Publisher, year)" → after the
+    last dash, so a claim ABOUT a vendor, sourced to someone neutral, passes.
+    """
+    text = _BARE_URL.sub("", _MD_LINK.sub(lambda m: m.group(1), first_line))
+    parts = _DASH.split(text)
+    if len(parts) < 2:
+        return "" if section != "Authoritative Sources" else re.sub(r"\*\*[^*]+\*\*", "", text)
+    return parts[1] if section == "Authoritative Sources" else parts[-1]
+
+
+def check_research_notes(notes: str, competitors: list[Competitor], *, article_type: str = "") -> list[Finding]:
+    """FAIL a head-to-head vendor used as research material the article will cite.
+
+    Catches their URLs and their name in an entry's attribution, which is where
+    an employee byline in a third-party outlet shows up ("Alex Gardner (XM Cyber),
+    The Hacker News"). In a vendor format (D51) their own docs may be listed as
+    sources for claims about them; a statistic sourced to them still fails.
+    """
+    vendor = vendor_mode(article_type)
+    findings: list[Finding] = []
+    for c in competitors:
+        pat = c.name_pattern()
+        hits: list[str] = []
+        for section in RESEARCH_CITED_SECTIONS:
+            if vendor and section != "Statistics & Data Points":
+                continue
+            for first, entry in _research_entries(notes, section):
+                urls = [u for u in _links(entry) if c.owns_url(u)]
+                # A product-only ban (no domains) is scoped by URL: the parent company stays
+                # citable, so its name in an attribution ("CrowdStrike, … distinct from Falcon
+                # Identity") isn't a hit.
+                named = bool(c.domains and pat and pat.search(_attribution(first, section)))
+                if urls or named:
+                    why = urls[0] if urls else "named in the attribution"
+                    hits.append(f"[{section}] {' '.join(_plain(first).split())[:150]} ({why})")
+        if hits:
+            findings.append(
+                Finding(
+                    "fail",
+                    f"Research: head-to-head competitor {c.name} used as a source — remove the entry "
+                    f"(their executives' bylines elsewhere count); find a neutral source or record "
+                    f"\"no neutral source found\"",
+                    hits,
+                )
+            )
+    return findings
+
+
+def main(argv: list[str]) -> int:
+    """`competitor_checks.py --research <research-notes.md> [--article-type <slug>]`.
+
+    Prints PASS/FAIL lines in the seo_audit format (the worker parses them) and
+    exits 1 on any FAIL.
+    """
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from company_config import load_config
+    from style_checks import format_finding
+
+    if len(argv) < 2 or argv[0] != "--research":
+        print("Usage: competitor_checks.py --research <research-notes.md> [--article-type <slug>]")
+        return 2
+    notes = Path(argv[1]).read_text(encoding="utf-8")
+    article_type = argv[argv.index("--article-type") + 1] if "--article-type" in argv[:-1] else ""
+    competitors = load_competitors(load_config(strict=False))
+    findings = check_research_notes(notes, competitors, article_type=article_type)
+    for f in findings:
+        print(f"FAIL  {format_finding(f)}")
+    if not findings:
+        print(f"PASS  Research: no head-to-head vendor used as a source ({len(competitors)} checked).")
+    return 1 if findings else 0
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(main(sys.argv[1:]))

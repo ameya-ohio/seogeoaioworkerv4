@@ -33,6 +33,11 @@ export async function enqueueRun(db: EngineDb, input: EnqueueInput): Promise<Run
 /**
  * Atomically claim the next run: oldest queued run, or a running run whose
  * lease expired (worker died). Sets a lease the claimer must heartbeat.
+ *
+ * A reclaimed run resumes at the phase it was in (`currentPhase`), not at the
+ * stage it was first queued from: the phases before it already persisted their
+ * artifacts, so re-running them only repeats paid work. A reclaim still counts
+ * as an attempt, so a phase that keeps crashing its worker can't loop forever.
  */
 export async function claimRun(
   db: EngineDb,
@@ -48,19 +53,55 @@ export async function claimRun(
         { status: "running", leaseUntil: { $lt: now } },
       ],
     },
-    {
-      $set: {
-        status: "running",
-        workerId,
-        leaseUntil,
-        startedAt: now,
-        updatedAt: now,
+    [
+      {
+        $set: {
+          // Evaluated against the document before this update: only a reclaim
+          // (status still "running") moves the resume point.
+          fromStage: {
+            $cond: [{ $eq: ["$status", "running"] }, { $ifNull: ["$currentPhase", "$fromStage"] }, "$fromStage"],
+          },
+          status: "running",
+          workerId,
+          leaseUntil,
+          startedAt: now,
+          updatedAt: now,
+          attempts: { $add: ["$attempts", 1] },
+        },
       },
-      $inc: { attempts: 1 },
-    },
+    ],
     { sort: { queuedAt: 1 }, returnDocument: "after" },
   );
   return res ?? null;
+}
+
+/** Record the phase a run is starting, so a reclaim or release resumes there. */
+export async function setRunPhase(db: EngineDb, runId: ObjectId, phase: WorkStage): Promise<void> {
+  await db.runs.updateOne({ _id: runId }, { $set: { currentPhase: phase, updatedAt: new Date() } });
+}
+
+/**
+ * Hand a run back to the queue on worker shutdown (a deploy's SIGTERM): it
+ * resumes at its current phase and the attempt is refunded — a deploy isn't
+ * the run's failure. Only the worker holding the lease can release it.
+ * Returns the released run, or null if this worker no longer held it.
+ */
+export async function releaseRun(db: EngineDb, runId: ObjectId, workerId: string): Promise<RunDoc | null> {
+  return db.runs.findOneAndUpdate(
+    { _id: runId, status: "running", workerId },
+    [
+      {
+        $set: {
+          status: "queued",
+          fromStage: { $ifNull: ["$currentPhase", "$fromStage"] },
+          attempts: { $max: [{ $subtract: ["$attempts", 1] }, 0] },
+          updatedAt: new Date(),
+        },
+      },
+      { $unset: ["leaseUntil", "workerId"] },
+    ],
+    { returnDocument: "after" },
+  );
 }
 
 export async function heartbeat(

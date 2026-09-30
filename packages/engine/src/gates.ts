@@ -34,6 +34,8 @@ export interface GateFiles {
   report?: ScriptReport;
   /** Live citation-verification report (D34 — research + edit gates). */
   citationReport?: CitationReport;
+  /** Research gate: scripts/competitor_checks.py --research (no competitor as a source). */
+  competitorReport?: ScriptReport;
   /** Internal-link resolution report (D35 — edit gate). */
   linkReport?: LinkReport;
   /** D45–D50: what this page's facets resolve to. Absent = pre-registry defaults. */
@@ -102,6 +104,12 @@ export function researchGate(files: GateFiles): GateResult {
     problems.push(
       `${claimCount} attributed claims — trim to the 3–5 load-bearing statistics the article will actually cite (hard ceiling ${MAX_ATTRIBUTED_CLAIMS}); list other sources without Key claim lines`,
     );
+  }
+  // Competitor ban (quality-bar → Competitor handling): a head-to-head vendor is
+  // never research material the article will cite. Absent = the check didn't run
+  // (older callers), which the gate doesn't block on.
+  for (const c of files.competitorReport?.checks ?? []) {
+    if (c.level === "fail") problems.push(c.message);
   }
   // D34 hard gate: every attributed claim must be verified at its live source.
   const cr = files.citationReport;

@@ -14,8 +14,10 @@ import {
   markFailed,
   nextStage,
   pushPhaseResult,
+  setRunPhase,
   runSchemaValidation,
   runSeoAudit,
+  runResearchCompetitorCheck,
   saveGateResult,
   setStage,
   updateLastPhaseResult,
@@ -71,6 +73,7 @@ export interface PipelineDeps {
 interface CodeStepOutputs {
   report?: ScriptReport;
   citationReport?: CitationReport;
+  competitorReport?: ScriptReport;
   linkReport?: LinkReport;
 }
 
@@ -100,6 +103,7 @@ async function loadGateFiles(
   if (phase === "design") files.headerPngExists = existsSync(join(dir, "header.png"));
   if (outputs.report) files.report = outputs.report;
   if (outputs.citationReport) files.citationReport = outputs.citationReport;
+  if (outputs.competitorReport) files.competitorReport = outputs.competitorReport;
   if (outputs.linkReport) files.linkReport = outputs.linkReport;
   if (page) {
     files.page = page.rules;
@@ -171,7 +175,15 @@ async function runCodeStep(
         { $set: { citationChecks: citationReport, updatedAt: new Date() } },
       );
     }
-    return { citationReport };
+    const competitorReport = await runResearchCompetitorCheck(
+      opts,
+      join(relFolder, "research-notes.md"),
+      article.facets?.articleType,
+    );
+    if (competitorReport.failures > 0) {
+      deps.log(`[${article.slug}/research] competitor sources found: ${competitorReport.failures} vendor(s)`);
+    }
+    return { citationReport, competitorReport };
   }
   if (phase === "edit" || phase === "design") {
     const report = await runSeoAudit(opts, relFolder);
@@ -532,8 +544,9 @@ async function executePhase(
 
 /**
  * Run the pipeline for one claimed run, from run.fromStage through design.
- * Completed stages are skipped on resume; each stage persists artifacts and
- * advances article.stage, so a crash resumes exactly where it stopped.
+ * Each stage persists its artifacts and records itself as run.currentPhase, so
+ * a retry (failRun), a reclaim after a crash (claimRun) or a release on
+ * shutdown (releaseRun) resumes at that phase; earlier phases never re-run.
  */
 export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<void> {
   const { db, cfg } = deps;
@@ -567,6 +580,9 @@ export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<void
   try {
     for (const phase of phases) {
       currentPhase = phase;
+      // Recorded on the run so a reclaim (crashed worker) or a release
+      // (deploy SIGTERM) resumes here instead of at run.fromStage.
+      await setRunPhase(db, runId, phase);
       await setStage(db, articleId, phase, runId);
       await emitEvent(db, {
         companyId: run.companyId,

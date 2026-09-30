@@ -71,6 +71,23 @@ export function runSeoAudit(opts: ScriptRunnerOptions, articleFolder: string): P
   return runScript(opts, join("scripts", "seo_audit.py"), [articleFolder]);
 }
 
+/**
+ * Run scripts/competitor_checks.py --research on a research-notes.md path: FAILs
+ * a head-to-head vendor listed as a source, statistic or quote (incl. their
+ * employees' bylines in third-party outlets). Exit 1 = has failures.
+ */
+export function runResearchCompetitorCheck(
+  opts: ScriptRunnerOptions,
+  notesPath: string,
+  articleType?: string,
+): Promise<ScriptReport> {
+  return runScript(opts, join("scripts", "competitor_checks.py"), [
+    "--research",
+    notesPath,
+    ...(articleType ? ["--article-type", articleType] : []),
+  ]);
+}
+
 /** Run scripts/validate_schema.py against a schema.json path. */
 export function runSchemaValidation(
   opts: ScriptRunnerOptions,

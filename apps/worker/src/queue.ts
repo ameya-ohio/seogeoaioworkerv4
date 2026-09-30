@@ -1,14 +1,18 @@
-import { claimRun, heartbeat, type EngineDb, type RunDoc } from "@blogagent/engine";
+import { claimRun, emitEvent, heartbeat, releaseRun, type EngineDb, type RunDoc } from "@blogagent/engine";
 import { runPipeline, type PipelineDeps } from "./pipeline.js";
 
 /**
  * Worker loop (roadmap 2.5): poll-claim runs from Mongo with a lease,
- * heartbeat while processing, respect a concurrency cap, and stop cleanly
- * on SIGINT/SIGTERM (in-flight runs finish; unfinished leases expire and
- * get reclaimed elsewhere).
+ * heartbeat while processing, respect a concurrency cap. On SIGINT/SIGTERM
+ * (a Railway deploy) the pipeline queue releases its in-flight runs back to
+ * the queue at their current phase, attempt refunded, and the process exits;
+ * the next worker resumes them there. A worker that dies without a signal
+ * leaves an expiring lease, and the reclaim also resumes at the current phase.
  */
 export interface QueueController {
   stop(): Promise<void>;
+  /** Stop claiming and hand in-flight runs back to the queue (shutdown). */
+  release?(): Promise<void>;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -36,6 +40,7 @@ export function startQueue(deps: PipelineDeps): QueueController {
   const { db, cfg } = deps;
   let stopping = false;
   const active = new Set<Promise<void>>();
+  const inFlight = new Map<string, RunDoc>();
 
   const loop = (async () => {
     deps.log(
@@ -57,7 +62,12 @@ export function startQueue(deps: PipelineDeps): QueueController {
         continue;
       }
       deps.log(`claimed run ${run._id?.toHexString()} (article ${run.articleId.toHexString()})`);
-      const p = processRun(deps, run).finally(() => active.delete(p));
+      const key = run._id?.toHexString() ?? "";
+      inFlight.set(key, run);
+      const p = processRun(deps, run).finally(() => {
+        active.delete(p);
+        inFlight.delete(key);
+      });
       active.add(p);
     }
     await Promise.allSettled(active);
@@ -68,6 +78,23 @@ export function startQueue(deps: PipelineDeps): QueueController {
       stopping = true;
       await loop;
     },
+    async release() {
+      stopping = true;
+      for (const run of inFlight.values()) {
+        if (!run._id) continue;
+        const released = await releaseRun(db, run._id, cfg.workerId);
+        if (!released) continue;
+        deps.log(`released run ${run._id.toHexString()} at ${released.fromStage} (worker shutting down)`);
+        await emitEvent(db, {
+          companyId: released.companyId,
+          runId: run._id,
+          articleId: released.articleId,
+          type: "run.retried",
+          message: `Released on worker shutdown — resumes from ${released.fromStage}, attempt refunded`,
+          data: { resumeFrom: released.fromStage },
+        });
+      }
+    },
   };
 }
 
@@ -76,9 +103,18 @@ export function installSignalHandlers(controller: QueueController, db: EngineDb,
   const shutdown = async (signal: string) => {
     if (shuttingDown) return;
     shuttingDown = true;
-    log(`${signal} received — finishing in-flight runs…`);
-    await controller.stop();
-    await db.close();
+    // Railway kills the container shortly after SIGTERM, so waiting for a
+    // 30-minute run to finish only guarantees it dies mid-phase. Hand pipeline
+    // runs back now and exit, so this process can't keep writing to a run the
+    // new container has already claimed. Other queues' leases expire and are
+    // reclaimed as before.
+    log(`${signal} received — releasing in-flight runs and exiting`);
+    try {
+      await controller.release?.();
+    } catch (err) {
+      log(`release failed: ${err instanceof Error ? err.message : err}`);
+    }
+    await db.close().catch(() => {});
     process.exit(0);
   };
   process.on("SIGINT", () => void shutdown("SIGINT"));

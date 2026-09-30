@@ -76,6 +76,18 @@ describe("researchGate", () => {
     expect(researchGate({}).ok).toBe(false);
   });
 
+  it("fails when the competitor check found a head-to-head vendor as a source", () => {
+    const competitorReport = parseScriptOutput(
+      "FAIL  Research: head-to-head competitor XM Cyber used as a source — remove the entry: …Alex Gardner (XM Cyber), The Hacker News…\n",
+      1,
+    );
+    const g = researchGate({ researchNotes: GOOD_RESEARCH, citationReport: okCitations(), competitorReport });
+    expect(g.ok).toBe(false);
+    expect(g.problems.join(" ")).toMatch(/XM Cyber used as a source/);
+    const clean = parseScriptOutput("PASS  Research: no head-to-head vendor used as a source (8 checked).\n", 0);
+    expect(researchGate({ researchNotes: GOOD_RESEARCH, citationReport: okCitations(), competitorReport: clean }).ok).toBe(true);
+  });
+
   it("fails when sources are thin", () => {
     const thin = GOOD_RESEARCH.replace(/https?:\/\/\S+/g, "(source)");
     const g = researchGate({ researchNotes: thin, citationReport: okCitations() });

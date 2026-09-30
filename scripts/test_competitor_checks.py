@@ -149,5 +149,49 @@ class VendorModeTests(unittest.TestCase):
         self.assertEqual(run(article(body=body)), [])
 
 
+# Research-notes shapes from the pre-rule production articles (research gate).
+NOTES = """## Topic Summary
+
+Attack paths chain identities.
+
+## Top Ranking Pages
+1. [https://specterops.io/what-is-attack-path-management/](https://specterops.io/what-is-attack-path-management/) — ranks #2; landscape only.
+
+## Authoritative Sources
+1. **MITRE ATT&CK: Kerberoasting** — MITRE, 2026. https://attack.mitre.org/techniques/T1558/003/
+2. **Attack path management: why identity matters** — Jared Atkinson (CTO, SpecterOps), Identity Week, 17 February 2026. https://www.identityweek.net/apm/
+3. **Tenable research on cloud misconfigurations** — Tenable, 2026. https://www.tenable.com/research/cloud
+   (Background source; not the head-to-head-banned Tenable Identity Exposure product.)
+4. **Indicators of Exposure** — Tenable, 2026. https://tenable.com/products/identity-exposure/indicators
+
+## Statistics & Data Points
+- BloodHound is used by most red teams — Source #1 (MITRE, 2026)
+- Organizations with 10,000 identities face 22 million potential attack paths — SpecterOps via Identity Week (Source #2)
+"""
+
+
+class ResearchNotesTests(unittest.TestCase):
+    def _hits(self, notes, article_type=""):
+        return [s for f in cc.check_research_notes(notes, COMPS, article_type=article_type) for s in f.snippets]
+
+    def test_byline_url_and_stat_attribution_fail(self):
+        hits = self._hits(NOTES)
+        self.assertTrue(any("Jared Atkinson" in h for h in hits), hits)  # employee byline in a third-party outlet
+        self.assertTrue(any("tenable.com/products/identity-exposure" in h for h in hits), hits)  # product URL
+        self.assertTrue(any("22 million" in h for h in hits), hits)  # statistic attributed to them
+        self.assertEqual(len(hits), 3, hits)
+
+    def test_landscape_mentions_and_claims_about_them_pass(self):
+        hits = " ".join(self._hits(NOTES))
+        self.assertNotIn("ranks #2", hits)          # Top Ranking Pages: mapping the landscape is allowed
+        self.assertNotIn("most red teams", hits)    # a claim ABOUT BloodHound, sourced to MITRE
+        self.assertNotIn("cloud misconfigurations", hits)  # product-only ban: the parent company stays citable
+
+    def test_vendor_format_allows_their_docs_but_not_their_stats(self):
+        hits = self._hits(NOTES, "comparison-vendor")
+        self.assertEqual(len(hits), 1, hits)
+        self.assertIn("22 million", hits[0])
+
+
 if __name__ == "__main__":
     unittest.main()

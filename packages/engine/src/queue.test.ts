@@ -8,6 +8,8 @@ import {
   enqueueRun,
   failRun,
   heartbeat,
+  releaseRun,
+  setRunPhase,
 } from "./dal/runs.js";
 import { emitEvent, eventsAfter } from "./dal/events.js";
 import type { ObjectId } from "mongodb";
@@ -66,6 +68,51 @@ describe("run queue", () => {
     expect(reclaimed?._id?.toHexString()).toBe(run._id?.toHexString());
     expect(reclaimed?.workerId).toBe("worker-b");
     expect(reclaimed?.attempts).toBe(2);
+    await completeRun(db, run._id as ObjectId);
+  });
+
+  it("a reclaimed run resumes at the phase it was in, not where it was queued from", async () => {
+    const article = await makeArticle("q-reclaim-phase");
+    const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const first = await claimRun(db, "worker-a", -1); // worker-a dies mid-phase: lease already expired
+    expect(first?.fromStage).toBe("research");
+    await setRunPhase(db, run._id as ObjectId, "hdcp");
+
+    const reclaimed = await claimRun(db, "worker-b", 60_000);
+    expect(reclaimed?._id?.toHexString()).toBe(run._id?.toHexString());
+    expect(reclaimed?.fromStage).toBe("hdcp");
+    expect(reclaimed?.attempts).toBe(2); // a crash still counts, so a crashing phase can't loop forever
+    await completeRun(db, run._id as ObjectId);
+  });
+
+  it("a fresh claim keeps fromStage even when a stale currentPhase is present", async () => {
+    const article = await makeArticle("q-fresh-claim");
+    const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId, fromStage: "outline" });
+    await db.runs.updateOne({ _id: run._id }, { $set: { currentPhase: "edit" } });
+    const claimed = await claimRun(db, "worker-a", 60_000);
+    expect(claimed?.fromStage).toBe("outline");
+    await completeRun(db, run._id as ObjectId);
+  });
+
+  it("releaseRun hands a run back at its current phase with the attempt refunded", async () => {
+    const article = await makeArticle("q-release");
+    const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    await claimRun(db, "worker-a", 60_000);
+    await setRunPhase(db, run._id as ObjectId, "edit");
+
+    expect(await releaseRun(db, run._id as ObjectId, "worker-b")).toBeNull(); // not the lease holder
+    const released = await releaseRun(db, run._id as ObjectId, "worker-a");
+    expect(released?.status).toBe("queued");
+    expect(released?.fromStage).toBe("edit");
+    expect(released?.attempts).toBe(0);
+    expect(released?.workerId).toBeUndefined();
+    expect(released?.leaseUntil).toBeUndefined();
+    expect(await heartbeat(db, run._id as ObjectId, "worker-a", 60_000)).toBe(false);
+
+    const next = await claimRun(db, "worker-c", 60_000);
+    expect(next?._id?.toHexString()).toBe(run._id?.toHexString());
+    expect(next?.fromStage).toBe("edit");
+    expect(next?.attempts).toBe(1);
     await completeRun(db, run._id as ObjectId);
   });
 

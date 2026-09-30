@@ -3,6 +3,8 @@ import { isAbsolute, resolve } from "node:path";
 import { ObjectId } from "mongodb";
 import {
   DataForSeoClient,
+  WORK_STAGES,
+  enqueueRerun,
   SlugTakenError,
   acceptSpokeBrief,
   clusterEventsAfter,
@@ -238,6 +240,9 @@ async function cmdStart(argv: string[]): Promise<void> {
     async stop() {
       await Promise.all(controllers.map((c) => c.stop()));
     },
+    async release() {
+      await Promise.all(controllers.map((c) => c.release?.()));
+    },
   };
   installSignalHandlers(controller, db, log);
 }
@@ -333,6 +338,38 @@ async function cmdStatus(): Promise<void> {
         `  ${r._id?.toHexString()} article=${r.articleId.toHexString()} status=${r.status} phase=${r.currentPhase ?? "-"} attempt=${r.attempts}/${r.maxAttempts}`,
       );
     }
+  } finally {
+    await db.close();
+  }
+}
+
+/**
+ * Queue a re-run of an existing article from a phase — the Review tab's
+ * "Re-run from…" button, for the terminal. Earlier phases' artifacts are kept.
+ */
+async function cmdRerun(argv: string[]): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const ref = typeof flags["article"] === "string" ? (flags["article"] as string) : undefined;
+  const from = (typeof flags["from"] === "string" ? flags["from"] : "research") as WorkStage;
+  if (!ref || !(WORK_STAGES as readonly string[]).includes(from)) {
+    console.error(`Usage: rerun --article <id|slug|folder> [--from ${WORK_STAGES.join("|")}]`);
+    process.exit(2);
+  }
+  const { db, companyId } = await setup();
+  try {
+    const article = ObjectId.isValid(ref) && ref.length === 24
+      ? await db.articles.findOne({ _id: new ObjectId(ref), companyId })
+      : await db.articles.findOne({ companyId, $or: [{ slug: ref }, { folder: ref }] });
+    if (!article) {
+      console.error(`No article matches ${ref}`);
+      process.exitCode = 1;
+      return;
+    }
+    const run = await enqueueRerun(db, article, from);
+    console.log(`Queued re-run of ${article.folder} from ${from}: run ${run._id?.toHexString()}`);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exitCode = 1;
   } finally {
     await db.close();
   }
@@ -1099,11 +1136,13 @@ Commands:
                                      Run the queue worker (article pipeline, cluster, scrape, plan
                                      enrichment; the cadence scheduler needs SCHEDULER_ENABLED=1)
   enqueue --topic "…"                Queue an article run
-          [--keyword "…"] [--slug s] [--from-stage research|outline|write|edit|schema|design]
+          [--keyword "…"] [--slug s] [--from-stage research|outline|write|edit|hdcp|schema|design]
   import-articles [--dry-run]        Backfill articles/ folders into Mongo
           [--stage published] [--update] [--audit]
           [--only <folder>,<folder>]  (full YYYY-MM-DD-slug names)
   status                             Articles by stage + active runs
+  rerun --article <id|slug|folder>   Re-run an existing article from a phase (default research)
+          [--from research|outline|write|edit|hdcp|schema|design]
   events --run <id> [--follow]       Print a run's event stream
   cluster-enqueue --seed "…" [--k 5] Queue a Topic & Cluster Generator run
   cluster-status [--id <id>]         List cluster runs, or themes for one
@@ -1164,6 +1203,8 @@ async function main(): Promise<void> {
       return cmdImport(rest);
     case "status":
       return cmdStatus();
+    case "rerun":
+      return cmdRerun(rest);
     case "events":
       return cmdEvents(rest);
     case "cluster-enqueue":

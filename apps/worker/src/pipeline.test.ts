@@ -510,6 +510,7 @@ describe("runPipeline end-to-end (fake agents, real gates + python checks)", () 
     const runDoc = await db.runs.findOne({ _id: run._id });
     expect(runDoc?.status).toBe("succeeded");
     expect(runDoc?.phaseResults.filter((p) => p.status === "succeeded")).toHaveLength(7);
+    expect(runDoc?.currentPhase).toBe("design"); // each phase records itself: a reclaim resumes there
 
     const events = await eventsAfter(db, run._id as ObjectId, 0, 500);
     expect(events.some((e) => e.type === "run.succeeded")).toBe(true);

@@ -13,21 +13,32 @@ enqueue → runs (queued) ──claim/lease──▶ worker
                                           │   1. materialize articles/<folder>/ from Mongo
                                           │   2. Agent SDK query(): agents/<phase>.md as system
                                           │      prompt, phase task prompt, per-phase tools
-                                          │   3. code step: seo_audit.py / validate_schema.py
+                                          │   3. code step: seo_audit.py / validate_schema.py /
+                                          │      competitor_checks.py --research
                                           │      (canonical Python checks, parsed + stored)
                                           │   4. gate (packages/engine gates.ts) — on failure,
                                           │      retry the phase with GATE FEEDBACK appended
                                           │   5. persist artifacts to Mongo, advance stage
                                           ▼
-        research → outline → write → edit → schema → design → review
+        research → outline → write → edit → hdcp → schema → design → review
 ```
 
 - **Mongo is the system of record**; the article folder is a scratch workspace
   the worker rebuilds from Mongo on resume (any worker can pick up any run).
 - **Queue**: `runs` collection, claimed with `findOneAndUpdate` + lease.
-  Expired leases are reclaimed (worker crash ⇒ another worker resumes from
-  the failing phase, completed phases never re-run). Heartbeat extends the
-  lease. `MAX_RUN_ATTEMPTS` bounds retries.
+  Heartbeat extends the lease; `MAX_RUN_ATTEMPTS` bounds retries. Each phase
+  records itself as `runs.currentPhase` when it starts, and every way back into
+  the queue resumes there, so completed phases never re-run (D58):
+  - **Gate failure** — `failRun` requeues at the failing phase (one attempt).
+  - **Worker crash** — the lease expires and another worker reclaims the run
+    at `currentPhase` (one attempt, so a phase that keeps killing its worker
+    still runs out of attempts).
+  - **Deploy / SIGTERM** — the worker releases its in-flight pipeline runs
+    back to `queued` at `currentPhase`, refunds the attempt, and exits
+    (`releaseRun`). It doesn't wait for runs to finish: Railway kills the
+    container soon after SIGTERM, and exiting promptly keeps the old
+    container from writing to a run the new one has claimed. Cluster, scrape
+    and plan runs still rely on lease expiry.
 - **Events**: append-only `events` collection with a per-run `seq` — the
   polling/SSE primitive for the web app's Work tab (Phase 3).
 - **Models per phase** (D13): `PHASE_MODEL_DEFAULT` / `PHASE_MODEL_<PHASE>`
@@ -45,6 +56,15 @@ enqueue → runs (queued) ──claim/lease──▶ worker
   the route; direct-phase `costUsd` is estimated from token counts. Roll a
   phase back with `PHASE_ROUTE_<PHASE>=agent`; tune with
   `PHASE_EFFORT_<PHASE>` (default `high`).
+- **Research competitor check**: after live citation verification, the
+  research code step runs `scripts/competitor_checks.py --research`. It fails
+  the research gate when a head-to-head vendor from `config/company.yaml` →
+  `competitors.head_to_head` appears in Authoritative Sources, Statistics &
+  Data Points, Quotes Worth Including or Key Claims — their URLs, or their
+  name in an entry's attribution, which catches an employee's byline in a
+  third-party outlet. Product-only bans match by URL alone, and vendor
+  formats (D51) may list the vendor's own docs. The Researcher retries with
+  the offending entries as gate feedback (D58).
 - **Edit pre-audit + technical review**: before the Editor's first attempt
   the worker runs the edit gate's own checks on the draft (audit incl. the
   `scripts/style_checks.py` AI-cadence limits, body citations, internal
@@ -63,6 +83,7 @@ node apps/worker/dist/cli.js start            # run the queue worker
 node apps/worker/dist/cli.js enqueue --topic "…" [--keyword "…"]
 node apps/worker/dist/cli.js import-articles [--dry-run] [--update] [--audit]
 node apps/worker/dist/cli.js status
+node apps/worker/dist/cli.js rerun --article <id|slug|folder> [--from research|outline|write|edit|hdcp|schema|design]
 node apps/worker/dist/cli.js events --run <runId> [--follow]
 
 # Topic & Cluster Generator (roadmap 4C — D30/D31)

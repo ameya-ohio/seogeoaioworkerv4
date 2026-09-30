@@ -52,7 +52,10 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   - `agents/researcher.md`
 - **Action:** Conduct deep, multi-source web research. Use `WebSearch` and `WebFetch` extensively. Minimum **8 distinct sources**, biased toward primary/authoritative.
 - **Output:** `articles/YYYY-MM-DD-slug/research-notes.md`, in the exact section format specified in `agents/researcher.md`.
-- **Gate:** Research notes file exists, contains all required sections, has ≥ 8 cited sources, and includes at least one named statistic, one named entity, and one explicit content gap.
+- **Gate:** Research notes file exists, contains all required sections, has ≥ 8 cited sources, and includes at least one named statistic, one named entity, and one explicit content gap. No head-to-head competitor is listed as a source, statistic or quote (their executives' bylines elsewhere included). Check it with:
+  ```bash
+  python3 scripts/competitor_checks.py --research articles/YYYY-MM-DD-slug/research-notes.md
+  ```
 
 ### Phase 2 — Strategist
 
