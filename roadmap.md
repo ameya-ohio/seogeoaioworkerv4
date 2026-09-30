@@ -334,7 +334,7 @@ Goal: every article carries four validated facets from brief to export, and each
   - the query-shaped verbatim opener fails;
   - "X vs Y" keywords are satisfied by both terms appearing naturally, which removes the incentive that produced the opener;
   - burn-cycles variants are banned.
-- [ ] 4F.9a Re-run P01-S01-A02 from write under the new checks; then the P01 pillar (full guide) and S01 hub (routing, 4–6 FAQs).
+- [ ] 4F.9a **HELD (operator, 2026-09-29):** re-run P01-S01-A02 from write under the new checks (D53 links, stuffed opener, burn cycles); then the P01 pillar (full guide) and S01 hub (routing, 4–6 FAQs).
 - [ ] 4F.9b ~~Acceptance plan (superseded by the run above):~~ import the real pillar map, then run P01-S01-A02 "Identity Exposure vs Identity Risk" (Comparison (Concept), MOFU). Check the path `/learn/identity-exposure-management/identity-exposure/vs-identity-risk/`, a table near the top, 3 takeaways, 3–5 FAQs, the assessment CTA close, Article + FAQPage schema, and the export bundle. Then the P01 pillar (full guide) and the S01 hub (routing, 4–6 FAQs).
 - [x] 4F.12 **Internal linking (D53):**
   - engine `links/inventory.ts` (inventory, markdown-link extraction, still-deferred resolution, articles waiting on a URL)
@@ -471,6 +471,33 @@ To be decided in the session where they become load-bearing:
 ## 9. Session log
 
 Newest first. Each session appends: what was decided, what was built, what's next.
+
+### Session 26 — 2026-09-29 (production acceptance run; opener + burn-cycles checks; internal linking — D53)
+- **Proof points:** Ameya filled in the methodologies in Admin → Context. That surfaced two problems:
+  - the 1,900+ row had lost its last two cells, and was fixed;
+  - a bug: "1,900" normalised to 1900 and was skipped as a year, so the integration count escaped the check. Fixed in `ee62968`.
+- **Real map imported to production:**
+  - `Saporo_SEO_Pillar_Map.numbers` was converted to .xlsx with `numbers-parser`, in a scratch venv installed with Ameya's OK.
+  - A read-only preview found path cases the fixture couldn't: acronym hubs, plural-aware shared prefixes, pronouns for mid-title terms, dangling articles, and the offer hub outside /learn/. All fixed before import (`b8687b0`).
+  - Nine older P01-S01 articles were renamed `-v1` to free their slugs.
+  - Ameya signed in; I drove the deployed UI to discard the duplicate draft, re-check, and commit 503 items (sharpening off, no cadence).
+- **Acceptance (4F.9):** P01-S01-A02 was sent alone and reached review in 17 min for about $2.50. Every mechanical check passed; details are under 4F.9.
+- **Found in the output, now machine-checked (`b4b8f33`):**
+  - A keyword-stuffed opener. Its root cause was that the audit demanded the literal "x vs y" query in the first 100 words. Both terms appearing naturally now passes, and a query-shaped verbatim opener fails.
+  - "burning cycles" is now banned.
+- **Internal linking (D53, `e72036e`):** Ameya's review of the links ("see [Title]" footnotes, "the hub page", a target linked twice, a lead-in pointing at the wrong page) traced to D35's plain-text-mention rule and the brief's structure labels. Built:
+  - the link inventory in page.md;
+  - real links to reserved paths, deferred until live;
+  - the site-wide anchor registry;
+  - the relevance judge;
+  - `scripts/link_checks.py`;
+  - the export and Mark live handling;
+  - the Strategist's `## Internal Links` plan.
+
+  Ameya's bad examples fail on each problem and his rewrites pass, as a test fixture.
+- **Tests:** engine 352, worker 49, Python 69. Deployed to Railway.
+
+**Next up:** 4F.9a, the re-run of P01-S01-A02 from write, is held until Ameya says go. Then the P01 pillar and S01 hub, and 4F.10 operator inputs (fact sheets, redirects for the old `/resources/blog/` articles).
 
 ### Session 25 — 2026-09-29 (page formats, facets, /learn/ URLs, Framer export — Phase 4F)
 - **Input (Ameya):** `Saporo_Content_Type_Build_Specs.md` (24 formats for the 504-page pillar map), and the news that Saporo runs its site on Framer, not HubSpot. Every page, clusters included, lives under `/learn/<pillar>/<hub>/<page>/`, and the closing CTA is fixed per funnel stage.
