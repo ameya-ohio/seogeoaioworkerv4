@@ -90,6 +90,26 @@ export function evidenceAsSources(entries: EvidenceEntry[]): string {
   return lines.join("\n") + "\n";
 }
 
+export const MAX_KEY_CLAIM_WORDS = 40;
+
+/**
+ * A key claim is ONE assertion the page states. One that bundles two (the
+ * page's point plus the expert's gloss, or a second source's) fails the
+ * live check when the page supports only half, and the auto-demote then
+ * loses a true fact — so it's split before verification, not after.
+ */
+export function keyClaimProblems(id: string, claim: string): string[] {
+  const words = claim.trim().split(/\s+/).length;
+  const sentences = claim.trim().split(/(?<=[.!?])\s+(?=[A-Z"“(])/).filter(Boolean).length;
+  const problems: string[] = [];
+  if (sentences > 1 || /;/.test(claim)) {
+    problems.push(`${id}: the key claim states more than one thing — keep the one assertion this page makes, or split the fact into two entries`);
+  } else if (words > MAX_KEY_CLAIM_WORDS) {
+    problems.push(`${id}: the key claim runs ${words} words (max ${MAX_KEY_CLAIM_WORDS}) — state only what this page says, in its words`);
+  }
+  return problems;
+}
+
 /** Structural problems with the Interview Evidence section, against pov.md's list. */
 export function evidenceProblems(pov: string | undefined, notes: string): string[] {
   const listed = factsToVerify(pov);
@@ -117,6 +137,7 @@ export function evidenceProblems(pov: string | undefined, notes: string): string
       if (!e.url || e.sourceN === undefined) problems.push(`${f.id}: a ${e.verdict} fact needs "- Source ${EVIDENCE_SOURCE_BASE}+: Title — URL"`);
       else if (e.sourceN < EVIDENCE_SOURCE_BASE) problems.push(`${f.id}: number evidence sources from ${EVIDENCE_SOURCE_BASE} (got ${e.sourceN})`);
       if (!e.keyClaim) problems.push(`${f.id}: a ${e.verdict} fact needs "- Key claim:" — what the source actually says`);
+      else problems.push(...keyClaimProblems(f.id, e.keyClaim));
     }
     if (!e.use) problems.push(`${f.id}: no "- Use:" line — as stated, as corrected, expert opinion only, or cut`);
   }

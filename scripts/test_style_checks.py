@@ -350,5 +350,11 @@ class IntroThesisFirstTests(unittest.TestCase):
         found = [f for f in run(self._intro(text)) if "intro carries" in f.message]
         self.assertEqual(len(found), 1)
         self.assertEqual(len(found[0].snippets), 2)
+        both = (
+            "The link decides how far a compromise reaches. Microsoft recorded a 32% surge in identity-based attacks "
+            "in 2025, and more than 97% of them were password attacks."
+        )
+        found = [f for f in run(self._intro(both)) if "intro carries" in f.message]
+        self.assertEqual(len(found), 1, "two figures in one sentence still count as two")
         one = "The link decides how far a compromise reaches. Microsoft recorded a 32% rise in identity-based attacks in 2025."
         self.assertFalse([f for f in run(self._intro(one)) if "intro carries" in f.message])

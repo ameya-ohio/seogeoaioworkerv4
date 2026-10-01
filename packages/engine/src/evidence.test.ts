@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   EVIDENCE_SOURCE_BASE,
   demoteUnverifiedEvidence,
+  keyClaimProblems,
   evidenceAsSources,
   evidenceGate,
   evidenceProblems,
@@ -100,6 +101,23 @@ describe("interview evidence (D61)", () => {
     });
     expect(g.ok).toBe(false);
     expect(g.problems.join(" ")).toContain("source #101");
+  });
+});
+
+describe("key claims are one assertion (D61)", () => {
+  it("flags a bundled, multi-sentence or overlong key claim; passes a single assertion", () => {
+    expect(keyClaimProblems("F4", "MITRE states an adversary with a valid token-signing certificate can forge SAML tokens.")).toEqual([]);
+    expect(keyClaimProblems("F4", "MITRE says certificates forge tokens. Microsoft documents the same.")[0]).toContain("more than one thing");
+    expect(keyClaimProblems("F4", "MITRE says certificates forge tokens; Microsoft documents the same")[0]).toContain("more than one thing");
+    expect(keyClaimProblems("F4", "word ".repeat(45).trim())[0]).toContain("45 words");
+  });
+
+  it("the gate reports a bundled key claim", () => {
+    const bundled = NOTES.replace(
+      "- Key claim: Storm-0501 compromised an Entra Connect Sync server and moved into Entra ID.",
+      "- Key claim: Storm-0501 compromised an Entra Connect Sync server. Microsoft also recommends attack path analysis.",
+    );
+    expect(evidenceProblems(POV, bundled).join(" ")).toContain("F1: the key claim states more than one thing");
   });
 });
 

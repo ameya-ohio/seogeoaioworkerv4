@@ -392,12 +392,15 @@ def check_misconception_opener(intro: str) -> Finding | None:
 def check_intro_stats(intro: str) -> Finding | None:
     """D61: at most one statistic in the intro; the argument comes first."""
     text = " ".join(_plain(intro).split())
-    hits = [s[:140] for s in sentences(text) if _STATISTIC.search(s)]
-    if len(hits) <= MAX_INTRO_STATS:
+    # Count figures, not sentences: "a 32% surge… and more than 97% of them…"
+    # is two statistics in one sentence, and it reads as a stat run.
+    figures = [(m.group(0), s) for s in sentences(text) for m in _STATISTIC.finditer(s)]
+    if len(figures) <= MAX_INTRO_STATS:
         return None
+    hits = [f"{fig.strip()} — {sent[:140]}" for fig, sent in figures]
     return Finding(
         "fail",
-        f"Evidence: the intro carries {len(hits)} statistics (max {MAX_INTRO_STATS}) — keep the one the thesis "
+        f"Evidence: the intro carries {len(figures)} statistics (max {MAX_INTRO_STATS}) — keep the one the thesis "
         f"turns on, inside the claim it supports, and move or cut the rest",
         hits,
     )
