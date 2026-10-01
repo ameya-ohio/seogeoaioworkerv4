@@ -27,7 +27,13 @@ import {
   type DirectLlmResponse,
   type HeaderRenderer,
 } from "./directRunner.js";
-import { runPipeline, type PipelineDeps } from "./pipeline.js";
+import { flagUnresolved, hashText, runPipeline, type PipelineDeps } from "./pipeline.js";
+
+const flagUnresolvedForTest = (md: string) =>
+  flagUnresolved(md, [
+    { kind: "technical_error", quote: "Body text about layers.", problem: "Vague.", fix: "Name them." },
+    { kind: "contradiction", quote: "not in the text", problem: "Elsewhere.", fix: "Fix." },
+  ]);
 import type { TechReviewer } from "./techReview.js";
 import type { InterviewOpener } from "./interviewOpener.js";
 import type { CitationVerifier, LinkChecker } from "./quality.js";
@@ -1032,6 +1038,50 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
     const doc = await db.articles.findOne({ _id: article._id });
     expect(doc?.verification?.unresolved).toEqual([]);
   }, 120_000);
+
+  it("verify: a fix pass that can't pass the Edit checks keeps the prior text and flags the issues", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "direct-verify-fixfail",
+      folder: "2026-09-14-direct-verify-fixfail",
+      topic: "Verify fix-fail topic",
+      targetKeyword: "context engineering",
+    });
+    const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const reviewer: TechReviewer = {
+      review: async () => ({
+        ranAt: new Date(),
+        model: "fake-reviewer",
+        droppedUnquoted: 0,
+        issues: [{ kind: "technical_error", quote: "Body text about layers.", problem: "Vague about which layers.", fix: "Name them." }],
+      }),
+    };
+    const llm = new FakeDirectLlm();
+    // Every fix attempt introduces a banned phrase, so it never passes the Edit gate.
+    llm.fixReplace = { from: "Body text about layers.", to: "Body text about the blast radius of layers." };
+    const c = { ...directCfg(), techReview: { ...cfg.techReview, enabled: true } };
+    expect(
+      await runPipeline(
+        makeDeps(new FakeInvoker(), { cfg: c, direct: new DirectPhaseRunner(llm, fakeRenderer([])), techReviewer: reviewer }),
+        (await claimRun(db, "test-worker", 60_000))!,
+      ),
+    ).toBe("completed");
+    const doc = await db.articles.findOne({ _id: article._id });
+    expect(doc?.stage).toBe("review");
+    expect(doc?.artifacts.article).not.toContain("blast radius");
+    expect(doc?.artifacts.article).toContain("Body text about layers. [VERIFY: Vague about which layers.]");
+    expect(doc?.verification?.unresolved).toHaveLength(1);
+    expect(doc?.verification?.rounds[0]?.fixed).toBe(false);
+    expect((await db.runs.findOne({ _id: run._id }))?.status).toBe("succeeded");
+  }, 120_000);
+
+  it("hashText ignores the verify stage's own notes, so a flagged restart finds its rounds", () => {
+    const md = "# T\n\nBody text about layers.\n\nMore.\n";
+    const flagged = flagUnresolvedForTest(md);
+    expect(flagged).toContain("[VERIFY:");
+    expect(hashText(flagged)).toBe(hashText(md));
+    expect(hashText(md.replace("More.", "Different."))).not.toBe(hashText(md));
+  });
 
   it("verify passes on the Edit checks when the technical review is skipped", async () => {
     const article = await createArticle(db, {

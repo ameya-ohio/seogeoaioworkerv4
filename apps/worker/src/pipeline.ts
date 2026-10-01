@@ -294,8 +294,15 @@ async function runCodeStep(
 }
 
 /** Stable id for a text, so a verification round is reused for the text it read. */
-function hashText(text: string): string {
-  return createHash("sha256").update(text).digest("hex").slice(0, 16);
+/**
+ * Stable id for a text, so a verification round is reused for the text it
+ * read. The stage's own [VERIFY: …] notes are left out: a run that stopped
+ * after flagging resumes on the same text plus its notes, and must find its
+ * rounds instead of asking the reviewer again (and getting a different list).
+ */
+export function hashText(text: string): string {
+  const core = text.replace(/\s?\[VERIFY:[^\]]*\]/g, "").replace(/\s+/g, " ").trim();
+  return createHash("sha256").update(core).digest("hex").slice(0, 16);
 }
 
 /**
@@ -801,11 +808,24 @@ async function verifyStep(deps: PipelineDeps, run: RunDoc, article: ArticleDoc):
       }
       open = r.open;
       if (!open.length || round === MAX_VERIFY_ROUNDS) break;
-      // Fix exactly these, gated by every Edit check.
-      await executePhase(deps, run, (await getArticle(db, articleId)) ?? article, "verify", {
-        verifyIssues: open,
-        gate: GATES.edit,
-      });
+      // Fix exactly these, gated by every Edit check. A fix pass that can't
+      // pass them (a judged check, like link relevance, can trip on any
+      // rewording) must not fail the run: keep the text from before it and
+      // leave the issues for the editor as [VERIFY: …] notes.
+      const before = await read("article.md");
+      try {
+        await executePhase(deps, run, (await getArticle(db, articleId)) ?? article, "verify", {
+          verifyIssues: open,
+          gate: GATES.edit,
+        });
+      } catch (err) {
+        await writeFile(join(dir, "article.md"), before, "utf-8");
+        deps.log(
+          `${tag} fix pass couldn't pass the Edit checks (${err instanceof Error ? err.message.slice(0, 200) : String(err)}) — ` +
+            `keeping the text from before it; the ${open.length} issue(s) go to the editor`,
+        );
+        break;
+      }
       r.fixed = true;
       r.fixedHash = hashText(await read("article.md"));
       await save();
