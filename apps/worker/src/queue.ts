@@ -21,17 +21,28 @@ async function processRun(deps: PipelineDeps, run: RunDoc): Promise<void> {
   const { db, cfg } = deps;
   const runId = run._id;
   if (!runId) return;
+  // Lost only when Mongo says the run isn't ours (canceled, reclaimed by
+  // another worker, parked) — a heartbeat that errors (a network blip) isn't
+  // proof, and a healthy run must not stop on one.
+  let lost = false;
   const beat = setInterval(() => {
-    void heartbeat(db, runId, cfg.workerId, cfg.leaseMs).then((ok) => {
-      if (!ok) deps.log(`lost lease on run ${runId.toHexString()}`);
-    });
+    heartbeat(db, runId, cfg.workerId, cfg.leaseMs)
+      .then((ok) => {
+        if (!ok && !lost) {
+          lost = true;
+          deps.log(`lost lease on run ${runId.toHexString()} — stopping at the next phase boundary`);
+        }
+      })
+      .catch((err: unknown) => deps.log(`heartbeat error on run ${runId.toHexString()}: ${err instanceof Error ? err.message : err}`));
   }, cfg.heartbeatMs);
   try {
-    const outcome = await runPipeline(deps, run);
+    const outcome = await runPipeline(deps, run, { leaseLost: () => lost });
     deps.log(
       outcome === "awaiting_input"
         ? `run ${runId.toHexString()} is waiting for the expert interview`
-        : `run ${runId.toHexString()} succeeded`,
+        : outcome === "abandoned"
+          ? `run ${runId.toHexString()} stopped — this worker no longer holds it`
+          : `run ${runId.toHexString()} succeeded`,
     );
   } catch (err) {
     deps.log(`run ${runId.toHexString()} errored: ${err instanceof Error ? err.message : err}`);

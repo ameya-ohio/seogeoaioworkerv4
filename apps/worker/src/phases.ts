@@ -1,4 +1,6 @@
-import type { ArticleDoc, TechnicalIssue, WorkStage } from "@blogagent/engine";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { cfgGet, loadCompanyConfig, type ArticleDoc, type TechnicalIssue, type WorkStage } from "@blogagent/engine";
 import type { WorkerConfig } from "./config.js";
 
 /**
@@ -29,6 +31,32 @@ export interface PhaseContext {
   headerPattern?: string;
   /** Verify only (D61): the issues the fix pass must resolve, and nothing else. */
   verifyIssues?: TechnicalIssue[];
+  /** Verify only: the banned list the Edit gate fails on, printed beside the issues. */
+  bannedPhrases?: string[];
+}
+
+/**
+ * The list seo_audit.py fails on: standards/banned-phrases.txt plus the
+ * company's voice.banned_phrases, lowercased and deduped — the same rules as
+ * scripts/company_config.py load_banned_phrases.
+ */
+export function loadBannedPhrases(cfg: Pick<WorkerConfig, "repoRoot" | "companyConfigPath">): string[] {
+  const phrases: string[] = [];
+  const file = join(cfg.repoRoot, "standards", "banned-phrases.txt");
+  if (existsSync(file)) {
+    for (const raw of readFileSync(file, "utf-8").split("\n")) {
+      const line = raw.trim();
+      if (!line || line.startsWith("#")) continue;
+      phrases.push((/^(["']).*\1$/.test(line) && line.length >= 2 ? line.slice(1, -1) : line).toLowerCase());
+    }
+  }
+  try {
+    const extra = cfgGet<unknown[]>(loadCompanyConfig(cfg.repoRoot, cfg.companyConfigPath), "voice.banned_phrases", []);
+    if (Array.isArray(extra)) phrases.push(...extra.map((x) => String(x).toLowerCase()));
+  } catch {
+    // No company config in this checkout: the generic list still applies.
+  }
+  return [...new Set(phrases)];
 }
 
 /** D61: the verify fix pass's brief — fix exactly these, in Fix mode (agents/editor.md). */
@@ -39,6 +67,14 @@ export function verifyIssuesBlock(ctx: PhaseContext): string {
     `FIX MODE — the expert review of the final text found these issues. Fix each one (the quote shows where),`,
     `change nothing else, and keep every check the article already passes:`,
     ...ctx.verifyIssues.map((i) => `- ${i.kind}: "${i.quote}" — ${i.problem}${i.fix ? ` Fix: ${i.fix}` : ""}`),
+    ...(ctx.bannedPhrases?.length
+      ? [
+          ``,
+          `BANNED WORDS AND PHRASES — the Edit gate fails the article if any of these appears (case-insensitive, whole`,
+          `words). A sentence you rewrite must contain none of them; "just" and "it's not just" are the ones fixes slip in:`,
+          ctx.bannedPhrases.map((p) => `"${p}"`).join(", "),
+        ]
+      : []),
   ].join("\n");
 }
 

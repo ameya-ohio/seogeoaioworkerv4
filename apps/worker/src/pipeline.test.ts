@@ -28,6 +28,7 @@ import {
   type HeaderRenderer,
 } from "./directRunner.js";
 import { flagUnresolved, hashText, runPipeline, type PipelineDeps } from "./pipeline.js";
+import { loadBannedPhrases, verifyIssuesBlock, type PhaseContext } from "./phases.js";
 
 const flagUnresolvedForTest = (md: string) =>
   flagUnresolved(md, [
@@ -764,6 +765,46 @@ function directCfg(): WorkerConfig {
     },
   };
 }
+
+describe("runPipeline, a worker that lost the run", () => {
+  it("stops at the next phase boundary and leaves the run and article alone", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "pipeline-lease-lost",
+      folder: "2026-10-01-pipeline-lease-lost",
+      topic: "Context engineering basics",
+      targetKeyword: "context engineering",
+    });
+    await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const claimed = await claimRun(db, "test-worker", 60_000);
+    const invoker = new FakeInvoker();
+    // The run is canceled while research is in flight.
+    let calls = 0;
+    const leaseLost = () => ++calls > 1;
+    expect(await runPipeline(makeDeps(invoker), claimed!, { leaseLost })).toBe("abandoned");
+    expect(invoker.calls.map((c) => c.phase)).toEqual(["Researcher"]);
+    const doc = await db.articles.findOne({ _id: article._id });
+    expect(doc?.stage).toBe("research");
+    const runDoc = await db.runs.findOne({ _id: claimed!._id });
+    expect(runDoc?.currentPhase).toBe("research");
+    expect(runDoc?.status).toBe("running");
+  });
+});
+
+describe("verify fix pass prompt", () => {
+  it("prints the banned list beside the issues", () => {
+    const banned = loadBannedPhrases({ repoRoot: join(__dirname, "..", "..", "..") });
+    expect(banned).toContain("just");
+    expect(banned).toContain("it's not just");
+    expect(banned.some((p) => p.startsWith("#"))).toBe(false);
+    const block = verifyIssuesBlock({
+      verifyIssues: [{ kind: "technical_error", quote: "x", problem: "y", fix: "z" }],
+      bannedPhrases: banned,
+    } as unknown as PhaseContext);
+    expect(block).toContain("BANNED WORDS AND PHRASES");
+    expect(block).toContain('"just"');
+  });
+});
 
 describe("runPipeline, direct Messages API route (10.3)", () => {
   it("runs research on the agent and the other five phases as direct calls", async () => {

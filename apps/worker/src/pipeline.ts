@@ -60,7 +60,7 @@ import type { AgentInvoker, AgentRunOutcome } from "./agentRunner.js";
 import { AGENT_ONLY_PHASES, type DirectPhase, type WorkerConfig } from "./config.js";
 import type { DirectPhaseRunner } from "./directRunner.js";
 import type { InterviewOpener } from "./interviewOpener.js";
-import { PHASE_ORDER, phaseDefs, type PhaseContext } from "./phases.js";
+import { PHASE_ORDER, loadBannedPhrases, phaseDefs, type PhaseContext } from "./phases.js";
 import { articleProse, type CitationVerifier, type LinkChecker } from "./quality.js";
 import type { TechReviewer } from "./techReview.js";
 import {
@@ -526,7 +526,7 @@ async function executePhase(
       hasCompetitorGaps: existsSync(join(articleDir(cfg, article), "competitor-gaps.md")),
       ...(gateFeedback ? { gateFeedback } : {}),
       ...(preAudit ? { preAudit } : {}),
-      ...(opts.verifyIssues ? { verifyIssues: opts.verifyIssues } : {}),
+      ...(opts.verifyIssues ? { verifyIssues: opts.verifyIssues, bannedPhrases: loadBannedPhrases(cfg) } : {}),
       headerPattern: page.rules.format.headerPattern,
     };
     const onProgress = (text: string) => deps.log(`[${article.slug}/${phase}] ${text.slice(0, 160)}`);
@@ -875,8 +875,18 @@ async function verifyStep(deps: PipelineDeps, run: RunDoc, article: ArticleDoc):
  * Each stage persists its artifacts and records itself as run.currentPhase, so
  * a retry (failRun), a reclaim after a crash (claimRun) or a release on
  * shutdown (releaseRun) resumes at that phase; earlier phases never re-run.
+ *
+ * `leaseLost` reports that this worker no longer holds the run: it was
+ * canceled, or another worker reclaimed it after this one stalled. The
+ * pipeline then stops before the next phase and touches nothing — not the
+ * run, not the article — because the run is no longer this worker's to
+ * advance, requeue or fail. The phase already in flight still finishes.
  */
-export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<"completed" | "awaiting_input"> {
+export async function runPipeline(
+  deps: PipelineDeps,
+  run: RunDoc,
+  opts: { leaseLost?: () => boolean } = {},
+): Promise<"completed" | "awaiting_input" | "abandoned"> {
   const { db, cfg } = deps;
   const runId = run._id;
   if (!runId) throw new Error("run missing _id");
@@ -909,8 +919,13 @@ export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<"com
   const phases = PHASE_ORDER.slice(startIdx === -1 ? 0 : startIdx);
 
   let currentPhase: WorkStage | undefined;
+  const lost = () => opts.leaseLost?.() === true;
   try {
     for (const phase of phases) {
+      if (lost()) {
+        deps.log(`[${article.slug}] no longer holds run ${runId.toHexString()} — stopping before ${phase}`);
+        return "abandoned";
+      }
       currentPhase = phase;
       // Recorded on the run so a reclaim (crashed worker) or a release
       // (deploy SIGTERM) resumes here instead of at run.fromStage.
@@ -943,6 +958,10 @@ export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<"com
       if (phase === "interview") await markInterviewRefined(db, articleId);
     }
 
+    if (lost()) {
+      deps.log(`[${article.slug}] no longer holds run ${runId.toHexString()} — not moving it to review`);
+      return "abandoned";
+    }
     await setStage(db, articleId, "review", runId);
     await emitEvent(db, {
       companyId: run.companyId,
@@ -963,6 +982,12 @@ export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<"com
     return "completed";
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    // Not this worker's run any more: requeueing or failing it would revive a
+    // canceled run or overwrite the worker that holds it now.
+    if (lost()) {
+      deps.log(`[${article.slug}] ${currentPhase ?? "run"} errored after this worker lost the run (${message.slice(0, 160)}) — leaving it alone`);
+      return "abandoned";
+    }
     const disposition = await failRun(db, runId, message, currentPhase);
     if (disposition === "requeued") {
       await emitEvent(db, {
