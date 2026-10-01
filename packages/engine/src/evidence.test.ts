@@ -65,6 +65,24 @@ describe("interview evidence (D61)", () => {
     expect(problems.some((p) => p.startsWith("F1: a verified fact needs"))).toBe(true);
   });
 
+  it("gate: with a pre-D61 pov.md (no list), still checks every entry and every citation", () => {
+    const legacyPov = "# Expert POV\n\n## Thesis\nThe links carry the exposure.\n";
+    const unsupported = {
+      ranAt: new Date(),
+      results: [{ sourceN: 101, url: "https://x", claim: "c", kind: "key_claim" as const, verdict: "unsupported" as const, note: "not on page" }],
+      verifiedSourceCount: 0,
+      verifiedUrls: [],
+      unsupportedCount: 1,
+      unreachableCount: 0,
+    };
+    const g = evidenceGate({ pov: legacyPov, researchNotes: NOTES, citationReport: unsupported });
+    expect(g.ok).toBe(false);
+    expect(g.problems.join(" ")).toContain("source #101");
+    const noUse = NOTES.replace("- Use: as stated\n", "");
+    expect(evidenceGate({ pov: legacyPov, researchNotes: noUse }).problems.join(" ")).toContain('F1: no "- Use:" line');
+    expect(evidenceGate({ pov: legacyPov, researchNotes: "## Topic Summary\nx\n" }).ok).toBe(true);
+  });
+
   it("gate: passes with no facts; fails an unsupported evidence citation", () => {
     expect(evidenceGate({ pov: "## Facts to Verify\nnone\n" }).ok).toBe(true);
     const g = evidenceGate({

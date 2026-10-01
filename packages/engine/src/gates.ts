@@ -622,7 +622,9 @@ export function interviewGate(files: GateFiles): GateResult {
  * live citation check, from a source that isn't a head-to-head competitor.
  */
 export function evidenceGate(files: GateFiles): GateResult {
-  if (!factsToVerify(files.pov).length) return result([]);
+  // No early exit: a pov.md written before D61 has no Facts to Verify list,
+  // and the agent then lists the facts itself — every entry it wrote, and
+  // every source it cited, is still checked.
   const problems = evidenceProblems(files.pov, files.researchNotes ?? "");
   const cr = files.citationReport;
   if (cr) {

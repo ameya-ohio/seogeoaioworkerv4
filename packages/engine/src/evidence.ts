@@ -92,12 +92,16 @@ export function evidenceAsSources(entries: EvidenceEntry[]): string {
 
 /** Structural problems with the Interview Evidence section, against pov.md's list. */
 export function evidenceProblems(pov: string | undefined, notes: string): string[] {
-  const facts = factsToVerify(pov);
-  if (!facts.length) return [];
-  if (!markdownSection(notes, "Interview Evidence")) {
+  const listed = factsToVerify(pov);
+  const hasSection = Boolean(markdownSection(notes, "Interview Evidence"));
+  if (!listed.length && !hasSection) return [];
+  if (!hasSection) {
     return ["research-notes.md has no `## Interview Evidence` section — add one `### F<n>:` entry per fact in pov.md"];
   }
-  const entries = new Map(parseInterviewEvidence(notes).map((e) => [e.id, e]));
+  const parsed = parseInterviewEvidence(notes);
+  const entries = new Map(parsed.map((e) => [e.id, e]));
+  // A pov.md from before D61 lists no facts: check every entry the agent wrote.
+  const facts = listed.length ? listed : parsed.map((e) => ({ id: e.id, text: e.fact }));
   const problems: string[] = [];
   for (const f of facts) {
     const e = entries.get(f.id);
