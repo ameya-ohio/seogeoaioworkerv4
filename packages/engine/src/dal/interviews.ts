@@ -14,12 +14,13 @@ import { resumeRun } from "./runs.js";
 export async function openInterview(
   db: EngineDb,
   articleId: ObjectId,
-  input: { runId?: ObjectId; plan: string; opening: string; captured?: InterviewCaptured; costUsd?: number },
+  input: { runId?: ObjectId; plan: string; opening: string; captured?: InterviewCaptured; costUsd?: number; basis?: "research" },
 ): Promise<ArticleInterview> {
   const now = new Date();
   const interview: ArticleInterview = {
     status: "open",
     ...(input.runId ? { runId: input.runId } : {}),
+    ...(input.basis ? { basis: input.basis } : {}),
     plan: input.plan,
     messages: [{ role: "assistant", content: input.opening, at: now }],
     captured: input.captured ?? {},
@@ -64,7 +65,7 @@ export async function appendInterviewerReply(
 
 /**
  * Finish or skip the interview and put the waiting run back in the queue;
- * it resumes at the interview stage, where the refiner runs (or, skipped,
+ * it resumes at the interview stage, where the POV writer runs (or, skipped,
  * passes straight through to the Writer). Returns the requeued run.
  */
 export async function closeInterview(
@@ -100,7 +101,7 @@ export async function closeInterview(
   return run;
 }
 
-/** The refiner rewrote the outline from this interview (the gate passed). */
+/** The POV writer wrote pov.md from this interview (the gate passed). */
 export async function markInterviewRefined(db: EngineDb, articleId: ObjectId): Promise<void> {
   const now = new Date();
   await db.articles.updateOne(

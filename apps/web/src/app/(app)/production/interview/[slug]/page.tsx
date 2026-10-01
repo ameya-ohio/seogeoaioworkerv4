@@ -29,9 +29,12 @@ export default async function InterviewPage({ params }: { params: Promise<{ slug
           { label: "Attribution", value: iv.captured.attribution ?? null },
         ],
         wedge: markdownSection(iv.plan, "Wedge") || markdownSection(doc.artifacts.researchNotes ?? "", "Content Gaps"),
-        plannedAngle: markdownSection(outline, "Angle"),
-        plannedThesis: markdownSection(outline, "Thesis"),
-        plannedAnchor: markdownSection(outline, "Real-World Anchor"),
+        // D61: the interview reacts to research; interviews opened after an outline (D59) show that plan.
+        positions: markdownSection(doc.artifacts.researchNotes ?? "", "Candidate Positions"),
+        summary: markdownSection(doc.artifacts.researchNotes ?? "", "Topic Summary"),
+        plannedAngle: iv.basis === "research" ? "" : markdownSection(outline, "Angle"),
+        plannedThesis: iv.basis === "research" ? "" : markdownSection(outline, "Thesis"),
+        plannedAnchor: iv.basis === "research" ? "" : markdownSection(outline, "Real-World Anchor"),
         costUsd: iv.costUsd ?? null,
       }
     : null;
@@ -40,7 +43,7 @@ export default async function InterviewPage({ params }: { params: Promise<{ slug
     <div>
       <PageHeader
         title={`Expert interview: ${title}`}
-        subtitle="Your point of view shapes the angle, the thesis, the story and where the product fits. The outline is rebuilt from your answers before the Writer starts."
+        subtitle="Your point of view shapes the angle, the thesis, the story and where the product fits. The outline is planned from your answers, and any facts you raise are checked before it is."
         actions={
           <>
             <StageBadge stage={doc.stage} />
@@ -54,7 +57,7 @@ export default async function InterviewPage({ params }: { params: Promise<{ slug
         <InterviewChat view={view} />
       ) : (
         <p className="text-sm text-slate-500">
-          No interview for this article yet. It opens when the run reaches the Interview stage, right after the outline.
+          No interview for this article yet. It opens when the run reaches the Interview stage, right after research.
         </p>
       )}
     </div>

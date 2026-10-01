@@ -24,10 +24,10 @@ Cut two repeated statistics. Confirm the bank case can lead the body.
 `;
 
 describe("HDCP phase (lean protocol)", () => {
-  it("sits between edit and schema", () => {
-    expect(WORK_STAGES.indexOf("hdcp")).toBe(WORK_STAGES.indexOf("edit") + 1);
-    expect(nextStage("edit")).toBe("hdcp");
-    expect(nextStage("hdcp")).toBe("schema");
+  it("sits between write and edit (D61), so the Editor's gate checks the rewrite", () => {
+    expect(WORK_STAGES.indexOf("hdcp")).toBe(WORK_STAGES.indexOf("write") + 1);
+    expect(nextStage("write")).toBe("hdcp");
+    expect(nextStage("hdcp")).toBe("edit");
   });
 
   it("parses the markdown log into the stored shape", () => {
@@ -57,5 +57,20 @@ describe("HDCP phase (lean protocol)", () => {
   it("keeps real flags", () => {
     const { log } = parseHdcpLog(LOG.replace("- none", "- [HUMAN INPUT: a real customer example of stale delegation]"));
     expect(log?.flags).toEqual(["[HUMAN INPUT: a real customer example of stale delegation]"]);
+  });
+});
+
+describe("HDCP editor notes and flags (D61)", () => {
+  it("reads a flags line that starts with 'none' as no flags", () => {
+    const log = LOG.replace("## Flags\n- none", "## Flags\n- none inline. (The [NEEDS RESEARCH] note was resolved in prose.)");
+    expect(parseHdcpLog(log).log?.flags).toEqual([]);
+  });
+
+  it("fails when HDCP deletes an editor note it can't resolve", () => {
+    const prior = ARTICLE.replace("# Title", "# Title\n\nThe DKM container claim. [NEEDS RESEARCH: a primary source for the ACL]");
+    const g = hdcpGate({ article: ARTICLE, hdcpLog: LOG, priorArticle: prior });
+    expect(g.ok).toBe(false);
+    expect(g.problems.join(" ")).toContain("[NEEDS RESEARCH: a primary source for the ACL]");
+    expect(hdcpGate({ article: prior, hdcpLog: LOG, priorArticle: prior }).ok).toBe(true);
   });
 });

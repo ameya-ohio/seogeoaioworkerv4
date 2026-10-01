@@ -18,15 +18,18 @@ Roadmap Phase 3: the five-screen app over the engine — same Mongo, same
   article opens in a markdown editor + preview (D7) with sidebar tabs for
   research notes, outline, first draft, audit report, header image, and run
   history, plus Save / Approve-for-publish / re-run-from-phase actions.
-- **Expert interview** (D59) — `/production/interview/<slug>`. A run that
-  reaches the Interview stage waits for the operator. Its board card reads
-  *Needs you*, and the nav shows a count. The page is a streamed chat with
-  the interviewer (`agents/interviewer.md`), with the research wedge, the
-  planned angle, thesis and anchor, and a live "captured" checklist beside
-  it. **Finish** requeues the run to refine the outline from the answers;
-  **Skip** sends it on to the Writer. Review has an **Interview** tab
-  (pov.md + transcript). The Chat form can skip the interview for one
-  article, and a plan's Progress card sets it for the plan's articles.
+- **Expert interview** (D59/D61) — `/production/interview/<slug>`. A run
+  waits for the operator right after research. Its board card reads *Needs
+  you*, and the nav shows a count. The page is a streamed chat with the
+  interviewer (`agents/interviewer.md`), with the research wedge, the
+  Researcher's Candidate Positions and Topic Summary, and a live "captured"
+  checklist (facts to verify included) beside it. **Finish** requeues the
+  run: pov.md is written, the facts the expert raised are verified, and the
+  Strategist plans the outline from it. **Skip** plans from research alone.
+  Review has an **Interview** tab (pov.md + transcript) and a
+  **Verification** tab (the final review's rounds and what's left open as
+  `[VERIFY: …]`). The Chat form can skip the interview for one article, and
+  a plan's Progress card sets it for the plan's articles.
 - **Articles** — library of everything produced (imported corpus included),
   with per-artifact tabs.
 - **Admin** — edit the engine's markdown surfaces in place (standards /

@@ -9,6 +9,7 @@ import {
   claimRun,
   closeInterview,
   connect,
+  framerExportProblems,
   createArticle,
   enqueueRun,
   eventsAfter,
@@ -65,16 +66,18 @@ beforeAll(async () => {
       research: "m",
       outline: "m",
       interview: "m",
+      evidence: "m",
+      verify: "m",
       write: "m",
       edit: "m",
       hdcp: "m",
       schema: "m",
       design: "m",
     },
-    maxTurns: { research: 1, outline: 1, interview: 1, write: 1, edit: 1, hdcp: 1, schema: 1, design: 1 },
+    maxTurns: { research: 1, outline: 1, interview: 1, evidence: 1, verify: 1, write: 1, edit: 1, hdcp: 1, schema: 1, design: 1 },
     direct: {
-      routes: { outline: "agent", interview: "agent", write: "agent", edit: "agent", hdcp: "agent", schema: "agent", design: "agent" },
-      effort: { outline: "high", interview: "high", write: "high", edit: "high", hdcp: "high", schema: "high", design: "high" },
+      routes: { outline: "agent", interview: "agent", verify: "agent", write: "agent", edit: "agent", hdcp: "agent", schema: "agent", design: "agent" },
+      effort: { outline: "high", interview: "high", verify: "high", write: "high", edit: "high", hdcp: "high", schema: "high", design: "high" },
       maxTokens: 64_000,
     },
     interview: { openModel: "fake-interviewer", effort: "high" },
@@ -397,6 +400,10 @@ class FakeInvoker implements AgentInvoker {
         // Rewrites in place (here: unchanged) and logs its own verification.
         writeFileSync(join(dir, "hdcp.md"), HDCP_LOG);
         return ok();
+      case "Evidence":
+        // D61: verifies the interview's facts and appends them to the notes.
+        appendFileSync(join(dir, "research-notes.md"), `\n${INTERVIEW_EVIDENCE}`);
+        return ok();
       case "Schema Builder": {
         writeFileSync(join(dir, "schema.json"), JSON.stringify(SCHEMA, null, 2));
         const md = readFileSync(join(dir, "article.md"), "utf-8");
@@ -499,8 +506,8 @@ describe("runPipeline end-to-end (fake agents, real gates + python checks)", () 
       "Researcher",
       "Strategist",
       "Writer",
-      "Editor",
       "HDCP",
+      "Editor",
       "Schema Builder",
       "Header Designer",
     ]);
@@ -531,7 +538,7 @@ describe("runPipeline end-to-end (fake agents, real gates + python checks)", () 
       source: "strategist",
     });
     expect(doc?.frontmatter?.["article_type"]).toBe("deep-dive");
-    // HDCP ran between Edit and Schema and its log is on the article.
+    // HDCP ran between Write and Edit (D61) and its log is on the article.
     expect(doc?.hdcp?.diagnosis).toContain("layer count");
     expect(doc?.hdcp?.changes).toHaveLength(2);
     expect(doc?.hdcp?.cuts).toEqual([{ content: "Second copy of the layer count", reason: "duplicate" }]);
@@ -552,7 +559,10 @@ describe("runPipeline end-to-end (fake agents, real gates + python checks)", () 
 
     const events = await eventsAfter(db, run._id as ObjectId, 0, 500);
     expect(events.some((e) => e.type === "run.succeeded")).toBe(true);
-    expect(events.filter((e) => e.type === "gate.passed")).toHaveLength(7);
+    // Seven phases, plus the verify stage's gate on the final text (D61).
+    expect(events.filter((e) => e.type === "gate.passed")).toHaveLength(8);
+    expect(doc?.verification?.completedAt).toBeDefined();
+    expect(doc?.gates?.verify?.ok).toBe(true);
   }, 120_000);
 
   it("retries a phase with gate feedback, then succeeds", async () => {
@@ -597,20 +607,34 @@ class FakeDirectLlm implements DirectLlm {
   /** Edit and HDCP each write one internal link, with different anchors. */
   anchors?: { edit: string; hdcp: string; url: string };
 
+  /** Verify fix pass: replace this text in the article (the reviewer's quote). */
+  fixReplace?: { from: string; to: string };
+  /** The POV writer's pov.md (default: no facts to verify). */
+  pov = POV;
+
   async generate(req: DirectLlmRequest): Promise<DirectLlmResponse> {
     const phase = /You are running the (\w+) phase/.exec(req.prompt)?.[1] ?? "?";
     this.calls.push({ phase, req });
     const file = (name: string, content: string) => `<file name="${name}">\n${content}\n</file>`;
+    // The article as the phase received it (inlined), for phases that rewrite in place.
+    const inlined = /<input path="[^"]*\/article\.md">\n([\s\S]*?)\n<\/input>/.exec(req.prompt)?.[1] ?? ARTICLE;
+    const fixed = this.fixReplace ? inlined.replace(this.fixReplace.from, this.fixReplace.to) : inlined;
     const bodies: Record<string, string> = {
-      outline: file("outline.md", OUTLINE),
-      interview: file("pov.md", POV) + "\n" + file("outline.md", OUTLINE.replace(/## Thesis\n[^\n]+/, `## Thesis\n${POV_THESIS}`)),
+      // The Strategist plans from pov.md when the interview ran (D61): its thesis is the expert's.
+      outline: file(
+        "outline.md",
+        req.prompt.includes('/pov.md">') ? OUTLINE.replace(/## Thesis\n[^\n]+/, `## Thesis\n${POV_THESIS}`) : OUTLINE,
+      ),
+      interview: file("pov.md", this.pov),
+      verify: file("article.md", fixed),
       // Fenced on purpose: the runner must unwrap a code-fenced file body.
       write:
         file("article.md", "```markdown\n" + ARTICLE + "\n```") +
         "\n" +
         file("meta.json", JSON.stringify({ title: "t", slug: "pipeline-e2e" })),
       edit: file("article.md", ARTICLE + "\n<!-- EDIT SUMMARY: no changes needed -->\n"),
-      hdcp: file("article.md", ARTICLE + "\n<!-- EDIT SUMMARY: no changes needed -->\n") + "\n" + file("hdcp.md", HDCP_LOG),
+      // HDCP runs on the Writer's draft (D61) and returns it restructured — here, unchanged.
+      hdcp: file("article.md", inlined) + "\n" + file("hdcp.md", HDCP_LOG),
       schema: file("schema.json", JSON.stringify(SCHEMA)),
       design: file(
         "header.json",
@@ -621,8 +645,8 @@ class FakeDirectLlm implements DirectLlm {
       const withLink = (anchor: string) =>
         ARTICLE.replace("Body text about layers.", `Body text about layers, and [${anchor}](${this.anchors!.url}) covers the rest.`) +
         "\n<!-- EDIT SUMMARY: no changes needed -->\n";
-      bodies["edit"] = file("article.md", withLink(this.anchors.edit));
       bodies["hdcp"] = file("article.md", withLink(this.anchors.hdcp)) + "\n" + file("hdcp.md", HDCP_LOG);
+      bodies["edit"] = file("article.md", withLink(this.anchors.edit));
     }
     if (phase === "write" && this.dirtyDraft) {
       bodies["write"] = file("article.md", ARTICLE.replace("Body text about layers.", "Body text about the blast radius of layers.")) +
@@ -667,6 +691,25 @@ In the third section, as the mechanism that assembles the missing context. No pr
 
 ## Rejected
 - Upgrading the model as the first fix.
+
+## Facts to Verify
+none — the expert raised no third-party facts
+`;
+
+/** A pov.md whose expert raised one third-party fact (D61 evidence stage). */
+const POV_WITH_FACTS = POV.replace(
+  "none — the expert raised no third-party facts",
+  "- F1: Retrieval-augmented generation was introduced in a 2020 paper — check: the paper — said: \"the 2020 RAG paper\"",
+);
+
+const INTERVIEW_EVIDENCE = `## Interview Evidence
+
+### F1: Retrieval-augmented generation was introduced in a 2020 paper
+- Verdict: verified
+- Source 101: **Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks** — Lewis et al., 2020. https://arxiv.org/abs/2005.11401
+- Key claim: The paper introduces retrieval-augmented generation (RAG) models.
+- Supporting quote: "We explore a general-purpose fine-tuning recipe for retrieval-augmented generation (RAG)"
+- Use: as stated
 `;
 
 /** Records every open call; answers with a fixed plan and first question. */
@@ -701,6 +744,8 @@ function directCfg(): WorkerConfig {
       research: "m",
       outline: "claude-sonnet-5",
       interview: "claude-sonnet-5",
+      evidence: "claude-sonnet-5",
+      verify: "claude-sonnet-5",
       write: "claude-sonnet-5",
       edit: "claude-sonnet-5",
       hdcp: "claude-opus-5-5",
@@ -709,7 +754,7 @@ function directCfg(): WorkerConfig {
     },
     direct: {
       ...cfg.direct,
-      routes: { outline: "direct", interview: "direct", write: "direct", edit: "direct", hdcp: "direct", schema: "direct", design: "direct" },
+      routes: { outline: "direct", interview: "direct", verify: "direct", write: "direct", edit: "direct", hdcp: "direct", schema: "direct", design: "direct" },
     },
   };
 }
@@ -733,7 +778,7 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
     await runPipeline(makeDeps(invoker, { cfg: directCfg(), direct }), claimed!);
 
     expect(invoker.calls.map((c) => c.phase)).toEqual(["Researcher"]);
-    expect(llm.calls.map((c) => c.phase)).toEqual(["outline", "write", "edit", "hdcp", "schema", "design"]);
+    expect(llm.calls.map((c) => c.phase)).toEqual(["outline", "write", "hdcp", "edit", "schema", "design"]);
 
     // Inputs inlined; stable reference material sits behind the cache breakpoint.
     const outlineReq = llm.calls[0]!.req;
@@ -773,8 +818,8 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
       ["research", "agent"],
       ["outline", "direct"],
       ["write", "direct"],
-      ["edit", "direct"],
       ["hdcp", "direct"],
+      ["edit", "direct"],
       ["schema", "direct"],
       ["design", "direct"],
     ]);
@@ -815,7 +860,7 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
     expect(doc?.stage).toBe("review");
   }, 120_000);
 
-  it("re-records links and anchors after HDCP rewrites them (D53 registry, not a gate)", async () => {
+  it("records the Editor's anchors — the last rewrite — in the D53 registry (D61)", async () => {
     const article = await createArticle(db, {
       companyId: "testco",
       slug: "hdcp-anchors",
@@ -840,10 +885,10 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
 
     const doc = await db.articles.findOne({ _id: article._id });
     expect(doc?.stage).toBe("review");
-    // The edit gate checked the Editor's anchors; the registry holds HDCP's.
-    expect(seen).toContain("edit");
-    expect(seen[seen.length - 1]).toBe("hdcp");
-    expect(doc?.internalLinks).toEqual([{ url, anchor: "measuring context layers" }]);
+    // The Editor's pre-audit checked HDCP's anchors; the text that ships is the Editor's.
+    expect(seen[0]).toBe("hdcp");
+    expect(seen[seen.length - 1]).toBe("edit");
+    expect(doc?.internalLinks).toEqual([{ url, anchor: "How to measure context layers" }]);
   }, 120_000);
 
   it("hands the Editor the edit gate's findings on the draft before attempt 1", async () => {
@@ -876,52 +921,119 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
     expect(runDoc?.status).toBe("succeeded");
   }, 120_000);
 
-  it("hands the technical reviewer's findings to the Editor and stores them", async () => {
+  it("verify: reviews the final text, fixes the issue, and a confirm round closes it (D61)", async () => {
     const article = await createArticle(db, {
       companyId: "testco",
-      slug: "direct-techreview",
-      folder: "2026-09-14-direct-techreview",
-      topic: "Tech review topic",
+      slug: "direct-verify",
+      folder: "2026-09-14-direct-verify",
+      topic: "Verify topic",
       targetKeyword: "context engineering",
     });
     const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
     const claimed = await claimRun(db, "test-worker", 60_000);
 
-    const seen: string[] = [];
+    const calls: { mode: string | undefined; md: string; previous: number }[] = [];
     const reviewer: TechReviewer = {
-      review: async ({ articleMd }) => {
-        seen.push(articleMd);
-        return {
-          ranAt: new Date(),
-          model: "fake-reviewer",
-          droppedUnquoted: 0,
-          issues: [
-            {
-              kind: "technical_error",
-              quote: "Four layers cover most teams.",
-              problem: "The outline defines five layers.",
-              fix: "Say five layers.",
-            },
-          ],
-        };
+      review: async ({ articleMd, mode, previous }) => {
+        calls.push({ mode, md: articleMd, previous: previous?.length ?? 0 });
+        const issues = articleMd.includes("Body text about layers.")
+          ? [{ kind: "technical_error" as const, quote: "Body text about layers.", problem: "Says nothing about which layers.", fix: "Name them." }]
+          : [];
+        return { ranAt: new Date(), model: "fake-reviewer", droppedUnquoted: 0, issues };
       },
     };
     const llm = new FakeDirectLlm();
+    llm.fixReplace = { from: "Body text about layers.", to: "Body text about the retrieval and memory layers." };
     const direct = new DirectPhaseRunner(llm, fakeRenderer([]));
     const c = { ...directCfg(), techReview: { ...cfg.techReview, enabled: true } };
     await runPipeline(makeDeps(new FakeInvoker(), { cfg: c, direct, techReviewer: reviewer }), claimed!);
 
-    // Reviewed the Writer's draft, before the Editor touched it.
-    expect(seen).toHaveLength(1);
-    expect(seen[0]).not.toContain("EDIT SUMMARY");
-    const editPrompt = llm.calls.find((x) => x.phase === "edit")!.req.prompt;
-    expect(editPrompt).toContain('technical review (technical_error): "Four layers cover most teams."');
+    // It read the FINAL text (after the Editor), fixed once, then confirmed.
+    expect(calls.map((x) => x.mode)).toEqual(["review", "confirm"]);
+    expect(calls[0]?.md).toContain("EDIT SUMMARY");
+    expect(calls[1]?.previous).toBe(1);
+    expect(llm.calls.map((x) => x.phase)).toEqual(["outline", "write", "hdcp", "edit", "verify", "schema", "design"]);
+    expect(llm.calls.find((x) => x.phase === "verify")!.req.prompt).toContain('FIX MODE');
     const doc = await db.articles.findOne({ _id: article._id });
-    expect(doc?.technicalReview?.issues).toHaveLength(1);
+    expect(doc?.artifacts.article).toContain("the retrieval and memory layers");
+    expect(doc?.verification?.rounds).toHaveLength(2);
+    expect(doc?.verification?.rounds[0]?.fixed).toBe(true);
+    expect(doc?.verification?.unresolved).toEqual([]);
     expect((await db.runs.findOne({ _id: run._id }))?.status).toBe("succeeded");
   }, 120_000);
 
-  it("runs the Editor normally when the technical review is skipped", async () => {
+  it("verify: an issue still open after the confirm round is flagged inline and blocks export", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "direct-verify-open",
+      folder: "2026-09-14-direct-verify-open",
+      topic: "Verify open topic",
+      targetKeyword: "context engineering",
+    });
+    await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const claimed = await claimRun(db, "test-worker", 60_000);
+    const reviewer: TechReviewer = {
+      review: async () => ({
+        ranAt: new Date(),
+        model: "fake-reviewer",
+        droppedUnquoted: 0,
+        issues: [{ kind: "technical_error", quote: "Body text about layers.", problem: "Says nothing about which layers.", fix: "Name them." }],
+      }),
+    };
+    const llm = new FakeDirectLlm(); // its fix pass changes nothing
+    const c = { ...directCfg(), techReview: { ...cfg.techReview, enabled: true } };
+    await runPipeline(makeDeps(new FakeInvoker(), { cfg: c, direct: new DirectPhaseRunner(llm, fakeRenderer([])), techReviewer: reviewer }), claimed!);
+
+    const doc = await db.articles.findOne({ _id: article._id });
+    expect(doc?.stage).toBe("review");
+    expect(doc?.artifacts.article).toContain("Body text about layers. [VERIFY: Says nothing about which layers.]");
+    expect(doc?.verification?.unresolved).toHaveLength(1);
+    expect(llm.calls.filter((x) => x.phase === "verify")).toHaveLength(1); // one fix pass, then flag
+    expect(framerExportProblems(doc!, { signoffRequired: false }).join(" ")).toContain("[VERIFY:");
+  }, 120_000);
+
+  it("verify: a restart after the fix pass confirms instead of re-reviewing the fixed text", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "direct-verify-restart",
+      folder: "2026-09-14-direct-verify-restart",
+      topic: "Verify restart topic",
+      targetKeyword: "context engineering",
+    });
+    const run = await enqueueRun(db, { companyId: "testco", articleId: article._id as ObjectId });
+    const modes: (string | undefined)[] = [];
+    let crashOnce = true;
+    const reviewer: TechReviewer = {
+      review: async ({ articleMd, mode }) => {
+        modes.push(mode);
+        if (mode === "confirm" && crashOnce) {
+          crashOnce = false;
+          throw new Error("worker lost during the confirm round");
+        }
+        const issues = articleMd.includes("Body text about layers.")
+          ? [{ kind: "technical_error" as const, quote: "Body text about layers.", problem: "Vague.", fix: "Name them." }]
+          : [];
+        return { ranAt: new Date(), model: "fake-reviewer", droppedUnquoted: 0, issues };
+      },
+    };
+    const llm = new FakeDirectLlm();
+    llm.fixReplace = { from: "Body text about layers.", to: "Body text about the retrieval and memory layers." };
+    const c = { ...directCfg(), techReview: { ...cfg.techReview, enabled: true } };
+    const deps = makeDeps(new FakeInvoker(), { cfg: c, direct: new DirectPhaseRunner(llm, fakeRenderer([])), techReviewer: reviewer });
+    await expect(runPipeline(deps, (await claimRun(db, "test-worker", 60_000))!)).rejects.toThrow(/confirm round/);
+    const requeued = await db.runs.findOne({ _id: run._id });
+    expect(requeued?.status).toBe("queued");
+    expect(requeued?.fromStage).toBe("verify");
+
+    expect(await runPipeline(deps, (await claimRun(db, "test-worker", 60_000))!)).toBe("completed");
+    // One fresh review ever: the resumed run found its fix and went straight to confirming it.
+    expect(modes).toEqual(["review", "confirm", "confirm"]);
+    expect(llm.calls.filter((x) => x.phase === "verify")).toHaveLength(1);
+    const doc = await db.articles.findOne({ _id: article._id });
+    expect(doc?.verification?.unresolved).toEqual([]);
+  }, 120_000);
+
+  it("verify passes on the Edit checks when the technical review is skipped", async () => {
     const article = await createArticle(db, {
       companyId: "testco",
       slug: "direct-techreview-skip",
@@ -940,7 +1052,8 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
       claimed!,
     );
     const doc = await db.articles.findOne({ _id: article._id });
-    expect(doc?.technicalReview?.skipped).toBe("stop_reason refusal");
+    expect(doc?.verification?.rounds[0]?.review.skipped).toBe("stop_reason refusal");
+    expect(doc?.gates?.verify?.ok).toBe(true);
     expect((await db.runs.findOne({ _id: run._id }))?.status).toBe("succeeded");
   }, 120_000);
 
@@ -987,7 +1100,7 @@ describe("runPipeline, direct Messages API route (10.3)", () => {
 });
 
 describe("runPipeline, expert interview (D59)", () => {
-  it("parks at the interview, then refines the outline from the answers and hands pov.md on", async () => {
+  it("parks right after research, writes pov.md from the answers, then plans once from it (D61)", async () => {
     const article = await createArticle(db, {
       companyId: "testco",
       slug: "interview-e2e",
@@ -1016,7 +1129,9 @@ describe("runPipeline, expert interview (D59)", () => {
     expect(doc?.interview?.status).toBe("open");
     expect(doc?.interview?.runId?.equals(run._id as ObjectId)).toBe(true);
     expect(doc?.interview?.messages[0]?.content).toContain("Which is closest");
-    expect(llm.calls.map((c) => c.phase)).toEqual(["outline"]);
+    // D61: the interview opens right after research — nothing is planned yet.
+    expect(llm.calls.map((c) => c.phase)).toEqual([]);
+    expect(doc?.artifacts.outline ?? "").not.toContain("## Full Outline");
     // Parked runs stay out of the queue.
     expect(await claimRun(db, "test-worker", 60_000)).toBeNull();
 
@@ -1028,12 +1143,17 @@ describe("runPipeline, expert interview (D59)", () => {
     expect(await runPipeline(deps, resumed!)).toBe("completed");
 
     expect(interviewer.calls).toBe(1);
-    expect(llm.calls.map((c) => c.phase)).toEqual(["outline", "interview", "write", "edit", "hdcp", "schema", "design"]);
+    // No facts to verify, so evidence is skipped; the Strategist plans once, from pov.md.
+    expect(llm.calls.map((c) => c.phase)).toEqual(["interview", "outline", "write", "hdcp", "edit", "schema", "design"]);
     const folder = "articles/2026-09-30-interview-e2e";
-    const refine = llm.calls.find((c) => c.phase === "interview")!.req;
-    expect(refine.system[0]?.text).toContain("Interview Refiner");
-    expect(refine.prompt).toContain(`<input path="${folder}/interview.md">`);
-    expect(refine.prompt).toContain("never reaches the model");
+    const povWriter = llm.calls.find((c) => c.phase === "interview")!.req;
+    expect(povWriter.system[0]?.text).toContain("POV Writer");
+    expect(povWriter.prompt).toContain(`<input path="${folder}/interview.md">`);
+    expect(povWriter.prompt).toContain("never reaches the model");
+    expect(povWriter.prompt).not.toContain(`<input path="${folder}/outline.md">`);
+    const strategist = llm.calls.find((c) => c.phase === "outline")!.req.prompt;
+    expect(strategist).toContain(`<input path="${folder}/pov.md">`);
+    expect(strategist).toContain("EXPERT POV BRIEF");
     const write = llm.calls.find((c) => c.phase === "write")!.req.prompt;
     expect(write).toContain(`<input path="${folder}/pov.md">`);
     expect(write).toContain("the first sentence carries");
@@ -1050,6 +1170,34 @@ describe("runPipeline, expert interview (D59)", () => {
     expect(types).toContain("interview.opened");
     expect(types).toContain("interview.completed");
     expect((await db.runs.findOne({ _id: run._id }))?.status).toBe("succeeded");
+  }, 120_000);
+
+  it("verifies the facts the expert raised before the Strategist plans (D61 evidence)", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "interview-evidence",
+      folder: "2026-09-30-interview-evidence",
+      topic: "Context engineering basics",
+      targetKeyword: "context engineering",
+      interviewMode: "pause",
+    });
+    const id = article._id as ObjectId;
+    await enqueueRun(db, { companyId: "testco", articleId: id });
+    const llm = new FakeDirectLlm();
+    llm.pov = POV_WITH_FACTS;
+    const invoker = new FakeInvoker();
+    const deps = makeDeps(invoker, { cfg: directCfg(), direct: new DirectPhaseRunner(llm, fakeRenderer([])), interviewer: new FakeInterviewer() });
+    expect(await runPipeline(deps, (await claimRun(db, "test-worker", 60_000))!)).toBe("awaiting_input");
+    await appendExpertMessage(db, id, "C — and the 2020 RAG paper is where retrieval started.");
+    await closeInterview(db, (await db.articles.findOne({ _id: id }))!, "complete");
+    expect(await runPipeline(deps, (await claimRun(db, "test-worker", 60_000))!)).toBe("completed");
+
+    expect(invoker.calls.map((c) => c.phase)).toEqual(["Researcher", "Evidence"]);
+    const doc = await db.articles.findOne({ _id: id });
+    expect(doc?.artifacts.researchNotes).toContain("## Interview Evidence");
+    expect(doc?.gates?.evidence?.ok).toBe(true);
+    const strategist = llm.calls.find((c) => c.phase === "outline")!.req.prompt;
+    expect(strategist).toContain("### F1: Retrieval-augmented generation was introduced in a 2020 paper");
   }, 120_000);
 
   it("an operator skip resumes at the Writer without refining", async () => {

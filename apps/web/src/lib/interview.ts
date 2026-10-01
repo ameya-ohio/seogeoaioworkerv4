@@ -1,7 +1,16 @@
 import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
-import { buildInterviewContext, cfgGet, repoFileReader, type ArticleDoc } from "@blogagent/engine";
-import { getCompany, getDb } from "./db";
+import {
+  buildInterviewContext,
+  cfgGet,
+  CTA_SETTINGS_KEY,
+  mergeCtaSettings,
+  renderPageSpec,
+  repoFileReader,
+  resolvePageRules,
+  type ArticleDoc,
+} from "@blogagent/engine";
+import { getCompany, getDb, getFormats } from "./db";
 import { repoRoot } from "./repo";
 
 /**
@@ -24,13 +33,20 @@ export async function interviewSystem(article: ArticleDoc): Promise<Anthropic.Te
   const proofPoints = await files.read("context/sales/proof-points.md");
   const competitive = await files.read("context/sales/competitive-landscape.md");
   const description = cfgGet<string | undefined>(company, "company.description", undefined);
+  // The page's facets and CTA, as the worker's page.md states them (without the format guide).
+  const ctas = mergeCtaSettings(company.raw, (await db.settings.findOne({ companyId: company.companyId, key: CTA_SETTINGS_KEY }))?.value);
+  const pageMd = renderPageSpec(resolvePageRules(await getFormats(), article.facets, { ctas }), "");
   const text = buildInterviewContext({
     companyName: company.companyName,
     ...(description ? { companyDescription: description } : {}),
     topic: article.topic,
     ...(article.targetKeyword ? { keyword: article.targetKeyword } : {}),
     researchNotes: article.artifacts.researchNotes ?? "",
-    outline: article.artifacts.outline ?? "",
+    pageMd,
+    // D61 interviews are built from research; an interview opened after an
+    // outline (before D61) keeps that outline as context.
+    ...(article.interview?.basis !== "research" && article.artifacts.outline ? { outline: article.artifacts.outline } : {}),
+    ...(article.brief?.spec?.companyPosition ? { companyPosition: article.brief.spec.companyPosition } : {}),
     context,
     caseStudies: await files.list("context/case-studies"),
     ...(proofPoints ? { proofPoints } : {}),

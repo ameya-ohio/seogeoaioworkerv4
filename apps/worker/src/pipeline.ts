@@ -1,9 +1,17 @@
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   GATES,
   applyRepoFiles,
+  evidenceAsSources,
+  factsToVerify,
+  markdownSection,
+  parseInterviewEvidence,
+  verifyGate,
+  type ArticleVerification,
+  type TechnicalIssue,
   awaitInput,
   defaultInterviewMode,
   markInterviewRefined,
@@ -46,12 +54,12 @@ import {
 } from "@blogagent/engine";
 import { materializePageSpec, materializeResearchBrief, pageRulesFor, stampArticleFrontmatter } from "./pageSpec.js";
 import type { AgentInvoker, AgentRunOutcome } from "./agentRunner.js";
-import type { WorkerConfig } from "./config.js";
+import { AGENT_ONLY_PHASES, type DirectPhase, type WorkerConfig } from "./config.js";
 import type { DirectPhaseRunner } from "./directRunner.js";
 import type { InterviewOpener } from "./interviewOpener.js";
 import { PHASE_ORDER, phaseDefs, type PhaseContext } from "./phases.js";
 import { articleProse, type CitationVerifier, type LinkChecker } from "./quality.js";
-import { formatIssue, type TechReviewer } from "./techReview.js";
+import type { TechReviewer } from "./techReview.js";
 import {
   articleDir,
   materializeCompetitorGaps,
@@ -70,7 +78,7 @@ export interface PipelineDeps {
   citationVerifier: CitationVerifier;
   /** D35: internal-link resolution — edit gate depends on it. */
   linkChecker: LinkChecker;
-  /** Pre-edit expert read of the draft; findings join the edit pre-audit. */
+  /** D61: expert read of the final text, in the verify stage. */
   techReviewer?: TechReviewer;
   /** D59: opens the expert interview. Absent = interviews are skipped. */
   interviewer?: InterviewOpener;
@@ -107,8 +115,10 @@ async function loadGateFiles(
   if (phase === "hdcp") {
     const hdcpLog = await read("hdcp.md");
     if (hdcpLog !== undefined) files.hdcpLog = hdcpLog;
+    // D61: the draft as it was before HDCP, so no editor note can be deleted.
+    if (article.artifacts.article) files.priorArticle = article.artifacts.article;
   }
-  if (phase === "interview") {
+  if (phase === "interview" || phase === "evidence") {
     const pov = await read("pov.md");
     if (pov !== undefined) files.pov = pov;
   }
@@ -139,7 +149,7 @@ async function runCodeStep(
   const { cfg, db } = deps;
   // The worker owns the facet and canonical_url frontmatter keys (D45–D46):
   // stamp them before anything reads the article.
-  if (rules && (phase === "write" || phase === "edit" || phase === "hdcp" || phase === "schema")) {
+  if (rules && (phase === "write" || phase === "hdcp" || phase === "edit" || phase === "verify" || phase === "schema")) {
     if (await stampArticleFrontmatter(cfg, article, rules)) {
       deps.log(`[${article.slug}/${phase}] stamped facet/canonical frontmatter`);
     }
@@ -197,7 +207,37 @@ async function runCodeStep(
     }
     return { citationReport, competitorReport };
   }
-  if (phase === "edit" || phase === "design") {
+  if (phase === "evidence") {
+    // D61: the verified interview facts get the same live check research's
+    // claims do, and join the research-verified set the Edit gate cites from.
+    const notes = await readIf("research-notes.md");
+    const entries = parseInterviewEvidence(notes).filter((e) => e.verdict !== "unsourced" && e.url);
+    const competitorReport = await runResearchCompetitorCheck(
+      opts,
+      join(relFolder, "research-notes.md"),
+      article.facets?.articleType,
+    );
+    if (!entries.length) return { competitorReport };
+    const citationReport = await deps.citationVerifier.verifyResearch(evidenceAsSources(entries));
+    if (article._id && citationReport.verifiedUrls.length) {
+      const prior = article.citationChecks;
+      const merged: CitationReport = prior
+        ? {
+            ...prior,
+            results: [...prior.results.filter((r) => r.sourceN < 101), ...citationReport.results],
+            verifiedUrls: [...new Set([...prior.verifiedUrls, ...citationReport.verifiedUrls])],
+            verifiedSourceCount: prior.verifiedSourceCount + citationReport.verifiedSourceCount,
+          }
+        : citationReport;
+      await db.articles.updateOne({ _id: article._id }, { $set: { citationChecks: merged, updatedAt: new Date() } });
+    }
+    deps.log(
+      `[${article.slug}/evidence] ${entries.length} fact source(s) checked: ${citationReport.verifiedSourceCount} verified, ` +
+        `${citationReport.unsupportedCount} unsupported, ${citationReport.unreachableCount} unreachable`,
+    );
+    return { citationReport, competitorReport };
+  }
+  if (phase === "edit" || phase === "verify" || phase === "design") {
     const report = await runSeoAudit(opts, relFolder);
     if (article._id) {
       await db.articles.updateOne(
@@ -205,7 +245,7 @@ async function runCodeStep(
         { $set: { audit: report, updatedAt: new Date() } },
       );
     }
-    if (phase !== "edit") return {};
+    if (phase === "design") return {};
     const body = await readIf("article.md");
     // Body citations check deterministically against the research-verified
     // set; internal links resolve against inventory + the live site.
@@ -230,52 +270,50 @@ async function runCodeStep(
   return {};
 }
 
+/** Stable id for a text, so a verification round is reused for the text it read. */
+function hashText(text: string): string {
+  return createHash("sha256").update(text).digest("hex").slice(0, 16);
+}
+
 /**
- * Expert read of the Writer's draft (agents/technical-reviewer.md), stored
- * on the article and returned as pre-audit lines. Never blocks: a skipped
- * review is logged and the Editor runs without it.
+ * D61: put a `[VERIFY: …]` note right after each unresolved issue's quote,
+ * so the editor sees it in place and the export refuses until it's resolved.
+ * A quote the text no longer contains gets its note at the end of the body.
  */
-async function runTechnicalReview(deps: PipelineDeps, article: ArticleDoc): Promise<string[]> {
-  const { cfg, db } = deps;
-  if (!deps.techReviewer || !cfg.techReview.enabled) return [];
-  const dir = articleDir(cfg, article);
-  const read = async (name: string) =>
-    existsSync(join(dir, name)) ? await readFile(join(dir, name), "utf-8") : "";
-  const review = await deps.techReviewer.review({
-    articleMd: await read("article.md"),
-    researchNotes: await read("research-notes.md"),
-    pageMd: await read("page.md"),
-    outline: await read("outline.md"),
-    onProgress: (t) => deps.log(`[${article.slug}/tech-review] ${t}`),
-  });
-  if (article._id) {
-    await db.articles.updateOne(
-      { _id: article._id },
-      { $set: { technicalReview: review, updatedAt: new Date() } },
-    );
+export function flagUnresolved(md: string, issues: TechnicalIssue[]): string {
+  let out = md;
+  const tail: string[] = [];
+  for (const i of issues) {
+    const problem = i.problem.replace(/[[\]]/g, "").replace(/\s+/g, " ").trim().slice(0, 300);
+    const note = `[VERIFY: ${problem}]`;
+    if (out.includes(note)) continue;
+    const at = out.indexOf(i.quote);
+    if (at !== -1) {
+      const end = at + i.quote.length;
+      out = `${out.slice(0, end)} ${note}${out.slice(end)}`;
+    } else {
+      tail.push(`[VERIFY: "${i.quote.replace(/[[\]]/g, "").slice(0, 160)}" — ${problem}]`);
+    }
   }
-  deps.log(
-    `[${article.slug}/tech-review] ` +
-      (review.skipped
-        ? `skipped (${review.skipped})`
-        : `${review.issues.length} issue(s)${review.droppedUnquoted ? `, ${review.droppedUnquoted} dropped (quote not in draft)` : ""}`) +
-      ` — ${review.model}${review.costUsd !== undefined ? `, $${review.costUsd.toFixed(3)}` : ""}`,
-  );
-  for (const i of review.issues) {
-    deps.log(`[${article.slug}/tech-review]   - ${i.kind}: "${i.quote.slice(0, 90)}" — ${i.problem.slice(0, 160)}`);
-  }
-  return review.issues.map(formatIssue);
+  if (!tail.length) return out;
+  const block = `${tail.join("\n\n")}\n\n`;
+  const at = [out.indexOf("```json-ld"), out.indexOf("<!-- EDIT SUMMARY")].filter((n) => n !== -1).sort((a, b) => a - b)[0];
+  return at === undefined ? `${out.trimEnd()}\n\n${block}` : `${out.slice(0, at)}${block}${out.slice(at)}`;
 }
 
 /**
  * HDCP inputs (agents/hdcp.md): the protocol's `cluster_context` — the hub,
  * the pages that own sibling topics, the glossary when context/glossary.md
- * exists — plus what the pipeline already knows about the draft (the
- * technical review's findings and the edit-stage audit's failures/warnings).
+ * exists — plus the audit of the Writer's draft (D61: HDCP runs before the
+ * Editor, and the expert review reads the final text later).
  */
-async function materializeHdcpInputs(cfg: WorkerConfig, article: ArticleDoc, inventory: LinkTarget[]): Promise<void> {
-  const tr = article.technicalReview;
-  const checks = (article.audit?.checks ?? []).filter((c) => c.level !== "pass");
+async function materializeHdcpInputs(
+  cfg: WorkerConfig,
+  article: ArticleDoc,
+  inventory: LinkTarget[],
+  draftAudit?: ScriptReport,
+): Promise<void> {
+  const checks = (draftAudit?.checks ?? []).filter((c) => c.level !== "pass");
   const role = article.facets?.pageRole ?? "";
   const hubPath = role === "cluster" && article.trail && article.trail.length >= 2 ? article.trail[article.trail.length - 2]?.path : undefined;
   const base = article.canonicalUrl && article.path && article.canonicalUrl.endsWith(article.path)
@@ -306,13 +344,7 @@ async function materializeHdcpInputs(cfg: WorkerConfig, article: ArticleDoc, inv
     ``,
     glossary || `_none: no context/glossary.md yet — hold each core term to one definition within the article_`,
     ``,
-    `## Technical review (before the Editor)`,
-    ``,
-    ...(tr && !tr.skipped && tr.issues.length
-      ? tr.issues.map((i) => `- ${i.kind}: "${i.quote}" — ${i.problem}${i.fix ? ` Fix: ${i.fix}` : ""}`)
-      : [tr?.skipped ? `_skipped: ${tr.skipped}_` : `_no findings_`]),
-    ``,
-    `## Latest audit (edit stage): failures and warnings`,
+    `## Audit of the draft: failures and warnings (the Editor clears what's left after you)`,
     ``,
     ...(checks.length ? checks.map((c) => `- ${c.level.toUpperCase()}: ${c.message}`) : [`_clean_`]),
     ``,
@@ -372,6 +404,8 @@ async function executePhase(
   run: RunDoc,
   article: ArticleDoc,
   phase: WorkStage,
+  /** D61 verify fix pass: the issues to fix, and the Edit gate instead of the verify gate. */
+  opts: { verifyIssues?: TechnicalIssue[]; gate?: (files: GateFiles) => GateResult } = {},
 ): Promise<PhaseOutcome> {
   const { cfg, db, invoker } = deps;
   const defs = phaseDefs(cfg);
@@ -384,14 +418,23 @@ async function executePhase(
   let attempt = 0;
   let gateFeedback: string[] | undefined;
 
-  const route = phase === "research" ? "agent" : cfg.direct.routes[phase];
+  const route = AGENT_ONLY_PHASES.includes(phase) ? "agent" : cfg.direct.routes[phase as DirectPhase];
 
   // page.md (D45–D50) is rebuilt for every phase, so facets the Strategist
   // chose for a page that had none reach the Writer.
   const page = await pageRulesFor(db, cfg, article);
   await materializePageSpec(cfg, article, page.rules, page.inventory);
   if (phase === "research") await materializeResearchBrief(cfg, article, page.rules, page.formats, page.inventory);
-  if (phase === "hdcp") await materializeHdcpInputs(cfg, article, page.inventory);
+  if (phase === "hdcp") {
+    const opts2 = {
+      repoRoot: cfg.repoRoot,
+      pythonBin: cfg.pythonBin,
+      ...(cfg.companyConfigPath ? { companyConfigPath: cfg.companyConfigPath } : {}),
+    };
+    if (page.rules) await stampArticleFrontmatter(cfg, article, page.rules);
+    const draftAudit = await runSeoAudit(opts2, join("articles", article.folder));
+    await materializeHdcpInputs(cfg, article, page.inventory, draftAudit);
+  }
 
   // Edit pre-audit: run the edit gate's own checks on the incoming draft so
   // attempt 1 starts with the exact problems a retry would have been given.
@@ -404,15 +447,14 @@ async function executePhase(
     const advisory = (preOutputs.report?.checks ?? [])
       .filter((c) => c.level === "warn" && c.message.startsWith("Style:"))
       .map((c) => `(advisory) ${c.message}`);
-    const technical = await runTechnicalReview(deps, article);
-    const items = [...(pre.ok ? [] : pre.problems), ...technical, ...advisory];
+    // D61: the technical review reads the final text in the verify stage.
+    const items = [...(pre.ok ? [] : pre.problems), ...advisory];
     if (items.length) preAudit = items;
     deps.log(
       `[${article.slug}/edit] pre-audit: ${pre.ok ? "draft passes the gate" : `${pre.problems.length} gate problem(s)`}` +
-        `, ${technical.length} technical, ${advisory.length} advisory`,
+        `, ${advisory.length} advisory`,
     );
-    // One line per non-technical item (technical ones were logged by the review).
-    for (const item of [...(pre.ok ? [] : pre.problems), ...advisory]) {
+    for (const item of items) {
       deps.log(`[${article.slug}/edit]   - ${item.slice(0, 220)}`);
     }
     await db.articles.updateOne(
@@ -444,12 +486,13 @@ async function executePhase(
       hasCompetitorGaps: existsSync(join(articleDir(cfg, article), "competitor-gaps.md")),
       ...(gateFeedback ? { gateFeedback } : {}),
       ...(preAudit ? { preAudit } : {}),
+      ...(opts.verifyIssues ? { verifyIssues: opts.verifyIssues } : {}),
       headerPattern: page.rules.format.headerPattern,
     };
     const onProgress = (text: string) => deps.log(`[${article.slug}/${phase}] ${text.slice(0, 160)}`);
     const outcome: AgentRunOutcome =
-      phase !== "research" && route === "direct"
-        ? await deps.direct.run(phase, def.specFile, ctx, onProgress)
+      route === "direct"
+        ? await deps.direct.run(phase as DirectPhase, def.specFile, ctx, onProgress)
         : await invoker.run({
             systemPromptFile: def.specFile,
             prompt: def.buildPrompt(ctx),
@@ -482,7 +525,7 @@ async function executePhase(
 
     const outputs = await runCodeStep(deps, article, phase, page.rules, page.inventory);
     const files = await loadGateFiles(cfg, article, phase, outputs, page);
-    gate = GATES[phase](files);
+    gate = (opts.gate ?? GATES[phase])(files);
     await saveGateResult(db, articleId, phase, gate);
 
     // Gate outcomes otherwise live only in Mongo; the log is where an
@@ -514,19 +557,8 @@ async function executePhase(
         data: { phase, attempt },
       });
       await persistPhaseOutputs(deps.db, cfg, deps.storage, article, phase);
-      if (phase === "hdcp") {
-        await recordHdcp(deps, article, files.hdcpLog);
-        // HDCP rewrote the anchors: record the ones that ship. Not a gate
-        // (operator decision) — a problem shows in Review, it doesn't block.
-        if (files.article) {
-          const lr = await recordLinks(deps, article, files.article, page.inventory);
-          const flagged = lr.results.filter((r) => r.status === "missing" || r.status === "off_target" || r.status === "anchor_conflict");
-          deps.log(
-            `[${article.slug}/hdcp] links re-recorded: ${lr.results.length} internal, ${lr.deferredCount ?? 0} deferred` +
-              (flagged.length ? `, ${flagged.length} to review: ${flagged.map((r) => `${r.status} ${r.url}`).join("; ")}` : ""),
-          );
-        }
-      }
+      // D61: the Editor runs after HDCP and records the links that ship.
+      if (phase === "hdcp") await recordHdcp(deps, article, files.hdcpLog);
       if (phase === "outline" && files.outline) {
         // Which case study (or incident, or none) the article is anchored on.
         const anchor = /^##\s+Real-World Anchor\s*\n+([^\n]+)/im.exec(files.outline)?.[1]?.trim();
@@ -565,7 +597,8 @@ async function executePhase(
  * D59: what the interview stage does for this run.
  * - `park`: the interview was just opened (plan + first question); the run
  *   waits for the operator as awaiting_input.
- * - `refine`: the operator finished this run's interview; the refiner runs.
+ * - `refine`: the operator finished the interview; the POV writer turns the
+ *   answers into pov.md, before the Strategist plans (D61).
  * - `skip`: skipped by the operator, the plan, or company.yaml.
  * An interview another run opened (before a re-run from outline) doesn't
  * count: this run opens its own.
@@ -606,18 +639,22 @@ async function interviewStep(deps: PipelineDeps, run: RunDoc, article: ArticleDo
   }
 
   const startedAt = new Date();
+  // The opener reads the page's facets and CTA from page.md (D61: no outline exists yet).
+  const page = await pageRulesFor(db, cfg, article);
+  await materializePageSpec(cfg, article, page.rules, page.inventory);
   const opening = await deps.interviewer.open({
     article,
     companyName: deps.companyName,
     onProgress: (t) => deps.log(`${tag} ${t.slice(0, 160)}`),
   });
-  // A POV from an earlier interview no longer matches the new outline.
+  // A POV from an earlier interview no longer matches the new research.
   if (article.artifacts.pov) {
     await db.articles.updateOne({ _id: articleId }, { $unset: { "artifacts.pov": "" } });
     await rm(join(articleDir(cfg, article), "pov.md"), { force: true });
   }
   await openInterview(db, articleId, {
     runId,
+    basis: "research",
     plan: opening.plan,
     opening: opening.opening,
     ...(opening.captured ? { captured: opening.captured } : {}),
@@ -647,6 +684,137 @@ async function interviewStep(deps: PipelineDeps, run: RunDoc, article: ArticleDo
     `${tag} opened (${opening.model}${opening.costUsd !== undefined ? `, $${opening.costUsd.toFixed(3)}` : ""}) — run waits for the expert`,
   );
   return "park";
+}
+
+/**
+ * D61: the evidence stage runs when pov.md lists facts to verify, or when an
+ * interviewed article's pov.md predates the list (the agent then reads the
+ * transcript for them). Otherwise there is nothing to check.
+ */
+function needsEvidence(article: ArticleDoc): boolean {
+  const pov = article.artifacts.pov;
+  if (!pov) return false;
+  if (factsToVerify(pov).length) return true;
+  return !markdownSection(pov, "Facts to Verify") && Boolean(article.interview?.messages.some((m) => m.role === "user"));
+}
+
+const MAX_VERIFY_ROUNDS = 2;
+
+/**
+ * D61 verify stage: an expert read of the FINAL text, after the last
+ * rewrite. Round 1 reviews it fresh; if it finds issues a fix pass (the
+ * Editor in Fix mode, gated by the Edit checks) resolves them, and round 2
+ * only confirms the listed issues (plus new technical errors). What's left
+ * becomes inline [VERIFY: …] notes the export refuses. Each round is stored
+ * against the hash of the text it read, and each fix against the text it
+ * produced, so a restart picks up where the loop was instead of asking the
+ * reviewer again and getting a different list.
+ */
+async function verifyStep(deps: PipelineDeps, run: RunDoc, article: ArticleDoc): Promise<void> {
+  const { cfg, db } = deps;
+  const runId = run._id;
+  const articleId = article._id;
+  if (!runId || !articleId) throw new Error("run/article missing _id");
+  const tag = `[${article.slug}/verify]`;
+  const dir = articleDir(cfg, article);
+  const read = async (name: string) =>
+    existsSync(join(dir, name)) ? await readFile(join(dir, name), "utf-8") : "";
+  const page = await pageRulesFor(db, cfg, article);
+  await materializePageSpec(cfg, article, page.rules, page.inventory);
+
+  const prior = article.verification;
+  const v: ArticleVerification = prior?.runId?.equals(runId)
+    ? { ...prior, rounds: [...prior.rounds] }
+    : { runId, rounds: [], unresolved: [] };
+  delete v.completedAt;
+  const save = () => db.articles.updateOne({ _id: articleId }, { $set: { verification: v, updatedAt: new Date() } });
+
+  let open: TechnicalIssue[] = [];
+  if (!deps.techReviewer || !cfg.techReview.enabled) {
+    deps.log(`${tag} technical review off — verifying the Edit checks only`);
+  } else {
+    for (let round = 1; round <= MAX_VERIFY_ROUNDS; round++) {
+      const md = await read("article.md");
+      const hash = hashText(md);
+      // This round's fix already produced the current text: go on to confirm it.
+      if (v.rounds.some((x) => x.round === round && x.fixedHash === hash)) continue;
+      const mode = round === 1 ? "review" : "confirm";
+      let r = v.rounds.find((x) => x.round === round && x.articleHash === hash);
+      if (r) {
+        deps.log(`${tag} round ${round}: reusing the stored ${r.mode} of this text (${r.open.length} open)`);
+      } else {
+        const startedAt = new Date();
+        const previous = v.rounds.find((x) => x.round === round - 1)?.open;
+        const review = await deps.techReviewer.review({
+          articleMd: md,
+          researchNotes: await read("research-notes.md"),
+          pageMd: await read("page.md"),
+          outline: await read("outline.md"),
+          pov: await read("pov.md"),
+          interview: await read("interview.md"),
+          mode,
+          ...(previous?.length ? { previous } : {}),
+          onProgress: (t) => deps.log(`${tag} ${t.slice(0, 160)}`),
+        });
+        r = { round, articleHash: hash, mode, review, open: review.skipped ? [] : review.issues, fixed: false, at: new Date() };
+        // A fresh review of round N supersedes any later round from an earlier pass.
+        v.rounds = [...v.rounds.filter((x) => x.round < round), r];
+        await save();
+        await pushPhaseResult(db, runId, {
+          phase: "verify",
+          status: "succeeded",
+          attempt: round,
+          route: "direct",
+          startedAt,
+          endedAt: new Date(),
+          usage: { model: review.model, numTurns: 1, ...(review.costUsd !== undefined ? { costUsd: review.costUsd } : {}) },
+        });
+        deps.log(
+          `${tag} round ${round} (${mode}): ` +
+            (review.skipped ? `skipped (${review.skipped})` : `${review.issues.length} issue(s)`) +
+            ` — ${review.model}${review.costUsd !== undefined ? `, $${review.costUsd.toFixed(3)}` : ""}`,
+        );
+        for (const i of r.open) deps.log(`${tag}   - ${i.kind}: "${i.quote.slice(0, 90)}" — ${i.problem.slice(0, 160)}`);
+      }
+      open = r.open;
+      if (!open.length || round === MAX_VERIFY_ROUNDS) break;
+      // Fix exactly these, gated by every Edit check.
+      await executePhase(deps, run, (await getArticle(db, articleId)) ?? article, "verify", {
+        verifyIssues: open,
+        gate: GATES.edit,
+      });
+      r.fixed = true;
+      r.fixedHash = hashText(await read("article.md"));
+      await save();
+    }
+  }
+
+  if (open.length) {
+    const flagged = flagUnresolved(await read("article.md"), open);
+    await writeFile(join(dir, "article.md"), flagged, "utf-8");
+    deps.log(`${tag} ${open.length} issue(s) left for the editor as [VERIFY: …] notes (the export refuses until resolved)`);
+  }
+  v.unresolved = open;
+  v.completedAt = new Date();
+  await save();
+
+  // The text that ships passes every Edit check and carries its notes.
+  const outputs = await runCodeStep(deps, article, "verify", page.rules, page.inventory);
+  const files = await loadGateFiles(cfg, article, "verify", outputs, page);
+  files.verification = v;
+  const gate = verifyGate(files);
+  await saveGateResult(db, articleId, "verify", gate);
+  deps.log(`${tag} ${gate.ok ? "gate passed" : `gate FAILED: ${gate.problems.join("; ").slice(0, 1200)}`}`);
+  if (!gate.ok) throw new Error(`verify: ${gate.problems.join("; ")}`);
+  await persistPhaseOutputs(db, cfg, deps.storage, article, "verify");
+  await emitEvent(db, {
+    companyId: run.companyId,
+    runId,
+    articleId,
+    type: "gate.passed",
+    message: `Verify passed${open.length ? ` — ${open.length} issue(s) flagged for the editor` : ""}`,
+    data: { phase: "verify", rounds: v.rounds.length, unresolved: open.length },
+  });
 }
 
 /**
@@ -709,6 +877,14 @@ export async function runPipeline(deps: PipelineDeps, run: RunDoc): Promise<"com
         const step = await interviewStep(deps, run, fresh);
         if (step === "park") return "awaiting_input";
         if (step === "skip") continue;
+      }
+      if (phase === "evidence" && !needsEvidence(fresh)) {
+        deps.log(`[${fresh.slug}/evidence] nothing to verify — ${fresh.artifacts.pov ? "the interview raised no third-party facts" : "no interview"}`);
+        continue;
+      }
+      if (phase === "verify") {
+        await verifyStep(deps, run, fresh);
+        continue;
       }
       await executePhase(deps, run, fresh, phase);
       if (phase === "interview") await markInterviewRefined(db, articleId);

@@ -10,6 +10,7 @@ export * from "./scriptRunner.js";
 export * from "./storage.js";
 export * from "./gates.js";
 export * from "./interview.js";
+export * from "./evidence.js";
 export * from "./pricing.js";
 export * from "./citations.js";
 export * from "./pipelineOps.js";

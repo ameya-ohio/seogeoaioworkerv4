@@ -1,4 +1,4 @@
-import type { ArticleDoc, WorkStage } from "@blogagent/engine";
+import type { ArticleDoc, TechnicalIssue, WorkStage } from "@blogagent/engine";
 import type { WorkerConfig } from "./config.js";
 
 /**
@@ -27,6 +27,19 @@ export interface PhaseContext {
   preAudit?: string[];
   /** Design only: the format's default header pattern (formats.json). */
   headerPattern?: string;
+  /** Verify only (D61): the issues the fix pass must resolve, and nothing else. */
+  verifyIssues?: TechnicalIssue[];
+}
+
+/** D61: the verify fix pass's brief — fix exactly these, in Fix mode (agents/editor.md). */
+export function verifyIssuesBlock(ctx: PhaseContext): string {
+  if (!ctx.verifyIssues?.length) return "";
+  return [
+    ``,
+    `FIX MODE — the expert review of the final text found these issues. Fix each one (the quote shows where),`,
+    `change nothing else, and keep every check the article already passes:`,
+    ...ctx.verifyIssues.map((i) => `- ${i.kind}: "${i.quote}" — ${i.problem}${i.fix ? ` Fix: ${i.fix}` : ""}`),
+  ].join("\n");
 }
 
 const FILE_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep"];
@@ -134,13 +147,20 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
       allowedTools: FILE_TOOLS,
       buildPrompt: (ctx) =>
         [
-          header(ctx, 2, "Strategist"),
+          header(ctx, 3, "Strategist"),
           ``,
           `Inputs to read first:`,
           `- articles/${ctx.article.folder}/page.md — this page's spec (D45–D50): facets, the rules they`,
           `  resolve to (length band, Key Takeaways count, FAQ range, CTA) and the format guide. Build the`,
           `  outline on the format guide and include a \`## Page Facets\` section${ctx.article.facets ? " copied from page.md" : " — this page has no facets yet, so choose them from standards/formats.json"}.`,
-          `- articles/${ctx.article.folder}/research-notes.md`,
+          `- articles/${ctx.article.folder}/research-notes.md (with ## Interview Evidence when the expert raised facts)`,
+          ...(ctx.article.artifacts.pov
+            ? [
+                `- articles/${ctx.article.folder}/pov.md — the EXPERT POV BRIEF from the interview (D61). Its thesis is the`,
+                `  article's thesis, its Argument Spine is your spine's starting point, and nothing under ## Rejected is`,
+                `  argued. An interview fact is used only as its Interview Evidence verdict allows.`,
+              ]
+            : []),
           ...(ctx.article.brief
             ? [
                 `- articles/${ctx.article.folder}/brief.md — a SPOKE BRIEF from the Topic & Cluster`,
@@ -159,23 +179,45 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
     },
     interview: {
       phase: "interview",
-      title: "Interview Refiner",
-      specFile: "agents/interview-refiner.md",
+      title: "POV Writer",
+      specFile: "agents/pov-writer.md",
       allowedTools: FILE_TOOLS,
       buildPrompt: (ctx) =>
         [
-          header(ctx, 2.5, "Interview Refiner"),
+          header(ctx, 2, "POV Writer"),
           ``,
           `Inputs to read first:`,
           `- articles/${ctx.article.folder}/interview.md — the expert interview transcript (the source for the POV)`,
-          `- articles/${ctx.article.folder}/outline.md — the Strategist's plan you revise`,
-          `- articles/${ctx.article.folder}/research-notes.md — the only evidence you may choose from`,
-          `- articles/${ctx.article.folder}/page.md (facets, FAQ range, CTA — unchanged by you)`,
+          `- articles/${ctx.article.folder}/research-notes.md — Candidate Positions, Subject Material and the evidence bank`,
+          `- articles/${ctx.article.folder}/page.md (facets, CTA, format guide)`,
           `- standards/quality-bar.md, context/sales/proof-points.md (Citable: yes only)`,
           `- context/case-studies/ (skip README.md, _template.md, and any file marked "Permission: internal only")`,
           ``,
-          `Write the Expert POV brief to articles/${ctx.article.folder}/pov.md and rewrite`,
-          `articles/${ctx.article.folder}/outline.md in place, per your spec.`,
+          `Write the Expert POV brief to articles/${ctx.article.folder}/pov.md, per your spec. The Strategist plans`,
+          `the outline from it next; you don't write an outline.`,
+          feedback(ctx),
+        ].join("\n"),
+    },
+    evidence: {
+      phase: "evidence",
+      title: "Evidence",
+      specFile: "agents/evidence.md",
+      allowedTools: [...FILE_TOOLS, ...WEB_TOOLS],
+      buildPrompt: (ctx) =>
+        [
+          header(ctx, 2.5, "Evidence"),
+          ``,
+          `Inputs to read first:`,
+          `- articles/${ctx.article.folder}/pov.md — ## Facts to Verify: the third-party facts the expert raised`,
+          `- articles/${ctx.article.folder}/interview.md — the transcript (catch a fact pov.md missed; see your spec)`,
+          `- articles/${ctx.article.folder}/research-notes.md — skip a fact research already verified`,
+          `- articles/${ctx.article.folder}/research-brief.md — the page's facets and neighbouring pages`,
+          `- context/sales/competitive-landscape.md if it exists: head-to-head vendors (and their executives quoted`,
+          `  anywhere) are never sources.`,
+          ``,
+          `Verify each fact on the web against a primary source and APPEND a \`## Interview Evidence\` section to`,
+          `  articles/${ctx.article.folder}/research-notes.md`,
+          `in the exact format from your spec. Change nothing else in the file.`,
           feedback(ctx),
         ].join("\n"),
     },
@@ -186,7 +228,7 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
       allowedTools: FILE_TOOLS,
       buildPrompt: (ctx) =>
         [
-          header(ctx, 3, "Writer"),
+          header(ctx, 4, "Writer"),
           ``,
           `Inputs to read first:`,
           `- articles/${ctx.article.folder}/page.md (format guide, Key Takeaways count, FAQ range, closing CTA)`,
@@ -211,7 +253,7 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
       allowedTools: FILE_TOOLS,
       buildPrompt: (ctx) =>
         [
-          header(ctx, 4, "Editor"),
+          header(ctx, 6, "Editor"),
           ``,
           `Inputs to read first:`,
           `- standards/quality-bar.md, standards/seo-checklist.md, standards/geo-checklist.md, standards/aio-checklist.md`,
@@ -224,9 +266,30 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
           `- context/sales/proof-points.md (company numbers: only Citable: yes entries may stay)`,
           `- context/case-studies/ — real engagements (skip README.md, _template.md, and any file marked "Permission: internal only")`,
           ``,
-          `Walk every checklist item, edit article.md in place to fix all failures,`,
+          `HDCP has already restructured this draft (D61): make the smallest edits that pass every check, and don't`,
+          `restructure. Walk every checklist item, edit article.md in place to fix all failures,`,
           `and append the HTML-comment edit summary at the bottom.`,
           preAuditBlock(ctx),
+          feedback(ctx),
+        ].join("\n"),
+    },
+    verify: {
+      phase: "verify",
+      title: "Verify (fix pass)",
+      specFile: "agents/editor.md",
+      allowedTools: FILE_TOOLS,
+      buildPrompt: (ctx) =>
+        [
+          header(ctx, 7, "Verify fix pass"),
+          ``,
+          `Inputs to read first:`,
+          `- articles/${ctx.article.folder}/article.md (the final text), research-notes.md, outline.md, page.md`,
+          ...povLines(ctx, true),
+          `- standards/quality-bar.md and standards/banned-phrases.txt`,
+          ``,
+          `Run your spec's "Fix mode" on articles/${ctx.article.folder}/article.md: fix exactly the issues below`,
+          `and edit it in place.`,
+          verifyIssuesBlock(ctx),
           feedback(ctx),
         ].join("\n"),
     },
@@ -237,12 +300,12 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
       allowedTools: FILE_TOOLS,
       buildPrompt: (ctx) =>
         [
-          header(ctx, 4.5, "HDCP"),
+          header(ctx, 5, "HDCP"),
           ``,
           `Inputs to read first:`,
           `- articles/${ctx.article.folder}/page.md (facets, CTA, format guide, internal link inventory)`,
-          `- articles/${ctx.article.folder}/hdcp-inputs.md (target_keyword, content_role, cluster_context, technical review + audit findings)`,
-          `- articles/${ctx.article.folder}/article.md (the edited draft — the fact boundary)`,
+          `- articles/${ctx.article.folder}/hdcp-inputs.md (target_keyword, content_role, cluster_context, the draft's audit findings)`,
+          `- articles/${ctx.article.folder}/article.md (the Writer's draft — the fact boundary; the Editor runs after you)`,
           `- articles/${ctx.article.folder}/research-notes.md (context only; never bring a fact in from it)`,
           ...povLines(ctx, true),
           `- standards/quality-bar.md and context/sales/proof-points.md`,
@@ -260,7 +323,7 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
       allowedTools: [...FILE_TOOLS, "Bash"],
       buildPrompt: (ctx) =>
         [
-          header(ctx, 5, "Schema Builder"),
+          header(ctx, 8, "Schema Builder"),
           ``,
           `Inputs to read first:`,
           `- standards/schema-spec.md and templates/schema-template.json`,
@@ -282,7 +345,7 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
       allowedTools: [...FILE_TOOLS, "Bash"],
       buildPrompt: (ctx) =>
         [
-          header(ctx, 6, "Header Designer"),
+          header(ctx, 9, "Header Designer"),
           ``,
           `Generate the 1200×600 hero image with:`,
           `  ${ctx.cfg.headerGenPython} blogheaderimagegen/generate_header.py \\`,
@@ -298,4 +361,16 @@ export function phaseDefs(cfg: WorkerConfig): Record<WorkStage, PhaseDef> {
   };
 }
 
-export const PHASE_ORDER: WorkStage[] = ["research", "outline", "interview", "write", "edit", "hdcp", "schema", "design"];
+/** D61: the point of view before the plan; the last rewrite always gated; a final read of the finished text. */
+export const PHASE_ORDER: WorkStage[] = [
+  "research",
+  "interview",
+  "evidence",
+  "outline",
+  "write",
+  "hdcp",
+  "edit",
+  "verify",
+  "schema",
+  "design",
+];

@@ -13,6 +13,10 @@ export interface InterviewView {
   messages: { role: "assistant" | "user"; content: string; at: string }[];
   checklist: { label: string; value: string | null }[];
   wedge: string;
+  /** D61: the Researcher's Candidate Positions and Topic Summary — what the interview reacts to. */
+  positions: string;
+  summary: string;
+  /** Interviews opened after an outline (D59) only. */
   plannedAngle: string;
   plannedThesis: string;
   plannedAnchor: string;
@@ -21,9 +25,9 @@ export interface InterviewView {
 
 const STATUS_NOTE: Record<InterviewView["status"], string> = {
   open: "",
-  complete: "Finished. The run is refining the outline from your answers, then the Writer starts.",
-  skipped: "Skipped. The run went on to the Writer with the Strategist's outline.",
-  refined: "Finished. The outline was rebuilt from this interview.",
+  complete: "Finished. The run is writing your point of view up, checking any facts you raised, then planning the outline from it.",
+  skipped: "Skipped. The Strategist plans the outline from the research alone.",
+  refined: "Finished. The outline was planned from this interview.",
 };
 
 /**
@@ -95,7 +99,7 @@ export function InterviewChat({ view }: { view: InterviewView }) {
   }
 
   function close(kind: "finish" | "skip") {
-    if (kind === "skip" && !window.confirm("Skip the interview? The Writer will use the Strategist's outline as is.")) return;
+    if (kind === "skip" && !window.confirm("Skip the interview? The Strategist will plan the outline from the research alone.")) return;
     startTransition(async () => {
       const res = await (kind === "finish" ? finishInterview(view.slug) : skipInterview(view.slug));
       if (res.error) setError(res.error);
@@ -182,11 +186,19 @@ export function InterviewChat({ view }: { view: InterviewView }) {
             <Prose text={view.wedge} />
           </Card>
         )}
-        <Card title="Planned before the interview">
-          {view.plannedAngle && <Labeled label="Angle" text={view.plannedAngle} />}
-          {view.plannedThesis && <Labeled label="Thesis" text={view.plannedThesis} />}
-          {view.plannedAnchor && <Labeled label="Real-world anchor" text={view.plannedAnchor} />}
-        </Card>
+        {(view.positions || view.summary) && (
+          <Card title="What research proposes">
+            {view.positions && <Labeled label="Candidate positions" text={view.positions} />}
+            {view.summary && <Labeled label="Topic summary" text={view.summary} />}
+          </Card>
+        )}
+        {(view.plannedAngle || view.plannedThesis || view.plannedAnchor) && (
+          <Card title="Planned before the interview">
+            {view.plannedAngle && <Labeled label="Angle" text={view.plannedAngle} />}
+            {view.plannedThesis && <Labeled label="Thesis" text={view.plannedThesis} />}
+            {view.plannedAnchor && <Labeled label="Real-world anchor" text={view.plannedAnchor} />}
+          </Card>
+        )}
         {view.costUsd !== null && <p className="text-xs text-slate-400">Interview cost so far: ${view.costUsd.toFixed(3)}</p>}
       </div>
     </div>

@@ -7,7 +7,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { estimateCostUsd, type PhaseUsage } from "@blogagent/engine";
 import type { AgentRunOutcome } from "./agentRunner.js";
 import type { DirectPhase, Effort, WorkerConfig } from "./config.js";
-import { feedback, preAuditBlock, type PhaseContext } from "./phases.js";
+import { feedback, preAuditBlock, verifyIssuesBlock, type PhaseContext } from "./phases.js";
 import { articleDir } from "./workspace.js";
 
 const execFileAsync = promisify(execFile);
@@ -299,10 +299,20 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
         inputs: await readAll(cfg, [
           inFolder("page.md"),
           inFolder("research-notes.md"),
+          ...(article.artifacts.pov ? [inFolder("pov.md")] : []),
           ...(article.brief ? [inFolder("brief.md")] : []),
         ]),
         task: [
           `Write the strategy + outline as outline.md.`,
+          ...(article.artifacts.pov
+            ? [
+                `${inFolder("pov.md")} is the EXPERT POV BRIEF from the interview (D61): its thesis is the article's thesis`,
+                `(Position taken: expert), its Argument Spine is where yours starts, its Real-World Anchor and Company Role`,
+                `stand, and nothing under ## Rejected is argued. Use an interview fact only as the research notes'`,
+                `## Interview Evidence verdict allows (verified: as stated; corrected: as the source says; unsourced: as`,
+                `the expert's opinion, or not at all). The intro's first sentence states the thesis claim.`,
+              ]
+            : []),
           `${inFolder("page.md")} is this page's spec (D45–D50): its facets, the rules they resolve to`,
           `(length band, Key Takeaways count, FAQ range, CTA) and the format guide. Build the outline on`,
           `the format guide's structure. Always include a \`## Page Facets\` section with the page's`,
@@ -331,15 +341,46 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
         inputs: await readAll(cfg, [
           inFolder("page.md"),
           inFolder("interview.md"),
-          inFolder("outline.md"),
           inFolder("research-notes.md"),
         ]),
         task: [
-          `The expert has been interviewed about this article (${inFolder("interview.md")}). Write pov.md, the Expert`,
-          `POV brief, and return the complete revised outline.md, per your spec. The transcript is the source for`,
-          `the point of view; the research notes are the only evidence you may choose from; page.md is unchanged.`,
+          `The expert has been interviewed about this article (${inFolder("interview.md")}), right after research and`,
+          `before any outline exists (D61). Write pov.md, the Expert POV brief, per your spec: the transcript is the`,
+          `source for the point of view, the research notes' Candidate Positions and evidence bank are what the`,
+          `expert reacted to, and ## Facts to Verify lists every third-party fact the expert raised.`,
         ].join("\n"),
-        outputs: ["pov.md", "outline.md"],
+        outputs: ["pov.md"],
+      };
+    case "verify":
+      return {
+        reference: [
+          ...(await readAll(cfg, [
+            "standards/quality-bar.md",
+            "standards/seo-checklist.md",
+            "standards/geo-checklist.md",
+            "standards/aio-checklist.md",
+            "standards/banned-phrases.txt",
+            "config/company.yaml",
+          ])),
+          ...(await readDir(cfg, "context/author-style")),
+          ...(await competitiveLandscape(cfg)),
+          ...(await proofPoints(cfg)),
+          ...(await caseStudies(cfg)),
+        ],
+        inputs: await readAll(cfg, [
+          inFolder("page.md"),
+          inFolder("article.md"),
+          inFolder("research-notes.md"),
+          inFolder("outline.md"),
+          ...(article.artifacts.pov ? [inFolder("pov.md"), inFolder("interview.md")] : []),
+        ]),
+        task: [
+          `Run the "Fix mode" section of your spec on ${inFolder("article.md")}: fix exactly the issues listed below and`,
+          `change nothing else. The article already passes every Edit check; it must still pass them after you.`,
+          `Return the complete article.md.`,
+          verifyIssuesBlock(ctx),
+        ].join("\n"),
+        outputs: ["article.md"],
       };
     case "write":
       return {
@@ -418,7 +459,8 @@ async function planPhase(phase: DirectPhase, ctx: PhaseContext): Promise<PhasePl
         task: [
           `Run the Human Driven Content Protocol on ${inFolder("article.md")}: Step 1 Diagnose, then Step 2 Rewrite.`,
           `Follow "How this runs in the pipeline" in your spec; where it differs from the protocol, it wins.`,
-          `${inFolder("hdcp-inputs.md")} holds target_keyword, content_role and cluster_context, plus the technical review and audit findings.`,
+          `${inFolder("hdcp-inputs.md")} holds target_keyword, content_role and cluster_context, plus the draft's audit findings.`,
+          `The Editor runs after you (D61) and its gates check your rewrite. Never remove a [HUMAN INPUT|NEEDS RESEARCH|NEEDS SOURCE|VERIFY: …] note.`,
           `Return the complete rewritten article.md (frontmatter unchanged, no editor notes in it) and hdcp.md (the Log format, with ## Editor notes).`,
           ...povTask(article, true),
         ].join("\n"),
@@ -578,7 +620,7 @@ export const renderHeaderCli: HeaderRenderer = async (cfg, folder, choice) => {
 
 /**
  * Opus- and Fable-tier models run broader safety classifiers, and security
- * topics trip the cyber one: the D59 interview refiner was refused mid-run
+ * topics trip the cyber one: the D59 interview refiner (now the POV writer) was refused mid-run
  * on an identity-attack article. Those phases get the server-side fallback,
  * which re-runs a declined request on the recommended model in the same call.
  */

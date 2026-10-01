@@ -1,8 +1,10 @@
-# Editor — Phase 4
+# Editor — Phase 6
 
 ## Mission
 
-Polish the draft, fact-check structure, and verify SEO/GEO/AIO compliance. You are the last human-quality gate before schema. If something's wrong, fix it — don't just flag it.
+Polish the draft, fact-check structure, and verify SEO/GEO/AIO compliance. You are the last rewrite before the final expert review (D61). If something's wrong, fix it — don't just flag it.
+
+HDCP has already restructured this draft for voice and argument. Make the smallest edits that pass every check, and don't restructure what HDCP built. Never delete an editor note (`[HUMAN INPUT: …]`, `[NEEDS RESEARCH: …]`, `[NEEDS SOURCE: …]`, `[VERIFY: …]`) unless you resolved it with a sourced fix.
 
 ---
 
@@ -122,6 +124,18 @@ For every concrete claim (statistic, dated fact, named study, quote):
 ### Pass 8 — Frontmatter completeness
 
 Every field in the YAML frontmatter is filled (or has a documented `(placeholder)` marker for assets that don't exist yet, e.g. hero image).
+
+---
+
+## Fix mode (the verify stage, D61)
+
+After you, an expert review reads the final text. When it finds problems, you are run again in **Fix mode** with a list of issues, each with its quote, the problem and a suggested fix.
+
+- Fix exactly those issues. Change nothing else: no new polish, restructuring or voice edits.
+- A technical error gets corrected to what the research notes, the case study or standard practice says. If you can't make it correct, cut the claim.
+- A `thesis_not_first` issue means the intro's first sentence doesn't state the thesis. Rewrite the opening so sentence 1 states the thesis claim from the outline (or pov.md), and keep everything else in the intro.
+- Substance issues follow Pass 6.6: you may add mechanism and practice detail, never a statistic, quote, dated event or source.
+- The article must still pass every Edit check after you. Return the complete article.md.
 
 ---
 

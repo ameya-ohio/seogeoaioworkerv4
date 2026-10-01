@@ -86,6 +86,25 @@ describe("interview helpers", () => {
     expect(ctx).not.toContain("64%");
   });
 
+  it("builds from research's candidate positions and page.md when there's no outline (D61)", () => {
+    const ctx = buildInterviewContext({
+      companyName: "Saporo",
+      topic: "identity exposure examples",
+      researchNotes:
+        "## Topic Summary\nSummary.\n\n## Candidate Positions\n### P1: The links between directories carry the exposure\n- Supported by: Source #2\n\n## Subject Material\nMechanisms.",
+      pageMd: "# Page spec\n\n- **Funnel:** TOFU\n\n## Rules for this page\n\n- **Closing CTA:** Download the overview\n\n## Format guide: Examples\n\nLONG GUIDE",
+      companyPosition: "Saporo maps one graph across AD, Entra ID and AWS.",
+      context: [],
+      caseStudies: [],
+    });
+    expect(ctx).toContain("### P1: The links between directories carry the exposure");
+    expect(ctx).toContain("## Subject Material");
+    expect(ctx).toContain("Closing CTA:** Download the overview");
+    expect(ctx).not.toContain("LONG GUIDE");
+    expect(ctx).toContain("one graph across AD, Entra ID and AWS");
+    expect(ctx).not.toContain("From the Strategist's outline");
+  });
+
   it("renders the transcript with the captured checklist", () => {
     const at = new Date("2026-09-30T00:00:00Z");
     const md = renderTranscript({

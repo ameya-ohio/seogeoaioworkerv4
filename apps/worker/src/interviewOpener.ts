@@ -46,6 +46,7 @@ export async function interviewContextFromDisk(
     const content = await repo(rel);
     if (content?.trim()) context.push({ path: rel, content });
   }
+  const pageMd = await read(join(dir, "page.md"));
   const proofPoints = await repo("context/sales/proof-points.md");
   const competitive = await repo("context/sales/competitive-landscape.md");
   return {
@@ -54,7 +55,10 @@ export async function interviewContextFromDisk(
     topic: article.topic,
     ...(article.targetKeyword ? { keyword: article.targetKeyword } : {}),
     researchNotes: (await read(join(dir, "research-notes.md"))) ?? article.artifacts.researchNotes ?? "",
-    outline: (await read(join(dir, "outline.md"))) ?? article.artifacts.outline ?? "",
+    // D61: the interview runs before any outline — an outline left from an
+    // earlier run is stale, so the opener builds from research alone.
+    ...(pageMd ? { pageMd } : {}),
+    ...(article.brief?.spec?.companyPosition ? { companyPosition: article.brief.spec.companyPosition } : {}),
     context,
     caseStudies: (await caseStudies(cfg)).map((f) => ({ path: f.path, content: f.content })),
     ...(proofPoints ? { proofPoints } : {}),

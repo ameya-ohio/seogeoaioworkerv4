@@ -115,6 +115,17 @@ _INTRO_HOOKS = re.compile(
     r"|\bwalk(?:s|ed)? (?:in(?:to)?|through) the front door\b",
     re.I,
 )
+# D61: an intro that opens by correcting what "teams" or "people" believe puts
+# a misconception, not the thesis, in the first sentence.
+_MISCONCEPTION_OPENER = re.compile(
+    r"^(?:(?:many|most|some|a lot of)\s+)?(?:security\s+|it\s+|IT\s+)?"
+    r"(?:teams|people|organizations|organisations|companies|practitioners|leaders|admins|administrators|defenders|engineers|buyers|CISOs)\b"
+    r"[^.!?]{0,40}?\b(?:often\s+|usually\s+|still\s+)?(?:worry|worries|think|thinks|believe|believes|assume|assumes|assumed|fear|fears)\b"
+    r"|^(?:it(?:'s|’s| is)|there(?:'s|’s| is))\s+a\s+(?:common\s+|widespread\s+|persistent\s+)?(?:myth|misconception|misunderstanding)\b"
+    r"|^contrary to\b|^you (?:might|may) (?:think|assume|believe)\b|^it(?:'s|’s| is) (?:easy|tempting) to (?:think|assume|believe)\b",
+    re.I,
+)
+MAX_INTRO_STATS = 1           # D61: the intro argues; one figure at most, inside the claim it supports
 # A statistic in the opening words of the first sentence = a stat hook. Bare years don't count.
 _STAT_TOKEN = re.compile(r"(?:\$\d|\d+(?:[.,]\d+)?\s*(?:%|percent\b|x\b|:1\b)|\b(?!(?:19|20)\d\d\b)\d+(?:[.,]\d+)?\b)", re.I)
 STAT_OPENER_WORDS = 6
@@ -361,6 +372,33 @@ def check_intro_hooks(intro: str) -> Finding | None:
         "fail",
         "Style: hook-shaped intro — rebuild it from the outline's Intro Strategy: name the subject and state the "
         "problem the thesis answers first, then why it matters now, with any figure inside a claim",
+        hits,
+    )
+
+
+def check_misconception_opener(intro: str) -> Finding | None:
+    """D61: sentence 1 states the thesis; it doesn't correct what someone else believes."""
+    first = next(iter(sentences(" ".join(_plain(intro).split()))), "")
+    if not first or not _MISCONCEPTION_OPENER.search(first):
+        return None
+    return Finding(
+        "fail",
+        "Style: the intro opens on a misconception — the first sentence states the thesis claim; "
+        "a misconception worth correcting belongs in the body, where the argument answers it",
+        [first[:160]],
+    )
+
+
+def check_intro_stats(intro: str) -> Finding | None:
+    """D61: at most one statistic in the intro; the argument comes first."""
+    text = " ".join(_plain(intro).split())
+    hits = [s[:140] for s in sentences(text) if _STATISTIC.search(s)]
+    if len(hits) <= MAX_INTRO_STATS:
+        return None
+    return Finding(
+        "fail",
+        f"Evidence: the intro carries {len(hits)} statistics (max {MAX_INTRO_STATS}) — keep the one the thesis "
+        f"turns on, inside the claim it supports, and move or cut the rest",
         hits,
     )
 
@@ -620,6 +658,7 @@ def run_all(
         else [
             check_stat_density(blocks, word_count),
             check_stat_stacking(prose),
+            check_intro_stats(intro),
             check_evidence_openers(sections),
             check_source_headings(sections),
         ]
@@ -632,6 +671,7 @@ def run_all(
         check_takeaway_restatement(intro, sections),
         check_takeaway_count(sections, takeaways),
         check_intro_hooks(intro),
+        check_misconception_opener(intro),
         check_heading_echo(sections),
         check_contrasts(blocks, word_count),
         *check_repetition(blocks),

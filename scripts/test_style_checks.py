@@ -315,3 +315,40 @@ class MetaCommentaryTests(unittest.TestCase):
     def test_leaves_the_articles_own_claims_alone(self):
         for text in self.CLEAN:
             self.assertFalse([f for f in run(text) if "comments on other writing" in f.message], text)
+
+
+class IntroThesisFirstTests(unittest.TestCase):
+    """D61: the intro opens on the thesis and carries at most one figure."""
+
+    def _intro(self, text: str) -> str:
+        return "# Title\n\n" + text + "\n\n## First section\n\nBody text here.\n"
+
+    def test_misconception_openers_fail(self):
+        for opener in [
+            "Security teams often worry that password hash sync copies an on-premises password into the cloud.",
+            "Many organizations assume their cloud tenant is isolated from on-prem Active Directory.",
+            "It's a common misconception that MFA stops every identity attack.",
+            "Contrary to popular belief, service accounts are rarely audited.",
+        ]:
+            found = [f for f in run(self._intro(opener + " It doesn't.")) if "misconception" in f.message]
+            self.assertEqual(len(found), 1, opener)
+            self.assertEqual(found[0].level, "fail")
+
+    def test_thesis_first_intro_passes(self):
+        text = (
+            "In a hybrid estate, the exposures on the links between directories are where one fix contains the most damage. "
+            "The sync account, the federation trust and the cross-account role each join two directories."
+        )
+        self.assertFalse([f for f in run(self._intro(text)) if "misconception" in f.message])
+
+    def test_two_statistics_in_the_intro_fail(self):
+        text = (
+            "The link decides how far a compromise reaches. "
+            "Microsoft recorded a 32% rise in identity-based attacks in 2025. "
+            "More than 97% of those were password attacks."
+        )
+        found = [f for f in run(self._intro(text)) if "intro carries" in f.message]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(len(found[0].snippets), 2)
+        one = "The link decides how far a compromise reaches. Microsoft recorded a 32% rise in identity-based attacks in 2025."
+        self.assertFalse([f for f in run(self._intro(one)) if "intro carries" in f.message])

@@ -32,12 +32,12 @@ export function ChatForm() {
           </div>
           <label className="flex items-center gap-2 text-sm text-slate-600">
             <input type="checkbox" name="skipInterview" className="accent-accent" />
-            Skip the expert interview (the run won't stop for your point of view after the outline)
+            Skip the expert interview (the run won't stop for your point of view after research)
           </label>
           {state.error && <p className="text-sm text-red-600">{state.error}</p>}
           <div className="flex items-center justify-between">
             <p className="text-xs text-slate-400">
-              Queues the full pipeline: research → outline → expert interview → write → edit → HDCP → schema → design.
+              Queues the full pipeline: research → expert interview → evidence → outline → write → HDCP → edit → verify → schema → design.
             </p>
             <button type="submit" disabled={pending} className={buttonCls("primary")}>
               {pending ? "Queuing…" : "Queue article"}

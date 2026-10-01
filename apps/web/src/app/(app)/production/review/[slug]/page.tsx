@@ -76,6 +76,21 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
         }
       : null,
     editPreAudit: doc.editPreAudit?.items ?? null,
+    verification: doc.verification
+      ? {
+          rounds: doc.verification.rounds.map((r) => ({
+            round: r.round,
+            mode: r.mode,
+            model: r.review.model,
+            issues: r.review.skipped ? [] : r.review.issues,
+            skipped: r.review.skipped ?? null,
+            fixed: r.fixed,
+            costUsd: r.review.costUsd ?? null,
+            at: new Date(r.at).toISOString(),
+          })),
+          unresolved: doc.verification.unresolved.length,
+        }
+      : null,
     interview: doc.interview
       ? { status: doc.interview.status, pov: doc.artifacts.pov ?? null, transcript: renderTranscript(doc.interview) }
       : null,

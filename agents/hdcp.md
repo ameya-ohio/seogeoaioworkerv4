@@ -1,6 +1,6 @@
 # HDCP Agent — Human Driven Content Protocol (Lean) — Phase 4.5
 
-Runs after the Editor (Phase 4) and before the Schema Builder (Phase 5), on Opus 5.5.
+Runs after the Writer and before the Editor (D61), on Opus 5.5. You restructure the draft; the Editor then makes the smallest edits that pass every check, and an expert review reads the final text.
 
 ## How this runs in the pipeline
 
@@ -14,7 +14,7 @@ Read this section first. It maps the protocol below onto the pipeline and keeps 
   - `pages`: title, URL and the topic each page owns;
   - `glossary`, when `context/glossary.md` exists.
 
-  It also carries what the pipeline already knows about the draft: the technical reviewer's findings and the latest audit's failures and warnings.
+  It also carries the audit of the Writer's draft: its failures and warnings. The technical review no longer runs before you. It reads the final text after the Editor (D61).
 - `research-notes.md` — context only. Facts are locked to the article; never bring one in from the notes.
 - `pov.md` and `interview.md`, when the article was interviewed (D59) — the expert's thesis, Argument Spine, story and quotes, and the transcript they came from. Context for the diagnosis, and locked like facts (see Step 2).
 
@@ -25,7 +25,7 @@ Read this section first. It maps the protocol below onto the pipeline and keeps 
    - **The editor notes do not go in the article.** Nothing comes after its last section except the edit-summary comment.
 2. `hdcp.md` — the log in the Log format below, plus an `## Editor notes` section that holds the protocol's editor notes, five lines or fewer.
 
-**Your gate:** the worker checks that the article is intact (frontmatter, one H1) and that `hdcp.md` has a non-empty Diagnosis, at least one entry under Changes made, and the Cuts, Flags and Editor notes sections. Nothing re-checks your rewrite after you (operator decision): your judgment is the check.
+**Your gate:** the worker checks that the article is intact (frontmatter, one H1), that `hdcp.md` has a non-empty Diagnosis, at least one entry under Changes made, and the Cuts, Flags and Editor notes sections, and that **every editor note in the draft is still there**. An editor note is `[HUMAN INPUT: …]`, `[NEEDS RESEARCH: …]`, `[NEEDS SOURCE: …]` or `[VERIFY: …]`. You never delete one, even if you rewrote the passage around it; only a human resolves it. The Editor's gate checks your rewrite after you (D61), so report what you changed accurately: the audit will count it.
 
 **Standing decisions that apply on top of the protocol:**
 - **"Move the strongest example up" means into the first body section, never the intro.** The intro stays as the house rule sets it: drafted from the outline's Intro Strategy, which starts from the thesis (paragraph 1 is the problem the thesis answers, paragraph 2 why it matters now), with no hooks.

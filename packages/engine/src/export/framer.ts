@@ -1,5 +1,6 @@
 import { cfgGet, type CompanyConfig } from "../companyConfig.js";
 import { cleanBody, parseArticle } from "../frontmatter.js";
+import { editorMarkers } from "../gates.js";
 import { buildHeadHtml, renderPostBody } from "../publish/render.js";
 import { zip } from "../plan/zip.js";
 import type { ArticleDoc } from "../types.js";
@@ -35,7 +36,7 @@ export function framerExportProblems(article: ArticleDoc, opts: { signoffRequire
   }
   if (!article.artifacts.article) problems.push("The article has no article.md yet.");
   // HDCP flags are for an editor to resolve before the page ships.
-  const flags = (article.artifacts.article ?? "").match(/\[(?:NEEDS SOURCE|HUMAN INPUT|VERIFY):[^\]]*\]/g) ?? [];
+  const flags = editorMarkers(article.artifacts.article ?? "");
   if (flags.length) {
     problems.push(`Resolve ${flags.length} editor flag(s) in the article first: ${flags.slice(0, 3).join(" ")}`);
   }

@@ -7,7 +7,7 @@ import type { ArticleInterview, InterviewCaptured, InterviewMessage } from "./ty
  * run opens with and the follow-ups the chat asks see the same material.
  */
 
-export const CAPTURED_KEYS = ["angle", "thesis", "objection", "anchor", "product", "quote", "attribution"] as const;
+export const CAPTURED_KEYS = ["angle", "thesis", "objection", "anchor", "product", "facts", "quote", "attribution"] as const;
 
 /** The checklist the UI shows; attribution rides along with the quote. */
 export const CAPTURE_CHECKLIST: { key: keyof InterviewCaptured; label: string }[] = [
@@ -16,10 +16,11 @@ export const CAPTURE_CHECKLIST: { key: keyof InterviewCaptured; label: string }[
   { key: "objection", label: "Objection & answer" },
   { key: "anchor", label: "Real-world anchor" },
   { key: "product", label: "Product connection" },
+  { key: "facts", label: "Facts to verify" },
   { key: "quote", label: "Quote (optional)" },
 ];
 
-/** Sections the refiner's pov.md must carry (agents/interview-refiner.md). */
+/** Sections pov.md must carry (agents/pov-writer.md). */
 export const POV_SECTIONS = [
   "Thesis",
   "Argument Spine",
@@ -28,6 +29,8 @@ export const POV_SECTIONS = [
   "Company Role",
   "Approved Quotes",
   "Rejected",
+  // D61: third-party facts the expert raised, for the evidence stage ("none" when there are none).
+  "Facts to Verify",
 ] as const;
 
 const CAPTURED_RE = /<captured>\s*([\s\S]*?)\s*<\/captured>/i;
@@ -121,7 +124,15 @@ export interface InterviewContextInput {
   topic: string;
   keyword?: string;
   researchNotes: string;
-  outline: string;
+  /**
+   * Only for interviews opened before D61, when the interview came after
+   * the outline. New interviews are built from research alone.
+   */
+  outline?: string;
+  /** page.md: the page's facets, format guide and funnel CTA (D45–D50). */
+  pageMd?: string;
+  /** The brief's company position, when the page came from a plan or cluster. */
+  companyPosition?: string;
   /** context/brand/positioning.md, context/sales/value-props.md, … as {path, content}. */
   context: { path: string; content: string }[];
   caseStudies: { path: string; content: string }[];
@@ -138,16 +149,28 @@ export interface InterviewContextInput {
 const block = (path: string, content: string) => `<input path="${path}">\n${content.trim()}\n</input>`;
 
 /**
- * The interviewer's working material. Research contributes the wedge (Topic
- * Summary, Content Gaps, Debates, AI Engine Patterns) rather than the whole
- * notes; the outline contributes what the Strategist planned. Case studies
- * and citable proof points are what the anchor and product beats offer.
+ * The interviewer's working material (D61: the interview runs right after
+ * research). Research contributes the Researcher's Candidate Positions (the
+ * A/B/C the expert reacts to), the subject material and the wedge; page.md
+ * contributes the facets and CTA. Case studies and citable proof points are
+ * what the anchor and product beats offer.
  */
 export function buildInterviewContext(input: InterviewContextInput): string {
-  const research = ["Topic Summary", "Content Gaps", "Debates", "AI Engine Patterns"]
-    .map((t) => {
+  const words = (t: string, n: number) => {
+    const w = t.split(/\s+/);
+    return w.length > n ? `${w.slice(0, n).join(" ")} …` : t;
+  };
+  const research = [
+    ["Topic Summary", 0],
+    ["Candidate Positions", 0],
+    ["Subject Material", 400],
+    ["Content Gaps", 0],
+    ["Debates", 0],
+  ] as const;
+  const researchText = research
+    .map(([t, cap]) => {
       const body = markdownSection(input.researchNotes, t);
-      return body ? `## ${t}\n${body}` : "";
+      return body ? `## ${t}\n${cap ? words(body, cap) : body}` : "";
     })
     .filter(Boolean)
     .join("\n\n");
@@ -161,12 +184,14 @@ export function buildInterviewContext(input: InterviewContextInput): string {
     "Closing / CTA",
   ]
     .map((t) => {
-      const body = markdownSection(input.outline, t);
+      const body = markdownSection(input.outline ?? "", t);
       return body ? `## ${t}\n${body}` : "";
     })
     .filter(Boolean)
     .join("\n\n");
-  const title = /^#\s+Strategy & Outline:\s*(.+)$/m.exec(input.outline)?.[1]?.trim();
+  const title = /^#\s+Strategy & Outline:\s*(.+)$/m.exec(input.outline ?? "")?.[1]?.trim();
+  // page.md's facets and page rules (CTA included), without the long format guide.
+  const facets = input.pageMd ? (input.pageMd.split(/^## Format guide/m)[0] ?? "").replace(/^# Page spec\s*/, "").trim() : "";
   const proof = input.proofPoints ? citableProofPoints(input.proofPoints) : "";
   const studies = input.caseStudies.filter((f) => isUsableCaseStudy(f.path, f.content));
   return [
@@ -175,15 +200,16 @@ export function buildInterviewContext(input: InterviewContextInput): string {
     `Company: ${input.companyName}${input.companyDescription ? ` — ${input.companyDescription}` : ""}`,
     `Article: ${title ?? input.topic}`,
     `Topic: ${input.topic}`,
-    `Primary keyword: ${input.keyword ?? "(the outline's)"}`,
+    `Primary keyword: ${input.keyword ?? "(not chosen yet — the Strategist picks it)"}`,
+    ...(facets ? [``, `## The page (from page.md)`, ``, facets] : []),
+    ...(input.companyPosition ? [``, `## The company's position on this topic (from the brief)`, ``, input.companyPosition.trim()] : []),
     ``,
-    `## From the research notes (the wedge)`,
+    `## From the research notes`,
     ``,
-    research || "_research notes have none of the wedge sections_",
-    ``,
-    `## From the Strategist's outline (what is planned now)`,
-    ``,
-    outline || "_no outline sections found_",
+    researchText || "_research notes have none of the sections the interview uses_",
+    ...(outline
+      ? [``, `## From the Strategist's outline (this interview was opened after an outline, before D61)`, ``, outline]
+      : []),
     ``,
     `## Case studies (real engagements the anchor beat can offer)`,
     ``,
@@ -214,7 +240,7 @@ export function buildInterviewContext(input: InterviewContextInput): string {
   ].join("\n");
 }
 
-/** interview.md: the transcript the refiner, Editor and HDCP read — the fact boundary for expert claims. */
+/** interview.md: the transcript the POV writer, evidence stage, Editor, HDCP and reviewer read — the fact boundary for expert claims. */
 export function renderTranscript(interview: ArticleInterview): string {
   const c = interview.captured;
   return [

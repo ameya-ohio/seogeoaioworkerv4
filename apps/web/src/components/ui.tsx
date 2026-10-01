@@ -112,6 +112,8 @@ const STAGE_STYLE: Record<string, string> = {
   research: "bg-sky-100 text-sky-700",
   outline: "bg-cyan-100 text-cyan-700",
   interview: "bg-orange-100 text-orange-800",
+  evidence: "bg-yellow-100 text-yellow-800",
+  verify: "bg-rose-100 text-rose-700",
   write: "bg-blue-100 text-blue-700",
   edit: "bg-indigo-100 text-indigo-700",
   hdcp: "bg-fuchsia-100 text-fuchsia-700",

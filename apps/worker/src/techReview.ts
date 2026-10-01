@@ -5,14 +5,16 @@ import type { WorkerConfig } from "./config.js";
 import { caseStudies, competitiveLandscape, estimateCostUsd, parseFiles, renderInputs, type DirectLlm } from "./directRunner.js";
 
 /**
- * Pre-edit expert read of the Writer's draft (agents/technical-reviewer.md).
+ * Expert read of the article (agents/technical-reviewer.md). Since D61 it
+ * reads the FINAL text, in the verify stage after the Editor, so nothing a
+ * later rewrite introduces escapes it.
  *
- * It runs BEFORE the Editor and its findings join the edit pre-audit, rather
- * than gating after the Editor: an LLM judge re-run on every retry can find
- * new nits each time and burn the gate attempts, while a single pre-edit
- * read hands the Editor a fixed list it can clear in attempt 1. The review
- * never blocks the pipeline — a refusal, error or unparseable reply records
- * `skipped` and the Editor runs without it.
+ * It still isn't a per-attempt gate: an LLM judge re-run on every retry can
+ * find new nits each time. The verify stage bounds it instead — one fresh
+ * review, a fix pass, then a `confirm` round that only re-checks the listed
+ * issues (plus new technical errors) — and stores each round against the
+ * text's hash, so a restart reuses it. A refusal, error or unparseable reply
+ * records `skipped`.
  */
 export interface TechReviewer {
   review(input: {
@@ -21,6 +23,17 @@ export interface TechReviewer {
     /** D60: the page spec and outline, so substance findings know the format and the thesis. */
     pageMd?: string;
     outline?: string;
+    /** D61: the Expert POV brief and transcript — expert claims are checked against them. */
+    pov?: string;
+    interview?: string;
+    /**
+     * D61 verify loop. `review` reads the text fresh; `confirm` is handed the
+     * previous round's issues and reports which remain, plus only new
+     * technical errors or a thesis that isn't first — never fresh nits, so a
+     * re-review can't keep a clean article looping.
+     */
+    mode?: "review" | "confirm";
+    previous?: TechnicalIssue[];
     onProgress?: (t: string) => void;
   }): Promise<TechnicalReview>;
 }
@@ -33,6 +46,7 @@ const KINDS: readonly TechnicalIssueKind[] = [
   "not_actionable",
   "generic_example",
   "thesis_unsupported",
+  "thesis_not_first",
 ];
 const MAX_ISSUES = 12;
 
@@ -87,6 +101,10 @@ export class LlmTechReviewer implements TechReviewer {
     researchNotes: string;
     pageMd?: string;
     outline?: string;
+    pov?: string;
+    interview?: string;
+    mode?: "review" | "confirm";
+    previous?: TechnicalIssue[];
     onProgress?: (t: string) => void;
   }): Promise<TechnicalReview> {
     const { model, effort } = this.cfg.techReview;
@@ -105,13 +123,24 @@ export class LlmTechReviewer implements TechReviewer {
             { path: "research-notes.md", content: input.researchNotes },
             ...(input.pageMd ? [{ path: "page.md", content: input.pageMd }] : []),
             ...(input.outline ? [{ path: "outline.md", content: input.outline }] : []),
+            ...(input.pov ? [{ path: "pov.md", content: input.pov }] : []),
+            ...(input.interview ? [{ path: "interview.md", content: input.interview }] : []),
             // Case-study facts are sourced (the company's own engagements), not unsupported numbers.
             ...(await caseStudies(this.cfg)),
             // Vendor map: catches wrong or stale claims about competing/complementary products.
             ...(await competitiveLandscape(this.cfg)),
           ]),
           ``,
-          `Review the draft per your spec and return review.json.`,
+          ...(input.mode === "confirm" && input.previous?.length
+            ? [
+                `CONFIRM MODE (see your spec). The previous round found the issues below and a fix pass ran. For each`,
+                `one still present, return it again, quoting the CURRENT text. Add a new issue only if it is a`,
+                `technical_error or thesis_not_first. Return an empty list when all are resolved.`,
+                ...input.previous.map((i) => `- ${i.kind}: "${i.quote}" — ${i.problem}`),
+                ``,
+              ]
+            : []),
+          `Review the ${input.mode === "confirm" ? "fixed article" : "article"} per your spec and return review.json.`,
         ].join("\n"),
         ...(input.onProgress ? { onProgress: input.onProgress } : {}),
       });

@@ -99,6 +99,8 @@ the rules further down say *why* each pattern reads as generated.
 | Sections whose first sentence restates their own heading | 2 | WARN |
 | Paragraphs opening with a signpost ("That's why…", "This is also why…") | 3 | WARN |
 | Commentary on other writing ("most of what's written", "most guides", "top-ranking pages", "search results", "nobody talks about this") | 0 — state the article's own view (D59) | FAIL |
+| An intro that opens on a misconception ("Teams often worry that…", "It's a common myth…", "Contrary to…") | 0 — the first sentence states the thesis (D61) | FAIL |
+| Statistics in the intro | 1 — the one the thesis turns on, inside its claim (D61) | FAIL |
 
 The thesis belongs in the intro and the conclusion. Key Takeaways and FAQ
 answers support it with specifics; they don't repeat it.
@@ -460,8 +462,15 @@ Banned outright. Acceptable only for genuine acronyms (LLM, RAG, CRM, GTM). Neve
 - Exact wording, attribution to the right speaker, attribution to the right publication.
 - Quotes that can't be sourced are stripped.
 
+### Facts the expert raised are verified before use (D61)
+- A third-party fact from the interview (an incident, a CVE, a report, a vendor's behavior) is used only as its `## Interview Evidence` verdict in the research notes allows: verified as stated, corrected as the source says, unsourced only as the expert's opinion or not at all.
+
+### The final text is reviewed, and leftovers stay visible (D61)
+- After the Editor, the verify stage reviews the finished article, a fix pass resolves what it finds, and a confirm round checks the fixes. Anything still open is left inline as `[VERIFY: …]`.
+- No phase deletes an editor note it didn't resolve. The export refuses while any `[HUMAN INPUT]`, `[NEEDS RESEARCH]`, `[NEEDS SOURCE]` or `[VERIFY]` note remains.
+
 ### Expert statements trace to interview.md (D59)
-- When the article was interviewed, the expert's point of view, their story and their quotes are sourced to `interview.md` (the transcript) and `pov.md` (the brief the refiner wrote from it), not to the research notes.
+- When the article was interviewed, the expert's point of view, their story and their quotes are sourced to `interview.md` (the transcript) and `pov.md` (the brief the POV writer wrote from it), not to the research notes.
 - Quotes from the expert are verbatim from the transcript, attributed by name and title only when `pov.md` records that the expert opted in. Otherwise they stay unattributed or become the article's own voice.
 - The expert's story keeps the publishing boundary `pov.md` records (named, anonymized, or background only).
 - A company number the expert gave is printed only if it is a `Citable: yes` proof point. The interview never makes a number citable.

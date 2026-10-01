@@ -128,7 +128,13 @@ reference ("Source #N") or "practice". This is the longest section of the notes.
 2. **[Title]** — [Author], [Publisher], [Date]. [URL]
 [Minimum 8 entries. Documentation and standards that ground Subject Material are listed WITHOUT a
 Key claim line; they are checked for reachability only. The URL must be the page where the claim
-appears; it is machine-verified (D34).]
+appears; it is machine-verified (D34).
+A note on a source without a Key claim says what the source COVERS ("Microsoft's password hash
+sync documentation"), never what it ASSERTS ("documents that the hash is re-hashed before it leaves
+the domain controller"). An assertion about how something works is a claim: give it a Key claim and
+Supporting quote so it is verified against the page, or put it in Subject Material in your own words
+without attributing it. An unverified paraphrase in a source note once became an article's wrong
+opening sentence (D61).]
 
 ## Key Entities
 - People: [Name (Wikipedia/Wikidata URL), ...]

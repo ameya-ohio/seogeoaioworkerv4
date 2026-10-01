@@ -443,6 +443,9 @@ none
 
 ## Rejected
 - Starting path analysis from machine identities only.
+
+## Facts to Verify
+- F1: Storm-0501 reached the cloud through a compromised Entra Connect server — check: Microsoft's Storm-0501 write-up — said: "the Storm-0501 Entra Connect server"
 `;
 
 describe("interviewGate", () => {
@@ -450,21 +453,20 @@ describe("interviewGate", () => {
     expect(interviewGate({ interviewSkipped: true }).ok).toBe(true);
   });
 
-  it("passes a revised outline that still passes the outline gate, plus a complete pov.md", () => {
-    const g = interviewGate({ outline: GOOD_OUTLINE, pov: GOOD_POV });
+  it("passes a complete pov.md — no outline exists yet when the interview runs (D61)", () => {
+    const g = interviewGate({ pov: GOOD_POV });
     expect(g.problems).toEqual([]);
   });
 
-  it("fails a missing pov.md and a broken revised outline", () => {
-    const g = interviewGate({ outline: GOOD_OUTLINE.replace(/^## Thesis[\s\S]*?(?=^## )/m, ""), pov: "" });
-    expect(g.ok).toBe(false);
-    expect(g.problems.some((p) => p.startsWith("revised outline: No thesis"))).toBe(true);
-    expect(g.problems).toContain("pov.md missing or still a stub");
+  it("fails a missing pov.md, and one without Facts to Verify", () => {
+    expect(interviewGate({ pov: "" }).problems).toContain("pov.md missing or still a stub");
+    const noFacts = GOOD_POV.replace(/## Facts to Verify[\s\S]*$/, "");
+    expect(interviewGate({ pov: noFacts }).problems).toContain("pov.md is missing ## Facts to Verify (or it is empty)");
   });
 
   it("names each missing pov section and a spine outside 3-5 claims", () => {
-    const pov = GOOD_POV.replace(/## Rejected[\s\S]*$/, "").replace(/^3\. .*$/m, "");
-    const g = interviewGate({ outline: GOOD_OUTLINE, pov });
+    const pov = GOOD_POV.replace(/## Rejected[\s\S]*?(?=## Facts)/, "").replace(/^3\. .*$/m, "");
+    const g = interviewGate({ pov });
     expect(g.problems).toContain("pov.md is missing ## Rejected (or it is empty)");
     expect(g.problems).toContain("pov.md Argument Spine has 2 numbered claim(s); need 3-5");
   });

@@ -9,14 +9,20 @@ import type { FunnelStage, PageRole, SearchIntent } from "./plan/types.js";
  */
 export const WORK_STAGES = [
   "research",
-  "outline",
-  // Expert interview (agents/interviewer.md, D59): the run waits for the
-  // operator's point of view, then the outline is refined from it.
+  // Expert interview (agents/interviewer.md, D59/D61): the run waits for the
+  // operator's point of view on the research, then pov.md is written from it.
   "interview",
+  // D61: third-party facts the expert raised are verified on the web.
+  "evidence",
+  // The Strategist plans once, from research + pov.md + the evidence.
+  "outline",
   "write",
-  "edit",
-  // HDCP (agents/hdcp.md): editorial rewrite after the Editor, before Schema.
+  // HDCP (agents/hdcp.md): editorial rewrite, before the Editor (D61) so the
+  // last rewrite is always gated.
   "hdcp",
+  "edit",
+  // D61: expert review of the final text, with a bounded fix loop.
+  "verify",
   "schema",
   "design",
 ] as const;
@@ -40,16 +46,20 @@ export function nextStage(stage: Stage): Stage | null {
     case "queued":
       return "research";
     case "research":
-      return "outline";
-    case "outline":
       return "interview";
     case "interview":
+      return "evidence";
+    case "evidence":
+      return "outline";
+    case "outline":
       return "write";
     case "write":
-      return "edit";
-    case "edit":
       return "hdcp";
     case "hdcp":
+      return "edit";
+    case "edit":
+      return "verify";
+    case "verify":
       return "schema";
     case "schema":
       return "design";
@@ -101,7 +111,9 @@ export type TechnicalIssueKind =
   // example, a claim with no mechanism or evidence behind it.
   | "not_actionable"
   | "generic_example"
-  | "thesis_unsupported";
+  | "thesis_unsupported"
+  // D61: the intro's first two sentences don't state the thesis.
+  | "thesis_not_first";
 
 export interface TechnicalIssue {
   kind: TechnicalIssueKind;
@@ -120,6 +132,34 @@ export interface TechnicalReview {
   /** Set when the review didn't run to completion; the pipeline carries on. */
   skipped?: string;
   costUsd?: number;
+}
+
+/**
+ * D61: one round of the verify stage. `articleHash` is the text the review
+ * read, so a restart reuses a round for unchanged text instead of asking
+ * the reviewer again (and getting a different list).
+ */
+export interface VerificationRound {
+  round: number;
+  articleHash: string;
+  mode: "review" | "confirm";
+  review: TechnicalReview;
+  /** Issues still open after this round (confirm mode: the ones that remain). */
+  open: TechnicalIssue[];
+  /** A fix pass ran on these issues after the round. */
+  fixed: boolean;
+  /** Hash of the text the fix pass produced — a restart that finds it moves on to the next round. */
+  fixedHash?: string;
+  at: Date;
+}
+
+export interface ArticleVerification {
+  /** The run the rounds belong to; a new run starts over. */
+  runId?: ObjectId;
+  rounds: VerificationRound[];
+  /** Left inline as [VERIFY: …] after the last round; the export refuses while any remain. */
+  unresolved: TechnicalIssue[];
+  completedAt?: Date;
 }
 
 export interface PhaseUsage {
@@ -156,7 +196,7 @@ export interface ArticleArtifacts {
   meta?: Record<string, unknown>;
   schema?: Record<string, unknown>;
   headerHtml?: string;
-  /** D59: the Expert POV brief the interview refiner wrote (pov.md). */
+  /** D59: the Expert POV brief written from the interview (pov.md). */
   pov?: string;
 }
 
@@ -186,14 +226,14 @@ export interface HdcpLog {
   markdown: string;
 }
 
-/** D59: whether a run stops for the expert interview after the outline. */
+/** D59: whether a run stops for the expert interview after research (D61). */
 export type InterviewMode = "pause" | "skip";
 
 /**
  * D59 interview lifecycle. `open`: questions are out and the run waits
  * (status awaiting_input). `complete`/`skipped`: the operator finished or
- * skipped it and the run was requeued; `refined`: the refiner rewrote the
- * outline from the answers.
+ * skipped it and the run was requeued; `refined`: pov.md was written from
+ * the answers (agents/pov-writer.md, D61).
  */
 export type InterviewStatus = "open" | "complete" | "skipped" | "refined";
 
@@ -210,6 +250,8 @@ export interface InterviewCaptured {
   objection?: string;
   anchor?: string;
   product?: string;
+  /** D61: third-party facts the expert raised — verified before the article may use them. */
+  facts?: string;
   quote?: string;
   /** Name and title, only when the expert opted in to attribution. */
   attribution?: string;
@@ -219,9 +261,15 @@ export interface ArticleInterview {
   status: InterviewStatus;
   /**
    * The run that opened it. A later run reaching the interview stage (a
-   * re-run from outline) opens a new interview rather than reusing this one.
+   * re-run from research) opens a new interview once this one is refined or
+   * skipped; a complete or open interview carries over.
    */
   runId?: ObjectId;
+  /**
+   * D61: what the interview was built from. "research" (the interview runs
+   * before any outline); absent on interviews opened after an outline (D59).
+   */
+  basis?: "research";
   /** The interviewer's plan (wedge, candidate positions, beats), in markdown. */
   plan: string;
   messages: InterviewMessage[];
@@ -349,6 +397,8 @@ export interface ArticleDoc {
   linkChecks?: LinkReport;
   /** Expert read of the Writer's draft (agents/technical-reviewer.md), handed to the Editor. */
   technicalReview?: TechnicalReview;
+  /** D61: the verify stage's rounds on the final text. */
+  verification?: ArticleVerification;
   /** Everything handed to the Editor before its first attempt (gate problems, technical findings, advisory). */
   editPreAudit?: { ranAt: Date; items: string[] };
   /**

@@ -45,6 +45,20 @@ export interface ReviewArticle {
   } | null;
   /** Everything handed to the Editor before its first attempt. */
   editPreAudit: string[] | null;
+  /** D61: the verify stage's rounds on the final text. */
+  verification: {
+    rounds: {
+      round: number;
+      mode: "review" | "confirm";
+      model: string;
+      issues: TechnicalIssue[];
+      skipped: string | null;
+      fixed: boolean;
+      costUsd: number | null;
+      at: string;
+    }[];
+    unresolved: number;
+  } | null;
   /** D59 expert interview: status, the Expert POV brief and the transcript. */
   interview: { status: string; pov: string | null; transcript: string } | null;
   /** HDCP (agents/hdcp.md): diagnosis, changes, cuts, flags and editor notes. */
@@ -81,7 +95,7 @@ export interface ReviewArticle {
   runs: UiRun[];
 }
 
-const PHASES = ["research", "outline", "interview", "write", "edit", "hdcp", "schema", "design"];
+const PHASES = ["research", "interview", "evidence", "outline", "write", "hdcp", "edit", "verify", "schema", "design"];
 
 /** Body only: frontmatter, json-ld fence, and HTML comments stripped. */
 function previewBody(markdown: string): string {
@@ -147,7 +161,11 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
     { key: "interview", label: "Interview", disabled: !article.interview },
     { key: "draft", label: "First draft", disabled: !article.draft },
     { key: "audit", label: "Audit", disabled: !article.audit && !article.citations },
-    { key: "review", label: "Tech review", disabled: !article.technicalReview && !article.editPreAudit },
+    {
+      key: "review",
+      label: article.verification ? "Verification" : "Tech review",
+      disabled: !article.verification && !article.technicalReview && !article.editPreAudit,
+    },
     { key: "hdcp", label: "HDCP", disabled: !article.hdcp },
     { key: "header", label: "Header", disabled: !article.hasHeader },
     { key: "runs", label: "Runs", disabled: article.runs.length === 0 },
@@ -383,7 +401,8 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
                 <CheckList title="Internal links (D35)" checks={article.links} />
               </div>
             )}
-            {tab === "review" && (
+            {tab === "review" && article.verification && <VerificationPanel verification={article.verification} />}
+            {tab === "review" && !article.verification && (
               <TechReviewPanel
                 review={article.technicalReview}
                 preAudit={article.editPreAudit}
@@ -459,7 +478,47 @@ const KIND_LABEL: Record<TechnicalIssue["kind"], string> = {
   not_actionable: "Not actionable",
   generic_example: "Generic example",
   thesis_unsupported: "Claim not proven",
+  thesis_not_first: "Thesis not first",
 };
+
+/** D61: the verify stage's review rounds on the final text, and what each one left open. */
+function VerificationPanel({ verification }: { verification: NonNullable<ReviewArticle["verification"]> }) {
+  return (
+    <div className="space-y-5">
+      <p className="text-xs text-slate-500">
+        The expert review read the final text after the Editor, a fix pass resolved what it found, and a confirm round
+        checked the fixes. {verification.unresolved > 0
+          ? `${verification.unresolved} issue(s) are left in the article as [VERIFY: …] notes; the export refuses until you resolve them.`
+          : "Nothing was left open."}
+      </p>
+      {verification.rounds.length === 0 && <p className="text-xs text-slate-500">The technical review was off; only the Edit checks ran.</p>}
+      {verification.rounds.map((r) => (
+        <div key={r.round}>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Round {r.round} · {r.mode === "review" ? "review" : "confirm"}
+            {r.fixed ? " · fixed" : ""}
+          </p>
+          <p className="mb-2 text-xs text-slate-500">
+            {r.model} · {new Date(r.at).toLocaleString()}
+            {r.costUsd != null && ` · $${r.costUsd.toFixed(3)}`}
+          </p>
+          {r.skipped && <p className="text-xs text-amber-700">Skipped: {r.skipped}</p>}
+          {!r.skipped && r.issues.length === 0 && <p className="text-xs text-emerald-700">No issues.</p>}
+          <ul className="space-y-3">
+            {r.issues.map((issue, i) => (
+              <li key={i} className="rounded-md border border-slate-200 p-3 text-xs">
+                <p className="mb-1 font-semibold text-slate-700">{KIND_LABEL[issue.kind]}</p>
+                <blockquote className="mb-1 border-l-2 border-slate-300 pl-2 italic text-slate-600">{issue.quote}</blockquote>
+                <p className="text-slate-700">{issue.problem}</p>
+                <p className="mt-1 text-slate-500">Fix: {issue.fix}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function TechReviewPanel({
   review,
@@ -647,7 +706,7 @@ function FacetsPanel({
 
 function HdcpPanel({ hdcp, markdown }: { hdcp: ReviewArticle["hdcp"]; markdown: string }) {
   if (!hdcp) return <p className="text-xs text-slate-500">HDCP hasn't run on this article.</p>;
-  const openFlags = markdown.match(/\[(?:NEEDS SOURCE|HUMAN INPUT|VERIFY):[^\]]*\]/g) ?? [];
+  const openFlags = markdown.match(/\[(?:NEEDS SOURCE|NEEDS RESEARCH|HUMAN INPUT|VERIFY):[^\]]*\]/g) ?? [];
   return (
     <div className="space-y-5 text-xs">
       <div>

@@ -1,6 +1,6 @@
 # Blog Agent System — Master Orchestrator
 
-This repository is a company-configurable **Blog Agent System**. The company it currently writes for (name, domain, author, brand, HubSpot IDs, voice) is defined in **`config/company.yaml`** — read it at the start of every run; nothing company-specific is hardcoded in the engine. When the user asks for an article to be written, run the six-phase pipeline below.
+This repository is a company-configurable **Blog Agent System**. The company it currently writes for (name, domain, author, brand, HubSpot IDs, voice) is defined in **`config/company.yaml`** — read it at the start of every run; nothing company-specific is hardcoded in the engine. When the user asks for an article to be written, run the pipeline below.
 
 > Sibling tool: [`blogsagent/`](blogsagent/) is the publisher that ships finished `article.md` files to HubSpot. It is a separate concern. This system *produces* the markdown; `blogsagent/` *publishes* it.
 
@@ -33,14 +33,14 @@ Before any phase runs, do these in order:
    python scripts/new_article.py "<slug>"
    ```
    …which scaffolds `article.md`, `meta.json`, `research-notes.md`, and `outline.md` from the template, **or** create the folder + empty stub files manually if the script is unavailable.
-4. Decide the page's **facets** (D45): page role (`pillar`/`hub`/`cluster`), article type (a format in **`standards/formats.json`**), search intent, funnel. Take them from the user's request or a plan row; otherwise choose them from the topic and confirm them in the Strategist's `## Page Facets`. Write `articles/YYYY-MM-DD-slug/page.md` with the facets, the rules they resolve to in formats.json (length band, Key Takeaways count, FAQ range, schema types, the funnel's CTA from `config/company.yaml` → `ctas`), and the format guide from `templates/formats/<slug>.md` (`generic.md` if none). The worker does this step itself; in terminal mode you do it. Every phase reads page.md. For a plan page, add its **link inventory** (D53): the parent, grandparent and sibling pages with their full `/learn/` URLs and what each covers. Links follow `standards/quality-bar.md` → *Internal linking*.
+4. Decide the page's **facets** (D45): page role (`pillar`/`hub`/`cluster`), article type (a format in **`standards/formats.json`**), search intent, funnel. Take them from the user's request or a plan row; otherwise choose them from the topic and confirm them in the Strategist's `## Page Facets`. Write `articles/YYYY-MM-DD-slug/page.md` with the facets, the rules they resolve to in formats.json (length band, Key Takeaways count, FAQ range, schema types, the funnel's CTA from `config/company.yaml` → `ctas`), and the format guide from `templates/formats/<slug>.md` (`generic.md` if none). The worker does this step itself; in terminal mode you do it. Every phase reads page.md. For a plan page, add its **link inventory** (D53): the parent, grandparent and sibling pages with their full `/learn/` URLs and what each covers. Links follow `standards/quality-bar.md` → *Internal linking*. Then write `research-brief.md` (D60): the facets, what the page must cover (the brief's required passages, else the format's), the brief's evidence requirements and company position, the neighbouring pages under *Owned by other pages*, the research playbook for the format's `researchMode` (`templates/research/<mode>.md`), and the matching sections of `templates/research/modifiers.md` (Role, Funnel, Intent).
 5. Tell the user the folder path before starting Phase 1.
 
 The article folder is the single source of truth for the run. **Every phase reads from and writes to that folder.** Do not let phase outputs live in your head — persist them.
 
 ---
 
-## The six-phase pipeline
+## The pipeline
 
 Run phases strictly in order. Do not skip. If a phase fails its gate condition, fix and re-run that phase before advancing.
 
@@ -50,23 +50,48 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
 - **Inputs to load:**
   - The user's prompt (topic, outline, any keywords)
   - `agents/researcher.md`
-- **Action:** Conduct deep, multi-source web research. Use `WebSearch` and `WebFetch` extensively. Minimum **8 distinct sources**, biased toward primary/authoritative.
+  - `articles/YYYY-MM-DD-slug/research-brief.md` (D60): what this page is researching **for**. The playbook it carries (the "quiver", one per research mode: procedure, mechanism, catalog, comparison, measurement, argument, data, pillar, commercial) says what to gather.
+  - `page.md` and `brief.md` (when present)
+- **Action:** Research the material this page is built from (the playbook's *Subject Material*: the procedure and its commands, the mechanism, the example bank, the deciding dimensions, the measures), then form 2–3 **candidate positions** it supports and bank the evidence each needs, tagged by position. Use `WebSearch` and `WebFetch` extensively. Minimum **8 distinct sources**, biased toward primary documentation and standards. The Researcher doesn't write intro copy or pick the thesis.
 - **Output:** `articles/YYYY-MM-DD-slug/research-notes.md`, in the exact section format specified in `agents/researcher.md`.
-- **Gate:** Research notes file exists, contains all required sections, has ≥ 8 cited sources, and includes at least one named statistic, one named entity, and one explicit content gap.
+- **Gate:** Research notes file exists, contains all required sections (Subject Material and Candidate Positions included), has ≥ 8 cited sources, Subject Material is substantive, there are 2+ candidate positions, every banked statistic or quote is tagged `supports: P<n>` (or the notes say `None needed:`), and it includes one named entity and one explicit content gap. No head-to-head competitor is listed as a source, statistic or quote (their executives' bylines elsewhere included). Check it with:
+  ```bash
+  python3 scripts/competitor_checks.py --research articles/YYYY-MM-DD-slug/research-notes.md
+  ```
 
-### Phase 2 — Strategist
+### Phase 2 — Expert Interview (D59/D61)
+
+- **Sub-agent specs:** `agents/interviewer.md` (the interview), `agents/pov-writer.md` (pov.md from the answers)
+- **Why:** research finds the open wedge and proposes Candidate Positions; only the company's expert can say what they'd argue about it. The interview runs **before anything is planned**, so the outline is built once, from the expert's point of view. Without it, drafts define the topic instead of arguing the title, string statistics together, and comment on other writing.
+- **Inputs:** `research-notes.md` (Topic Summary, Candidate Positions, Subject Material, Content Gaps, Debates), `page.md` (facets, CTA), `context/case-studies/`, `context/sales/proof-points.md` (`Citable: yes` rows), `context/brand/positioning.md`, `context/sales/value-props.md`.
+- **Action (terminal mode):** you are the interviewer. Run the beats in `agents/interviewer.md` with the user in this chat, one question per message: frame the wedge, offer the research's Candidate Positions as A/B/C, get the thesis in their words and the strongest objection, validate or replace the real-world anchor (with its publishing boundary), ask what the product sees and which proof point (if any) fits, then play it back. Note every third-party fact they raise; it will be verified. If the user says skip, skip this phase and the next. Save the transcript to `interview.md`, then apply `agents/pov-writer.md` to write `pov.md`.
+- **Action (worker):** the run stops after research with status `awaiting_input`; the operator answers in the web app (Production → *Needs you*), and Finish (or Skip) requeues it. A plan or `config/company.yaml` → `pipeline.interview: skip` turns the stop off.
+- **Output:** `interview.md`, `pov.md`.
+- **Gate:** `pov.md` has Thesis, Argument Spine (3–5 claims), Objection & Answer, Real-World Anchor, Company Role, Approved Quotes, Rejected and Facts to Verify. A skipped interview passes.
+
+### Phase 2.5 — Evidence (D61)
+
+- **Sub-agent spec:** `agents/evidence.md`
+- **Why:** facts the expert raises (an incident, a CVE, a report, a vendor's behavior) come from memory. They are checked before the Strategist may use them.
+- **Inputs:** `pov.md` → `## Facts to Verify`, `interview.md`, `research-notes.md`, `research-brief.md`, `context/sales/competitive-landscape.md`.
+- **Action:** use `WebSearch`/`WebFetch` to check each fact against a primary, non-competitor source. Append `## Interview Evidence` to `research-notes.md`: one `### F<n>:` entry per fact with a verdict (verified / corrected / unsourced), the source (numbered from 101), the key claim, a supporting quote and how the article may use it. Skipped when the interview raised no third-party facts or was skipped.
+- **Output:** `research-notes.md` with `## Interview Evidence`.
+- **Gate:** every fact has an entry with a verdict and a use; verified and corrected facts have a source that passes the live citation check; no head-to-head competitor is a source.
+
+### Phase 3 — Strategist
 
 - **Sub-agent spec:** `agents/strategist.md`
 - **Inputs to load:**
   - `agents/strategist.md`
-  - `articles/YYYY-MM-DD-slug/research-notes.md`
+  - `articles/YYYY-MM-DD-slug/research-notes.md` (with `## Interview Evidence` when the expert raised facts)
+  - `articles/YYYY-MM-DD-slug/pov.md`, when the article was interviewed: its thesis is the article's thesis, its spine is where the outline's starts, and nothing under Rejected is argued
   - **All files in** `standards/` (`seo-checklist.md`, `geo-checklist.md`, `aio-checklist.md`, `schema-spec.md`, `quality-bar.md`)
-  - Relevant `context/` folders: `context/brand/`, `context/marketing/`, `context/sales/`. Skip empty folders silently and proceed with sensible defaults.
-- **Action:** Convert research into a winning angle and a detailed outline. Decide keywords, intent, word-count target, GEO/AIO angle, target entities, FAQ candidates, citations, internal-link opportunities, intro strategy (built from the research Topic Summary), and CTA.
+  - Relevant `context/` folders: `context/brand/`, `context/marketing/`, `context/sales/`, `context/case-studies/` (skip `README.md`, `_template.md`, and files marked `Permission: internal only`). Skip empty folders silently and proceed with sensible defaults.
+- **Action:** Decide what the article argues, then plan how each section proves it (D60): the thesis (from the research's Candidate Positions), a 3–5 claim **Argument Spine** with each claim's proof, the angle as a claim about the subject, and 3–5 banked statistics assigned to spine claims. Every body H2 names the spine claim it advances (or the format requirement it serves), its claim, and its proof; procedure steps carry the exact `Action:`, and examples carry their `Specifics:`. Then keywords, intent, word count, GEO/AIO, entities, FAQ, internal links, the intro strategy (built from the thesis), and the CTA.
 - **Output:** `articles/YYYY-MM-DD-slug/outline.md`.
-- **Gate:** Outline exists; primary keyword chosen; FAQ section has 3–7 candidate questions; H2/H3 outline contains at least 4 H2 sections; all entities and citations to use are listed by name with sources.
+- **Gate:** Outline exists; primary keyword chosen; FAQ count in page.md's range; at least 4 H2 sections; a real thesis; a 3–5 claim Argument Spine, every claim advanced by an H2 and at least half the body H2s advancing one; `Advances:` and `Claim:` on every body H2; each External Citation names the spine claim it supports (or is marked "mechanism"); procedure steps have an `Action:`, and an Examples page has 3+ examples with `Specifics:`, each advancing a spine claim.
 
-### Phase 3 — Writer
+### Phase 4 — Writer
 
 - **Sub-agent spec:** `agents/writer.md`
 - **Inputs to load:**
@@ -75,11 +100,25 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   - `articles/YYYY-MM-DD-slug/research-notes.md`
   - `context/author-style/` (or default voice rules from `agents/writer.md` if empty)
   - `context/brand/` (or skip if empty)
+  - the `context/case-studies/` file the outline's Real-World Anchor names (if any)
+  - `articles/YYYY-MM-DD-slug/pov.md`, when the article was interviewed: the thesis, Argument Spine, anchor, company role and approved quotes the article is built on
 - **Action:** Write the full article in markdown, following the outline section-by-section in the brand/author voice. Embed inline citations naturally. Write FAQ section verbatim using strategist's questions. Fill YAML frontmatter completely.
 - **Output:** `articles/YYYY-MM-DD-slug/article.md` (full draft). Also update `meta.json` with title/slug/meta_description/keywords/canonical.
 - **Gate:** `article.md` exists with complete frontmatter; H1 present; "Key Takeaways" block present near the top; FAQ section present; no fabricated sources (every cited claim must trace to `research-notes.md`).
 
-### Phase 4 — Editor
+### Phase 5 — HDCP (Human Driven Content Protocol)
+
+- **Sub-agent spec:** `agents/hdcp.md` (the lean protocol, Opus 5.5)
+- **Inputs:**
+  - `article.md`, the Writer's draft and the fact boundary; its `primary_keyword` is the target keyword.
+  - `page.md`, whose page role is the content role.
+  - `hdcp-inputs.md`, written by the worker. It holds `cluster_context` (the hub URL, each linked page with the topic it owns, and the glossary from `context/glossary.md` when that exists), plus the audit of the draft: its failures and warnings.
+  - `research-notes.md`, context only.
+- **Action:** Step 1 diagnoses why this draft reads as generated. The diagnosis is prioritized and specific, and is written to the log first. Step 2 rewrites the draft to fix causes, not symptoms. Facts, links and the CTA are locked. Repetition is cut, and sections may be reordered. A topic that a sibling page owns gets summarized and linked. No new material is added.
+- **Output:** the rewritten `article.md` and `hdcp.md`, a log with Diagnosis, Changes made, Cuts, Flags and Editor notes. `[HUMAN INPUT]` flags stay inline, and the export refuses while any remain.
+- **Gate:** the article is intact (frontmatter, one H1, no editor notes in it), every `[HUMAN INPUT|NEEDS RESEARCH|NEEDS SOURCE|VERIFY: …]` note in the draft survives, and the log has a Diagnosis, at least one change, and the Cuts, Flags and Editor notes sections. The Editor runs after HDCP (D61), so its gate checks the rewrite.
+
+### Phase 6 — Editor
 
 - **Sub-agent spec:** `agents/editor.md`
 - **Inputs to load:**
@@ -89,23 +128,19 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   - `standards/geo-checklist.md`
   - `standards/aio-checklist.md`
   - The current `article.md`
-- **Action:** Walk every checklist item explicitly (pass/fail/notes). Edit `article.md` in place to fix all failures. Strip every banned phrase. Verify every citation traces back to `research-notes.md`. Append an HTML-comment edit summary to the bottom of `article.md`.
+- **Action:** Run `python scripts/seo_audit.py` on the draft first and fix every FAIL it reports (banned phrases and the machine-checked style limits in `standards/quality-bar.md` included), HDCP has already restructured the draft, so make the smallest edits that pass and don't restructure. Then walk every checklist item explicitly (pass/fail/notes). Edit `article.md` in place to fix all failures. Strip every banned phrase. Verify every citation traces back to `research-notes.md`. Append an HTML-comment edit summary to the bottom of `article.md`.
 - **Output:** Updated `articles/YYYY-MM-DD-slug/article.md` + edit summary as `<!-- EDIT SUMMARY: ... -->`.
 - **Gate:** Zero banned phrases; all checklist items pass or have a documented justified exception; meta description 140–160 chars; title 50–60 chars; primary keyword present in first 100 words.
 
-### Phase 4.5 — HDCP (Human Driven Content Protocol)
+### Phase 7 — Verify (D61)
 
-- **Sub-agent spec:** `agents/hdcp.md` (the lean protocol, Opus 5.5)
-- **Inputs:**
-  - `article.md`, the edited draft and the fact boundary; its `primary_keyword` is the target keyword.
-  - `page.md`, whose page role is the content role.
-  - `hdcp-inputs.md`, written by the worker. It holds `cluster_context` (the hub URL, each linked page with the topic it owns, and the glossary from `context/glossary.md` when that exists), plus the technical review findings and the latest audit's failures and warnings.
-  - `research-notes.md`, context only.
-- **Action:** Step 1 diagnoses why this draft reads as generated. The diagnosis is prioritized and specific, and is written to the log first. Step 2 rewrites the draft to fix causes, not symptoms. Facts, links and the CTA are locked. Repetition is cut, and sections may be reordered. A topic that a sibling page owns gets summarized and linked. No new material is added.
-- **Output:** the rewritten `article.md` and `hdcp.md`, a log with Diagnosis, Changes made, Cuts, Flags and Editor notes. `[HUMAN INPUT]` flags stay inline, and the export refuses while any remain.
-- **Gate:** the article is intact (frontmatter, one H1, no editor notes in it), and the log has a Diagnosis, at least one change, and the Cuts, Flags and Editor notes sections. The model's judgment is the check; the edit gate does not run again.
+- **Sub-agent specs:** `agents/technical-reviewer.md` (the review), `agents/editor.md` → *Fix mode* (the fixes)
+- **Why:** the expert review reads the **final** text, after the last rewrite, so nothing a later phase introduced escapes it.
+- **Action:** apply `agents/technical-reviewer.md` to the finished `article.md` (with `research-notes.md`, `outline.md`, `page.md`, and `pov.md`/`interview.md` when interviewed): accuracy, substance, and `thesis_not_first`. If it finds issues, fix exactly those (Editor Fix mode), re-run `scripts/seo_audit.py`, and review once more in confirm mode, checking only the listed issues plus new technical errors. Anything still open after that goes inline as `[VERIFY: <problem>]` next to the sentence.
+- **Output:** the verified `article.md`. The worker stores each round on the article against the text's hash, so a restart reuses it.
+- **Gate:** every Edit check passes on the final text, the review rounds are recorded, and each unresolved issue has its `[VERIFY: …]` note. The export refuses while any note remains.
 
-### Phase 5 — Schema Builder
+### Phase 8 — Schema Builder
 
 - **Sub-agent spec:** `agents/schema-builder.md`
 - **Inputs to load:**
@@ -121,7 +156,7 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   Fix and re-run until exit code 0.
 - **Gate:** `schema.json` validates; the same JSON is embedded in `article.md`; FAQPage `mainEntity` mirrors the article's FAQ section verbatim.
 
-### Phase 6 — Header Designer
+### Phase 9 — Header Designer
 
 - **Sub-agent spec:** `agents/header-designer.md`
 - **Tool:** the `blogheaderimagegen/` Python package at the repo root (sibling to `blogsagent/` and `blogscraper/`).
@@ -142,7 +177,7 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
 
 ## Final deliverable check
 
-After Phase 6, run:
+After Phase 9, run:
 
 ```bash
 python scripts/seo_audit.py articles/YYYY-MM-DD-slug/
@@ -163,12 +198,13 @@ Then summarize for the user:
 
 - **Always create the article folder FIRST.** Never start Phase 1 without it.
 - **Never skip phases.** Even short articles run the full pipeline.
-- **Never fabricate** statistics, quotes, or sources. Every fact in the article must trace to `research-notes.md`. If research did not surface a needed source, go back to Phase 1 and search again rather than inventing one.
+- **Never fabricate** statistics, quotes, or sources. Every statistic, quote, dated event and named source in the article must trace to `research-notes.md` (the expert's own statements and story: to `interview.md`). Mechanism, practice and reasoning are written from expertise and need no citation. Use few statistics: the article argues, and evidence supports it (`standards/quality-bar.md` → *Argument over evidence*). If research did not surface a needed source, go back to Phase 1 and search again rather than inventing one.
 - **Empty context folder ≠ failure.** If `context/brand/` is empty, log it and proceed with sensible defaults from `agents/writer.md` and `standards/quality-bar.md`. Do the same for sales/marketing/finance/author-style.
 - **Author Style default** (until `context/author-style/` is populated): clear, expert, balanced — neither overly casual nor stiff. Confident voice, second-person where natural, short paragraphs (2–4 sentences), concrete examples. Avoid AI clichés (banned-phrases list lives in `standards/quality-bar.md`).
 - **Cite sources inline:** in `research-notes.md` use markdown footnote-style or numbered citations with full URLs; in `article.md` body use natural attribution ("According to a 2025 Stanford study…") plus a citation in the JSON-LD `citation` array.
 - **Do not auto-publish.** This system produces the article folder. Publishing to HubSpot is `blogsagent/`'s job and runs separately, on user request.
 - **Stop and ask** only if the user's request is genuinely ambiguous about *what topic* to cover. Otherwise, proceed.
+- **Never comment on other writing.** The article states its own view. It never says what other articles, guides or search results say or miss (the audit fails it).
 
 ---
 
@@ -177,13 +213,33 @@ Then summarize for the user:
 ```
 agents/
   researcher.md       Phase 1 spec
-  strategist.md       Phase 2 spec
-  writer.md           Phase 3 spec
-  editor.md           Phase 4 spec
-  schema-builder.md   Phase 5 spec
-  header-designer.md  Phase 6 spec (1200×600 hero image)
+  interviewer.md      Phase 2 spec: the expert interview, right after research (D59/D61)
+  pov-writer.md       Phase 2 spec: pov.md from the interview
+  evidence.md         Phase 2.5 spec: web-verify the facts the expert raised (D61)
+  strategist.md       Phase 3 spec
+  writer.md           Phase 4 spec
+  hdcp.md             Phase 5 spec (restructure for voice, before the Editor)
+  editor.md           Phase 6 spec (+ Fix mode for Phase 7)
+  schema-builder.md   Phase 8 spec
+  header-designer.md  Phase 9 spec (1200×600 hero image)
   configurator.md     Company onboarding agent (not a pipeline phase;
                       invoked via the /configure-company skill)
+  plan-brief-enricher.md
+                      Sharpens one imported content-plan row into a full spoke
+                      brief (not a pipeline phase; runs on the plan queue in
+                      apps/worker). May describe evidence, never supply it.
+  technical-reviewer.md
+                      Expert read of the FINAL text, in Phase 7 (D61):
+                      technical errors, contradictions, stale stats, vaguely
+                      sourced numbers, substance, a thesis that isn't first.
+                      Its issues go to the Editor's Fix mode, then a confirm
+                      round; leftovers become [VERIFY: …] notes.
+  topic-cluster-generator.md
+                      Theme-driven research agent (not a pipeline phase; D30/D31):
+                      seed → prompt fan-out → themes → hub/spoke architecture →
+                      spoke briefs. Runs headless in apps/worker (cluster queue);
+                      accepted briefs land in the keyword library and ride into
+                      the pipeline as a first-class Strategist input (brief.md)
 
 standards/
   seo-checklist.md    Traditional SEO bar
@@ -193,7 +249,8 @@ standards/
   quality-bar.md      Banned phrases, voice, fact-check
   formats.json        Format registry (D45): the 23 article types — length,
                       schema, header pattern, FAQ/takeaway rules, competitor
-                      mode, sign-off, fact-sheet requirements
+                      mode, sign-off, fact-sheet requirements, and the
+                      research mode each one researches in (D60)
 
 config/
   company.yaml        Single company config surface (identity, blog, author,
@@ -207,6 +264,9 @@ templates/
   article-template.md     Frontmatter + body skeleton
   schema-template.json    Base @graph skeleton
   formats/<slug>.md       Writing guide per article type (D45); generic.md fallback
+  research/<mode>.md      Research playbook per research mode (D60, the "quiver");
+                          formats.json maps each article type to a mode.
+                          research/modifiers.md adjusts by role, funnel, intent
 
 scripts/
   new_article.py      Scaffold a new article folder
@@ -219,6 +279,34 @@ scripts/
   proof_points.py     Company numbers must come from context/sales/proof-points.md
 
 articles/             One subfolder per article (YYYY-MM-DD-slug)
+
+Content plans      An operator-authored spreadsheet (a pillar map, a content
+                   calendar) imported as `plans` + `plan_items`: every row
+                   becomes a planned article with a reserved slug, a synthesized
+                   spoke brief, and a production `sequence` that builds
+                   bottom-up (D56): a subtopic's cluster articles before its
+                   hub, a pillar's hubs before the pillar page. The operator
+                   queues a subtopic or pillar for build from the Articles tab
+                   (or a per-plan cadence produces them unattended), stopping at
+                   `review`; each subtopic then goes live as one release (hub +
+                   articles together) from the Releases tab. Worker CLI:
+                   `plan-import`, `plan-status`, `plan-items`, `plan-enrich`,
+                   `plan-resequence`, `build-queue`, `build-sweep`,
+                   `schedule-create`, `schedule-resume`, `schedule-preview`,
+                   `schedule-tick`.
+
+packages/engine/      TypeScript engine library for headless mode (Mongo
+                      data layer, pipeline stages, code-enforced gates,
+                      bridge to the Python scripts, storage adapter)
+apps/worker/          Headless pipeline service (Claude Agent SDK): runs
+                      these same six phases from agents/*.md with state in
+                      MongoDB — see apps/worker/README.md. Terminal mode
+                      (this file) and the worker are two frontends over the
+                      same specs; changing agents/ or standards/ changes both.
+apps/web/             Operator web app (Next.js): keyword library, strategy
+                      tabs (chat/CSV/select), live production board + review
+                      editor, articles library, admin editors — see
+                      apps/web/README.md. Reads the same Mongo as the worker.
 ```
 
 When in doubt, re-read this file.

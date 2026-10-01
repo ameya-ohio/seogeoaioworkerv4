@@ -12,7 +12,8 @@ The Writer follows your outline mechanically. An outline whose sections each cov
 
 ## Inputs to load
 
-1. `articles/YYYY-MM-DD-slug/research-notes.md`: the **Subject Material** (what the page is built from), the **Candidate Positions**, and the evidence bank (**Statistics & Data Points** and **Quotes**, each tagged `supports: P<n>`). The Topic Summary is the Researcher's briefing to you, not intro copy.
+1. `articles/YYYY-MM-DD-slug/research-notes.md`: the **Subject Material** (what the page is built from), the **Candidate Positions**, and the evidence bank (**Statistics & Data Points** and **Quotes**, each tagged `supports: P<n>`). The Topic Summary is the Researcher's briefing to you, not intro copy. When the expert raised facts in the interview, the notes end with **`## Interview Evidence`**: one entry per fact, with a verdict.
+1.5. `articles/YYYY-MM-DD-slug/pov.md`, **if present**: the **Expert POV brief** (D59/D61). The company's expert was interviewed on the Candidate Positions before you plan, so this is the point of view you build on, not a suggestion. See *When pov.md exists* below.
 2. `articles/YYYY-MM-DD-slug/page.md`: **this page's spec** (D45–D50): the four facets, the rules they resolve to (length band, Key Takeaways count, FAQ range, schema types, closing CTA, how much the company appears), the **format guide**, and the link inventory. When page.md says the page has no facets yet, choose them yourself from `standards/formats.json` (decision 0).
 3. `articles/YYYY-MM-DD-slug/brief.md`, **if present**: a coverage contract, not an outline (D33). Its required passages must each exist somewhere in the article (answer-first, able to survive extraction), its evidence requirements bind, and its length band replaces the SERP-median rule. Its *Company position* is context: it tells you what the company stands for, not what this page argues. **The narrative structure is yours.**
 
@@ -32,6 +33,15 @@ Write each decision **and the reason**. The Writer reads your reasoning when pro
 ### 0. Page facets
 
 Record the four facets in `## Page Facets`. When page.md lists them (a plan item or a brief set them), copy them. Otherwise choose: page role (`pillar`, `hub` or `cluster`), article type (a label or slug from `standards/formats.json`, picked by whose query patterns match the primary keyword), search intent, funnel stage. The outline gate rejects a value the registry doesn't know.
+
+### When pov.md exists (D61)
+
+- **The thesis is the expert's.** Take pov.md's `## Thesis` and write `Position taken: expert` (name the Candidate Position it grew from). Sharpen the wording for the page if you need to; don't change the claim.
+- **The spine starts from pov.md's `## Argument Spine`.** Keep its order and claims, and give each claim its proof from the research material. Add a claim only when the page's format requires one (a procedure's steps, say).
+- **Real-World Anchor and Company Role** come from pov.md, with its publishing boundary.
+- **Nothing under `## Rejected` is argued**, anywhere in the outline.
+- **Interview facts are used only as their Interview Evidence verdict allows.** `verified`: cite it as Source 1xx. `corrected`: plan the source's version, not the expert's. `unsourced`: at most the expert's opinion, attributed as such, or leave it out. A fact with no entry isn't used.
+- **Approved Quotes** may go in `## Quotable Sound Bites` verbatim, with the attribution pov.md gives.
 
 ### 1. Thesis (the article's spine, D33)
 
@@ -132,7 +142,7 @@ Two to four clean, citable, standalone sentences that fall out of the spine clai
 
 The intro **starts from the thesis**. The research notes' Topic Summary is background and doesn't carry over as copy.
 
-- **Paragraph 1: the problem the thesis answers, in the thesis's terms.** Name the subject in the first sentence and state the problem or distinction directly. When the title argues something ("Why…", "…Has to Be…", "…Is Not…"), the first sentence carries that argument. The answer block the format guide asks for lives here. A definition, if the reader needs one, is a clause inside a sentence that argues. Concede-then-pivot (see `context/author-style/`) happens inside this paragraph, with no warm-up before it. Plan each sentence as a step toward the thesis.
+- **Paragraph 1: the problem the thesis answers, in the thesis's terms.** Name the subject in the first sentence and state the problem or distinction directly. **The first sentence states the thesis claim** (D61). It does not open on a misconception to correct ("Teams often worry that…", "It's a common myth…"), on a definition, or on a statistic; the audit fails the first two and a stat opener, and the final review flags a thesis that arrives late. When the title argues something ("Why…", "…Has to Be…", "…Is Not…"), the first sentence carries that argument. The answer block the format guide asks for lives here. A definition, if the reader needs one, is a clause inside a sentence that argues. Concede-then-pivot (see `context/author-style/`) happens inside this paragraph, with no warm-up before it. Plan each sentence as a step toward the thesis.
 - **Paragraph 2: why it matters now, in terms of the thesis.** What changed, or what getting this wrong costs, in one to three sentences. A figure is optional: at most one, and only a banked figure assigned to a spine claim. Never a threat-report number used as a hook.
 - **Optional short paragraph 3:** the thesis preview, if paragraph 1 doesn't already carry it.
 
@@ -175,7 +185,7 @@ Write `articles/YYYY-MM-DD-slug/outline.md` in this structure:
 ## Thesis
 [1–2 sentences: the claim the article argues.]
 
-**Position taken:** [P1 / P2 / combined / sharpened] — [why this one, and why not the others]
+**Position taken:** [P1 / P2 / combined / sharpened / expert (from pov.md)] — [why this one, and why not the others]
 
 ## Argument Spine
 1. [Claim] — proof: [mechanism: <Subject Material item> | evidence: Source #N | anchor | reasoning]

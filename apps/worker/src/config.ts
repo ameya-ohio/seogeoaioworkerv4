@@ -11,8 +11,11 @@ import type { WorkStage } from "@blogagent/engine";
  * its live WebSearch/WebFetch depth is the no-fabrication guardrail.
  */
 export type PhaseRoute = "agent" | "direct";
-export type DirectPhase = Exclude<WorkStage, "research">;
-export const DIRECT_PHASES: readonly DirectPhase[] = ["outline", "interview", "write", "edit", "hdcp", "schema", "design"];
+// Research and evidence (D61) are agent-only: they need live WebSearch/WebFetch.
+export type DirectPhase = Exclude<WorkStage, "research" | "evidence">;
+export const DIRECT_PHASES: readonly DirectPhase[] = ["interview", "outline", "write", "hdcp", "edit", "verify", "schema", "design"];
+/** Phases that always run as an Agent SDK session with web tools. */
+export const AGENT_ONLY_PHASES: readonly WorkStage[] = ["research", "evidence"];
 export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
 const EFFORTS: readonly Effort[] = ["low", "medium", "high", "xhigh", "max"];
 
@@ -124,12 +127,15 @@ function phaseModels(): Record<WorkStage, string> {
   const get = (phase: string) => process.env[`PHASE_MODEL_${phase.toUpperCase()}`] ?? def;
   return {
     research: get("research"),
-    outline: get("outline"),
-    // The interview refiner rebuilds the outline from the expert's answers:
-    // an editorial-judgment rewrite like HDCP, so Opus 5.5 unless overridden.
+    // The POV writer turns the expert's answers into pov.md: the article's
+    // point of view rests on its fidelity, so Opus 5.5 unless overridden.
     interview: process.env["PHASE_MODEL_INTERVIEW"] ?? "claude-opus-5-5",
+    evidence: get("evidence"),
+    outline: get("outline"),
     write: get("write"),
     edit: get("edit"),
+    // D61: the verify stage's fix pass is an Editor run on named issues.
+    verify: process.env["PHASE_MODEL_VERIFY"] ?? get("edit"),
     // HDCP is an editorial-judgment rewrite: Opus 5.5 unless overridden.
     hdcp: process.env["PHASE_MODEL_HDCP"] ?? "claude-opus-5-5",
     schema: get("schema"),
@@ -173,8 +179,10 @@ export function loadWorkerConfig(): WorkerConfig {
     models: phaseModels(),
     maxTurns: {
       research: intEnv("PHASE_MAX_TURNS_RESEARCH", 120),
-      outline: intEnv("PHASE_MAX_TURNS_OUTLINE", 40),
       interview: intEnv("PHASE_MAX_TURNS_INTERVIEW", 40),
+      evidence: intEnv("PHASE_MAX_TURNS_EVIDENCE", 80),
+      outline: intEnv("PHASE_MAX_TURNS_OUTLINE", 40),
+      verify: intEnv("PHASE_MAX_TURNS_VERIFY", 60),
       write: intEnv("PHASE_MAX_TURNS_WRITE", 60),
       edit: intEnv("PHASE_MAX_TURNS_EDIT", 80),
       hdcp: intEnv("PHASE_MAX_TURNS_HDCP", 80),

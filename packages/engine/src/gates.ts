@@ -13,10 +13,11 @@ import {
   type CitationReport,
   type LinkReport,
 } from "./citations.js";
-import type { GateResult, ScriptReport, WorkStage } from "./types.js";
+import type { ArticleVerification, GateResult, ScriptReport, WorkStage } from "./types.js";
 import type { FormatRegistry } from "./formats.js";
 import { parseOutlineFacets, type PageRules } from "./pageRules.js";
 import { povProblems } from "./interview.js";
+import { evidenceProblems, factsToVerify } from "./evidence.js";
 
 /**
  * Per-phase gate conditions from CLAUDE.md, enforced in code (roadmap 2.3).
@@ -45,10 +46,25 @@ export interface GateFiles {
   facetRegistry?: FormatRegistry;
   /** HDCP: the agent's hdcp.md log (raw markdown). */
   hdcpLog?: string;
-  /** Interview (D59): the refiner's Expert POV brief. */
+  /** Interview (D59/D61): the POV writer's Expert POV brief. */
   pov?: string;
   /** Interview (D59): skipped by the operator or the plan — nothing to check. */
   interviewSkipped?: boolean;
+  /** HDCP (D61): article.md as it was before HDCP, so no marker can be deleted. */
+  priorArticle?: string;
+  /** Verify (D61): the rounds the verify stage ran on the final text. */
+  verification?: ArticleVerification;
+}
+
+/**
+ * Inline notes an editor must resolve before a page ships. The export and
+ * the Review screen refuse while any remain, and no phase may delete one
+ * it didn't resolve (D61).
+ */
+export const EDITOR_MARKER_RE = /\[(?:NEEDS SOURCE|NEEDS RESEARCH|HUMAN INPUT|VERIFY):[^\]]*\]/g;
+
+export function editorMarkers(md: string): string[] {
+  return md.match(EDITOR_MARKER_RE) ?? [];
 }
 
 function result(problems: string[]): GateResult {
@@ -517,8 +533,8 @@ function bullets(section: string | undefined): string[] {
 
 /**
  * Parse the HDCP agent's markdown log (agents/hdcp.md → Log format). Returns
- * the log or the problems that make it unusable. The agent's own judgment is
- * the check (operator decision, 2026-09-29): no audit runs after HDCP.
+ * the log or the problems that make it unusable. Since D61 the Editor runs
+ * after HDCP, so its gate checks the rewrite.
  */
 export function parseHdcpLog(
   text: string | undefined,
@@ -537,7 +553,8 @@ export function parseHdcpLog(
     if (s === undefined) problems.push(`hdcp.md: \`## ${name}\` section missing`);
   }
   if (problems.length) return { problems };
-  const none = (s: string) => /^(none|n\/a|—|-)\.?$/i.test(s.trim());
+  // "none", "none inline. (…)", "n/a": the agent saying there's nothing to list.
+  const none = (s: string) => /^(?:none|n\/a)\b|^[—-]\.?$/i.test(s.trim());
   return {
     problems,
     log: {
@@ -559,9 +576,9 @@ export function parseHdcpLog(
 }
 
 /**
- * HDCP gate: the output exists and is sound. Deliberately no audit re-run
- * and no second opinion on the rewrite (operator decision): the agent's
- * judgment is the check.
+ * HDCP gate: the output exists and is sound, and no editor note was
+ * deleted. The rewrite itself is checked by the Editor's gate, which runs
+ * after HDCP since D61.
  */
 export function hdcpGate(files: GateFiles): GateResult {
   const problems: string[] = [];
@@ -579,18 +596,66 @@ export function hdcpGate(files: GateFiles): GateResult {
     problems.push("the editor notes belong in hdcp.md, not in the article");
   }
   problems.push(...parseHdcpLog(files.hdcpLog).problems);
+  // D61: a note left for a human stays until a human resolves it.
+  if (files.priorArticle) {
+    const after = editorMarkers(raw);
+    for (const m of editorMarkers(files.priorArticle)) {
+      if (!after.includes(m)) problems.push(`HDCP removed an editor note it can't resolve — keep it verbatim: ${m.slice(0, 160)}`);
+    }
+  }
   return result(problems);
 }
 
 /**
- * Interview (D59): the refiner rewrote outline.md from the expert's answers
- * and wrote pov.md. The rewritten outline must still pass the outline gate,
- * and the POV brief must carry every section the Writer builds on.
+ * Interview (D59/D61): the POV writer turned the expert's answers into
+ * pov.md, before the Strategist plans. The brief must carry every section
+ * the Strategist and Writer build on, including the facts to verify.
  */
 export function interviewGate(files: GateFiles): GateResult {
   if (files.interviewSkipped) return result([]);
-  const problems = outlineGate(files).problems.map((p) => `revised outline: ${p}`);
-  problems.push(...povProblems(files.pov));
+  return result(povProblems(files.pov));
+}
+
+/**
+ * Evidence (D61): every third-party fact the expert raised has a verdict in
+ * research-notes.md → Interview Evidence, and the verified ones passed the
+ * live citation check, from a source that isn't a head-to-head competitor.
+ */
+export function evidenceGate(files: GateFiles): GateResult {
+  if (!factsToVerify(files.pov).length) return result([]);
+  const problems = evidenceProblems(files.pov, files.researchNotes ?? "");
+  const cr = files.citationReport;
+  if (cr) {
+    for (const r of cr.results) {
+      if (r.verdict === "unsupported" || r.verdict === "unreachable") {
+        problems.push(`Interview evidence source #${r.sourceN} (${r.url}): ${r.verdict} — "${r.claim.slice(0, 100)}"${r.note ? ` (${r.note})` : ""}`);
+      }
+    }
+  }
+  if (files.competitorReport) {
+    for (const c of files.competitorReport.checks) {
+      if (c.level === "fail") problems.push(`competitor FAIL: ${c.message}`);
+    }
+  }
+  return result(problems);
+}
+
+/**
+ * Verify (D61): the final text passes every Edit check, the verify stage
+ * recorded its rounds, and each issue still open after the last round is
+ * flagged inline for the editor.
+ */
+export function verifyGate(files: GateFiles): GateResult {
+  const problems = editGate(files).problems;
+  const v = files.verification;
+  if (!v?.completedAt) {
+    problems.push("verification did not complete — no review of the final text is recorded");
+  } else {
+    const flagged = editorMarkers(files.article ?? "").filter((m) => m.startsWith("[VERIFY:")).length;
+    if (flagged < v.unresolved.length) {
+      problems.push(`${v.unresolved.length} unresolved verification issue(s) but ${flagged} [VERIFY: …] note(s) in the article`);
+    }
+  }
   return result(problems);
 }
 
@@ -633,11 +698,13 @@ export function designGate(files: GateFiles): GateResult {
 
 export const GATES: Record<WorkStage, (files: GateFiles) => GateResult> = {
   research: researchGate,
-  outline: outlineGate,
   interview: interviewGate,
+  evidence: evidenceGate,
+  outline: outlineGate,
   write: writeGate,
-  edit: editGate,
   hdcp: hdcpGate,
+  edit: editGate,
+  verify: verifyGate,
   schema: schemaGate,
   design: designGate,
 };

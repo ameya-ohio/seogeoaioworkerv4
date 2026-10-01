@@ -1207,14 +1207,14 @@ Commands:
                                      Run the queue worker (article pipeline, cluster, scrape, plan
                                      enrichment; the cadence scheduler needs SCHEDULER_ENABLED=1)
   enqueue --topic "…"                Queue an article run
-          [--keyword "…"] [--slug s] [--from-stage research|outline|interview|write|edit|hdcp|schema|design]
+          [--keyword "…"] [--slug s] [--from-stage research|interview|evidence|outline|write|hdcp|edit|verify|schema|design]
           [--interview pause|skip]   (default: the plan's setting, else company.yaml pipeline.interview)
   import-articles [--dry-run]        Backfill articles/ folders into Mongo
           [--stage published] [--update] [--audit]
           [--only <folder>,<folder>]  (full YYYY-MM-DD-slug names)
   status                             Articles by stage + active runs
   rerun --article <id|slug|folder>   Re-run an existing article from a phase (default research)
-          [--from research|outline|interview|write|edit|hdcp|schema|design]
+          [--from research|interview|evidence|outline|write|hdcp|edit|verify|schema|design]
   interview-skip --article <ref>     Skip an open expert interview; the run resumes at the Writer
   events --run <id> [--follow]       Print a run's event stream
   cluster-enqueue --seed "…" [--k 5] Queue a Topic & Cluster Generator run
@@ -1260,7 +1260,7 @@ Commands:
 
 Env: MONGODB_URI, MONGODB_DB, ANTHROPIC_API_KEY, WORKER_CONCURRENCY,
      PHASE_MODEL_DEFAULT / PHASE_MODEL_<PHASE>, STORAGE_DRIVER (local|s3),
-     INTERVIEW_OPEN_MODEL, INTERVIEW_OPEN_EFFORT (D59 interview opening call),
+     INTERVIEW_OPEN_MODEL, INTERVIEW_OPEN_EFFORT (D59 interview opening call), PHASE_MODEL_VERIFY (D61 fix pass),
      CLUSTER_MODEL, CLUSTER_FANOUT_MODEL, CLUSTER_FANOUT_K, CLUSTER_MAX_VALIDATIONS,
      GEMINI_API_KEY (observed fan-out), DATAFORSEO_LOGIN/PASSWORD (+_SANDBOX=1),
      SCRAPER_PYTHON, SCRAPE_MAX_ATTEMPTS, SCRAPE_TIMEOUT_MS,

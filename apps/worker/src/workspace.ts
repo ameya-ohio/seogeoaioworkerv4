@@ -173,9 +173,15 @@ export async function persistPhaseOutputs(
       return;
     }
     case "interview": {
-      const outline = await readIfExists(join(dir, "outline.md"));
+      // D61: the POV writer writes pov.md only; the Strategist plans after it.
       const pov = await readIfExists(join(dir, "pov.md"));
-      await saveArtifacts(db, id, { ...(outline ? { outline } : {}), ...(pov ? { pov } : {}) });
+      if (pov) await saveArtifacts(db, id, { pov });
+      return;
+    }
+    case "evidence": {
+      // D61: the Interview Evidence section is appended to the research notes.
+      const notes = await readIfExists(join(dir, "research-notes.md"));
+      if (notes) await saveArtifacts(db, id, { researchNotes: notes });
       return;
     }
     case "write": {
@@ -200,7 +206,8 @@ export async function persistPhaseOutputs(
       }
       return;
     }
-    case "hdcp": {
+    case "hdcp":
+    case "verify": {
       const md = await readIfExists(join(dir, "article.md"));
       if (md) {
         const { frontmatter } = parseArticle(md);

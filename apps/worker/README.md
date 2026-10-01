@@ -20,8 +20,8 @@ enqueue → runs (queued) ──claim/lease──▶ worker
                                           │      retry the phase with GATE FEEDBACK appended
                                           │   5. persist artifacts to Mongo, advance stage
                                           ▼
-        research → outline → interview → write → edit → hdcp → schema → design → review
-                                  (waits for the expert)
+        research → interview → evidence → outline → write → hdcp → edit → verify → schema → design → review
+                      (waits for the expert)   (D61: POV before the plan; the last rewrite gated; final read)
 ```
 
 - **Mongo is the system of record**; the article folder is a scratch workspace
@@ -67,31 +67,50 @@ enqueue → runs (queued) ──claim/lease──▶ worker
   third-party outlet. Product-only bans match by URL alone, and vendor
   formats (D51) may list the vendor's own docs. The Researcher retries with
   the offending entries as gate feedback (D58).
-- **Edit pre-audit + technical review**: before the Editor's first attempt
-  the worker runs the edit gate's own checks on the draft (audit incl. the
+- **Edit pre-audit**: before the Editor's first attempt the worker runs the
+  edit gate's own checks on the draft (audit incl. the
   `scripts/style_checks.py` AI-cadence limits, body citations, internal
-  links) and an expert read of the draft (`agents/technical-reviewer.md`,
-  `TECH_REVIEW_MODEL`, default `claude-opus-5-5` with server-side refusal
-  fallbacks). Everything found is handed to the Editor with quoted context;
-  the review result is stored as `articles.technicalReview` and never blocks
-  a run (`TECH_REVIEW=0` turns it off).
-- **Expert interview** (D59, Phase 2.5): after the outline, the worker opens
-  the interview. One call to `agents/interviewer.md` (`INTERVIEW_OPEN_MODEL`,
-  default `claude-opus-5-5`) writes the interview plan and the first message
-  to `articles.interview`. The run then parks as `awaiting_input`: it keeps
-  its attempts, has no lease, and `claimRun` never takes it. The operator
-  answers in the web app. Finish or Skip (`closeInterview`, or
-  `interview-skip` from the CLI) requeues it at `interview` with the claim's
-  attempt refunded (`resumeRun`). Finished, the refiner
-  (`agents/interview-refiner.md`, `PHASE_MODEL_INTERVIEW`, default
-  `claude-opus-5-5`) writes `pov.md` and rewrites `outline.md`, and
-  `interviewGate` re-runs the outline gate and checks pov.md. Skipped, the
-  stage passes straight to the Writer. Write gets `pov.md`, and Edit and HDCP
-  also get the transcript (`interview.md`). An article's `interviewMode`
-  comes from the enqueue call (`--interview pause|skip`), else its plan
-  (`plan-interview`), else `config/company.yaml` → `pipeline.interview`,
-  else `pause`. A re-run from outline cancels a parked run and opens a fresh
-  interview; the earlier answers ride along as context.
+  links) and hands every failure to the Editor with quoted context.
+- **Expert interview** (D59/D61, Phase 2): right after research, the worker
+  opens the interview. One call to `agents/interviewer.md`
+  (`INTERVIEW_OPEN_MODEL`, default `claude-opus-5-5`) writes the interview
+  plan and a first message that offers the research's Candidate Positions as
+  A/B/C. The run then parks as `awaiting_input`: it keeps its attempts, has
+  no lease, and `claimRun` never takes it. The operator answers in the web
+  app. Finish or Skip (`closeInterview`, or `interview-skip` from the CLI)
+  requeues it at `interview` with the claim's attempt refunded
+  (`resumeRun`). Finished, the POV writer (`agents/pov-writer.md`,
+  `PHASE_MODEL_INTERVIEW`, default `claude-opus-5-5`) writes `pov.md`,
+  including `## Facts to Verify`, and `interviewGate` checks it. A completed
+  interview is always written up, even by a re-run, and an open one carries
+  over. An article's `interviewMode` comes from the enqueue call
+  (`--interview pause|skip`), else its plan (`plan-interview`), else
+  `config/company.yaml` → `pipeline.interview`, else `pause`.
+- **Evidence** (D61, Phase 2.5): an Agent SDK session with web tools
+  (`agents/evidence.md`) checks each fact the expert raised against a
+  primary source and appends `## Interview Evidence` to the research notes.
+  The code step runs the D34 live citation check on those sources (numbered
+  from 101) and merges the verified URLs into `citationChecks`, so the Edit
+  gate accepts them; `evidenceGate` checks every fact has a verdict. Skipped
+  when there is nothing to verify.
+- **Outline after the interview**: the Strategist plans once, from research
+  plus `pov.md` and the evidence verdicts. Write gets `pov.md`; HDCP, Edit
+  and verify also get the transcript (`interview.md`).
+- **HDCP before Edit** (D61): HDCP restructures the Writer's draft, using
+  the draft's audit (`hdcp-inputs.md`), and its gate fails if it deletes an
+  editor note (`[HUMAN INPUT|NEEDS RESEARCH|NEEDS SOURCE|VERIFY: …]`). The
+  Editor runs after it, so the last rewrite is always gated, and Edit
+  records the links that ship.
+- **Verify** (D61): an expert read of the FINAL text
+  (`agents/technical-reviewer.md`, `TECH_REVIEW_MODEL`, default
+  `claude-opus-5-5` with refusal fallbacks). Round 1 reviews; if it finds
+  issues, a fix pass (`agents/editor.md` → Fix mode, `PHASE_MODEL_VERIFY`,
+  default the Edit model) fixes exactly those under the Edit gate, and round
+  2 confirms them (listed issues plus new technical errors only). Anything
+  still open becomes an inline `[VERIFY: …]` note that blocks export. Rounds
+  are stored on `articles.verification` against the text's hash, and each
+  fix against the text it produced, so a restart resumes the loop instead of
+  re-reviewing. `TECH_REVIEW=0` leaves only the Edit checks.
 - **Binary storage** (D3): header PNG/HTML go to `STORAGE_DRIVER=local|s3`
   (Railway buckets are S3-compatible).
 
@@ -102,7 +121,7 @@ node apps/worker/dist/cli.js start            # run the queue worker
 node apps/worker/dist/cli.js enqueue --topic "…" [--keyword "…"] [--interview pause|skip]
 node apps/worker/dist/cli.js import-articles [--dry-run] [--update] [--audit]
 node apps/worker/dist/cli.js status
-node apps/worker/dist/cli.js rerun --article <id|slug|folder> [--from research|outline|interview|write|edit|hdcp|schema|design]
+node apps/worker/dist/cli.js rerun --article <id|slug|folder> [--from research|interview|evidence|outline|write|hdcp|edit|verify|schema|design]
 node apps/worker/dist/cli.js interview-skip --article <id|slug|folder>   # unblock a run waiting on the interview
 node apps/worker/dist/cli.js plan-interview --plan <id> --mode pause|skip
 node apps/worker/dist/cli.js events --run <runId> [--follow]
