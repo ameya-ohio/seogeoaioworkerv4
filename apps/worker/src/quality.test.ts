@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { connect, createArticle, type EngineDb } from "@blogagent/engine";
 import type { ObjectId } from "mongodb";
 import type { LlmClient, LlmRequest, LlmResponse } from "./llm.js";
-import { LiveCitationVerifier, LiveLinkChecker, htmlToText, type PageFetcher } from "./quality.js";
+import { LiveCitationVerifier, LiveLinkChecker, focusPageText, htmlToText, type PageFetcher } from "./quality.js";
 
 /**
  * D34/D35 verification logic with fake pages and a fake judge — including a
@@ -120,6 +120,27 @@ Per [IBM](https://ibm.example.com/report), costs rose.
     const urls = check.results.map((r) => r.url);
     expect(urls).toEqual(["https://ibm.example.com/report"]);
     expect(check.unsupportedCount).toBe(0);
+  });
+});
+
+describe("focusPageText (D61)", () => {
+  it("passes a short page whole", () => {
+    expect(focusPageText("short page", ["anything"])).toBe("short page");
+  });
+
+  it("finds a claim deep in a long page instead of truncating it away", () => {
+    const filler = "Unrelated paragraph about cloud ransomware tradecraft and initial access. ".repeat(1500);
+    const claim = "security teams can use attack path analysis to trace cross-domain threats through the Entra Connect server";
+    const page = `${filler}${claim}. ${filler}`;
+    expect(page.length).toBeGreaterThan(200_000);
+    const focused = focusPageText(page, ["Microsoft recommends attack path analysis to trace cross-domain threats", claim]);
+    expect(focused.length).toBeLessThanOrEqual(25_000 + 40 * 13);
+    expect(focused).toContain("attack path analysis to trace cross-domain threats");
+  });
+
+  it("falls back to the page's opening when nothing matches", () => {
+    const page = "x".repeat(60_000);
+    expect(focusPageText(page, ["zzzzz qqqqq"])).toBe(page.slice(0, 25_000));
   });
 });
 

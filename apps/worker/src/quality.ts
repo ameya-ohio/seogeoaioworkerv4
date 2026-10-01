@@ -61,7 +61,60 @@ export function articleProse(md: string): string {
 }
 
 const FETCH_TIMEOUT_MS = 15_000;
+/** What the judge reads per source (the most relevant parts of the page, see focusPageText). */
 const PAGE_TEXT_CAP = 25_000;
+/** What the fetcher keeps: a long primary source (a vendor's incident write-up) runs far past the judge's cap. */
+const PAGE_FETCH_CAP = 600_000;
+const FOCUS_CHUNK = 2_000;
+
+const contentWords = (s: string) =>
+  new Set(
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length >= 5),
+  );
+
+/**
+ * The parts of a page the judge needs. Truncating to the first 25,000
+ * characters hid every claim in the back half of a long page: a Microsoft
+ * incident write-up's recommendations, 100,000 characters in, came back
+ * "unsupported" while the claim was on the page (D61). Instead the page is
+ * cut into chunks, each scored by how many of the claims' and quotes' words
+ * it holds; a chunk with an exact quote always goes in; the best chunks are
+ * kept in page order up to the cap. A short page is passed whole.
+ */
+export function focusPageText(text: string, needles: string[], cap = PAGE_TEXT_CAP): string {
+  if (text.length <= cap) return text;
+  const lower = text.toLowerCase();
+  const chunks: { start: number; text: string; score: number }[] = [];
+  for (let start = 0; start < text.length; start += FOCUS_CHUNK) {
+    chunks.push({ start, text: text.slice(start, start + FOCUS_CHUNK), score: 0 });
+  }
+  const words = new Set<string>();
+  for (const n of needles) for (const w of contentWords(n)) words.add(w);
+  for (const c of chunks) {
+    const cw = contentWords(c.text);
+    for (const w of words) if (cw.has(w)) c.score += 1;
+  }
+  // An exact quote (first 60 chars, normalized spacing) pins its chunk and the next one.
+  for (const n of needles) {
+    const probe = n.toLowerCase().replace(/\s+/g, " ").trim().slice(0, 60);
+    if (probe.length < 20) continue;
+    const at = lower.indexOf(probe);
+    if (at === -1) continue;
+    const i = Math.floor(at / FOCUS_CHUNK);
+    for (const j of [i, i + 1]) if (chunks[j]) chunks[j].score += 1_000;
+  }
+  const keep = [...chunks].sort((a, b) => b.score - a.score || a.start - b.start).slice(0, Math.floor(cap / FOCUS_CHUNK));
+  // Neither the claims nor the quotes match anything: the page's opening is the best guess.
+  if (!keep.some((c) => c.score > 0)) return text.slice(0, cap);
+  return keep
+    .sort((a, b) => a.start - b.start)
+    .map((c) => c.text)
+    .join(" … ");
+}
 const USER_AGENT =
   "Mozilla/5.0 (compatible; BlogAgentCitationCheck/1.0; +https://github.com/blogagent)";
 
@@ -93,7 +146,7 @@ export const defaultPageFetcher: PageFetcher = async (url) => {
       return { ok: false, note: `non-text content (${type.split(";")[0]}) — cite an HTML page that states the claim` };
     }
     const body = await res.text();
-    return { ok: true, text: htmlToText(body).slice(0, PAGE_TEXT_CAP) };
+    return { ok: true, text: htmlToText(body).slice(0, PAGE_FETCH_CAP) };
   } catch (err) {
     return { ok: false, note: err instanceof Error ? err.message.slice(0, 120) : "fetch failed" };
   }
@@ -137,7 +190,8 @@ export class LiveCitationVerifier implements CitationVerifier {
         results.push({ sourceN: source.n, url: source.url, claim: "(reachability)", kind: "key_claim", verdict: "supported", note: "reachable; no specific claim attributed" });
         continue;
       }
-      const verdicts = await this.judgeClaims(source, page.text, claims.map((c) => c.text));
+      const focused = focusPageText(page.text, [...claims.map((c) => c.text), ...(source.quote ? [source.quote] : [])]);
+      const verdicts = await this.judgeClaims(source, focused, claims.map((c) => c.text));
       claims.forEach((claim, i) => {
         const v = verdicts[i];
         results.push({
