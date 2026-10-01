@@ -71,8 +71,68 @@ export function isAbsenceMarker(text: string): boolean {
   );
 }
 
+const SOURCE_FIELD_RE = /^(Key claim|Supporting quote)\s*:/i;
+
+/**
+ * Researchers sometimes hard-wrap long lines: a source entry's URL or the end
+ * of its Key claim lands on the next line, and so does a banked statistic's
+ * "— Source #N (supports: P1)". Every reader of these sections works line by
+ * line, so a wrapped URL made the source unverifiable, a wrapped claim was
+ * judged by its first half, and a wrapped statistic wasn't seen at all
+ * (observed live, Oct 2026: 13 of 15 sources skipped). Join each continuation
+ * line onto the line it continues. Idempotent.
+ */
+export function unwrapResearchNotes(notes: string): string {
+  let out = notes;
+  out = unwrapSection(out, "Authoritative Sources", (t) => /^\d+[.)]\s+/.test(t), (t) => SOURCE_FIELD_RE.test(t));
+  for (const title of ["Statistics & Data Points", "Quotes Worth Including"]) {
+    out = unwrapSection(out, title, (t) => /^[-*]\s+/.test(t), () => false);
+  }
+  return out;
+}
+
+/**
+ * Within one `## title` section, a non-blank line that follows an item (or one
+ * of its fields) is that item's continuation, unless it starts an item or a
+ * field of its own. A blank line ends the item.
+ */
+function unwrapSection(
+  notes: string,
+  title: string,
+  startsItem: (t: string) => boolean,
+  isField: (t: string) => boolean,
+): string {
+  const head = new RegExp(`^##\\s+${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "im").exec(notes);
+  if (!head) return notes;
+  const start = head.index + head[0].length;
+  const rest = notes.slice(start);
+  const next = /^##\s+\S/m.exec(rest);
+  const body = next ? rest.slice(0, next.index) : rest;
+  const out: string[] = [];
+  let inItem = false;
+  for (const line of body.split("\n")) {
+    const t = line.trim();
+    if (!t) {
+      inItem = false;
+      out.push(line);
+    } else if (startsItem(t)) {
+      inItem = true;
+      out.push(line);
+    } else if (isField(t)) {
+      out.push(line);
+    } else if (inItem && !/^[-*]\s/.test(t) && out.length) {
+      out[out.length - 1] = `${(out[out.length - 1] ?? "").replace(/\s+$/, "")} ${t}`;
+    } else {
+      out.push(line);
+    }
+  }
+  const joined = out.join("\n");
+  return joined === body ? notes : notes.slice(0, start) + joined + (next ? rest.slice(next.index) : "");
+}
+
 /** Parse numbered sources + attributed claims out of research-notes.md. */
-export function parseResearchCitations(notes: string): ParsedCitations {
+export function parseResearchCitations(rawNotes: string): ParsedCitations {
+  const notes = unwrapResearchNotes(rawNotes);
   const problems: string[] = [];
   const sources: CitationSource[] = [];
   const claims: AttributedClaim[] = [];
@@ -205,25 +265,39 @@ export interface TrimResult {
  * strips attribution source-by-source from the end — the source's Key
  * claim/Supporting quote lines and its dependent stat/quote bullets — until
  * the count fits. The gate's budget check remains as a backstop.
+ *
+ * Key claims go first, from the end, and banked statistics and quotes only
+ * after: the figures are what a Candidate Position turns on, while a Key claim
+ * on a documentation source grounds a mechanism. Dropping by source alone
+ * emptied Statistics & Data Points on a run whose figures came from its
+ * later-numbered sources, and the gate then failed the research (Oct 2026).
  */
-export function trimExcessClaims(notes: string, maxClaims = MAX_ATTRIBUTED_CLAIMS): TrimResult {
+export function trimExcessClaims(rawNotes: string, maxClaims = MAX_ATTRIBUTED_CLAIMS): TrimResult {
+  const notes = unwrapResearchNotes(rawNotes);
   const parsed = parseResearchCitations(notes);
   if (parsed.claims.length <= maxClaims) return { notes, trimmed: [] };
 
-  // Sources in order of their first attributed claim; drop from the end.
-  const sourceOrder: number[] = [];
-  for (const c of parsed.claims) {
-    if (!sourceOrder.includes(c.sourceN)) sourceOrder.push(c.sourceN);
-  }
-  const dropSources = new Set<number>();
+  const isKey = (c: AttributedClaim) => c.kind === "key_claim";
+  const orderOf = (claims: AttributedClaim[]) => [...new Set(claims.map((c) => c.sourceN))];
   let remaining = parsed.claims.length;
-  for (let i = sourceOrder.length - 1; i >= 0 && remaining > maxClaims; i--) {
-    const n = sourceOrder[i] as number;
-    dropSources.add(n);
-    remaining -= parsed.claims.filter((c) => c.sourceN === n).length;
+  // Pass 1: Key claims, by source, from the end.
+  const dropKeyClaim = new Set<number>();
+  const keyOrder = orderOf(parsed.claims.filter(isKey));
+  for (let i = keyOrder.length - 1; i >= 0 && remaining > maxClaims; i--) {
+    const n = keyOrder[i] as number;
+    dropKeyClaim.add(n);
+    remaining -= parsed.claims.filter((c) => isKey(c) && c.sourceN === n).length;
+  }
+  // Pass 2: banked statistics and quotes, by source, from the end.
+  const dropBullets = new Set<number>();
+  const bulletOrder = orderOf(parsed.claims.filter((c) => !isKey(c)));
+  for (let i = bulletOrder.length - 1; i >= 0 && remaining > maxClaims; i--) {
+    const n = bulletOrder[i] as number;
+    dropBullets.add(n);
+    remaining -= parsed.claims.filter((c) => !isKey(c) && c.sourceN === n).length;
   }
 
-  const trimmed = parsed.claims.filter((c) => dropSources.has(c.sourceN));
+  const trimmed = parsed.claims.filter((c) => (isKey(c) ? dropKeyClaim : dropBullets).has(c.sourceN));
   const lines = notes.split("\n");
   const out: string[] = [];
   let section = "";
@@ -247,7 +321,7 @@ export function trimExcessClaims(notes: string, maxClaims = MAX_ATTRIBUTED_CLAIM
         out.push(line);
         continue;
       }
-      if (currentSourceN !== null && dropSources.has(currentSourceN)) {
+      if (currentSourceN !== null && dropKeyClaim.has(currentSourceN)) {
         if (/^\s*Key claim:/i.test(line)) {
           dropQuoteLine = true;
           continue; // demote to background source: attribution lines removed
@@ -263,7 +337,7 @@ export function trimExcessClaims(notes: string, maxClaims = MAX_ATTRIBUTED_CLAIM
     if (section === "Statistics & Data Points" || section === "Quotes Worth Including") {
       const bullet = /^\s*-\s+(.+)$/.exec(line);
       const ref = bullet?.[1] ? refRe.exec(bullet[1]) : null;
-      if (ref && dropSources.has(Number(ref[1]))) continue;
+      if (ref && dropBullets.has(Number(ref[1]))) continue;
     }
     out.push(line);
   }
@@ -281,7 +355,8 @@ const normalizeLine = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase()
  * so other references stay valid). The returned report carries the removals
  * in `pruned` so nothing disappears silently.
  */
-export function pruneUnverifiedCitations(notes: string, report: CitationReport): PruneResult {
+export function pruneUnverifiedCitations(rawNotes: string, report: CitationReport): PruneResult {
+  const notes = unwrapResearchNotes(rawNotes);
   const failed = report.results.filter((r) => r.verdict !== "supported");
   if (failed.length === 0) {
     return { notes, removed: [], report };

@@ -50,6 +50,7 @@ import {
   parseOutlineFacets,
   extractMarkdownLinks,
   parseLinkPlan,
+  unwrapResearchNotes,
   type FormatRegistry,
   type LinkTarget,
   type PageRules,
@@ -167,7 +168,11 @@ async function runCodeStep(
     existsSync(join(dir, name)) ? await readFile(join(dir, name), "utf-8") : "";
 
   if (phase === "research") {
-    let notes = await readIf("research-notes.md");
+    const raw = await readIf("research-notes.md");
+    // Wrapped source entries are joined first, so every check below reads
+    // each URL and the whole of each claim.
+    let notes = unwrapResearchNotes(raw);
+    if (notes !== raw) await writeFile(join(dir, "research-notes.md"), notes, "utf-8");
     // D37 auto-trim: enforce the claim budget mechanically before spending
     // verification calls — the budget gate stays only as a backstop.
     const trim = trimExcessClaims(notes);

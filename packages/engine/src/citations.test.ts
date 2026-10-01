@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  trimExcessClaims,
+  unwrapResearchNotes,
   buildCitationReport,
   buildLinkReport,
   extractExternalUrls,
@@ -31,6 +33,55 @@ Words about the topic.
 - "Whoever controls Tier 0 controls the identity estate" — Microsoft guidance, source #3
 - "A quote citing a ghost" — Nobody, source #9
 `;
+
+describe("unwrapResearchNotes (hard-wrapped entries)", () => {
+  // The shape a research run produced live (Oct 2026): URL and claim wrapped.
+  const WRAPPED = `## Authoritative Sources
+1. **AD DS Tier Model for Privileged Access Security in Windows Server** — Microsoft (Windows Server
+   documentation team), Microsoft Learn, updated 2026-07-01. https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/tier-model
+   Key claim: Tier 0 is the identity control plane, and expanding what sits in it — or sharing
+   credentials across tiers — directly expands the identity attack surface.
+   Supporting quote: "Every additional account, server, or application in Tier 0 expands the attack surface of the identity control plane."
+2. **MITRE ATT&CK — T1078 Valid Accounts** — MITRE. https://attack.mitre.org/techniques/T1078/
+   Key claim: adversaries abuse valid accounts.
+
+## Key Entities
+- Microsoft
+`;
+
+  it("reads a wrapped URL and the whole of a wrapped key claim", () => {
+    const parsed = parseResearchCitations(WRAPPED);
+    expect(parsed.sources.map((s) => s.url)).toEqual([
+      "https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/tier-model",
+      "https://attack.mitre.org/techniques/T1078/",
+    ]);
+    expect(parsed.sources[0]?.claim).toBe(
+      "Tier 0 is the identity control plane, and expanding what sits in it — or sharing credentials across tiers — directly expands the identity attack surface.",
+    );
+    expect(parsed.sources[0]?.quote).toContain("Every additional account");
+  });
+
+  it("reads a wrapped statistic's source and position tag", () => {
+    const md = `${WRAPPED}\n## Statistics & Data Points\n- Valid-account abuse accounted for 35% of cloud incidents in 2025, and 82% were\n  malware-free — Source #2 (supports: P1 — walking valid access)\n\nNone needed beyond this one: a definition page.\n`;
+    const out = unwrapResearchNotes(md);
+    expect(out).toContain("82% were malware-free — Source #2 (supports: P1");
+    expect(out).toContain("\n\nNone needed beyond this one");
+    expect(parseResearchCitations(md).claims.filter((c) => c.kind === "statistic").map((c) => c.sourceN)).toEqual([2]);
+  });
+
+  it("is idempotent and leaves the other sections alone", () => {
+    const once = unwrapResearchNotes(WRAPPED);
+    expect(unwrapResearchNotes(once)).toBe(once);
+    expect(once).toContain("## Key Entities\n- Microsoft");
+  });
+
+  it("trims a wrapped key claim without leaving its tail behind", () => {
+    const t = trimExcessClaims(WRAPPED, 1);
+    expect(t.trimmed.map((c) => c.sourceN)).toEqual([2]);
+    expect(t.notes).not.toContain("adversaries abuse valid accounts");
+    expect(t.notes).toContain("credentials across tiers — directly expands");
+  });
+});
 
 describe("parseResearchCitations", () => {
   it("parses numbered sources with claims, quotes, and stat/quote references", () => {
@@ -164,17 +215,28 @@ describe("trimExcessClaims (D37 auto-trim)", () => {
     const stats = Array.from({ length: 6 }, (_, i) => `- Stat ${i + 1}: ${i + 1}0% — Source #${i + 1}`).join("\n");
     const notes = `# n\n\n## Authoritative Sources\n${manySources}\n\n## Statistics & Data Points\n${stats}\n`;
 
-    // 12 claims (6 key + 6 stats) → trim to ≤ 8 by dropping trailing sources.
+    // 12 claims (6 key + 6 stats) → trim to ≤ 8: trailing Key claims go first.
     const { notes: out, trimmed } = trimExcessClaims(notes, 8);
     const after = parseResearchCitations(out);
     expect(after.claims.length).toBeLessThanOrEqual(8);
     expect(trimmed.length).toBe(12 - after.claims.length);
+    expect(trimmed.every((c) => c.kind === "key_claim")).toBe(true);
     // Early sources keep attribution; late ones are demoted to background.
     expect(out).toContain("Key claim: Claim number 1");
     expect(out).not.toContain("Key claim: Claim number 6");
-    expect(out).not.toContain("Stat 6");
+    // Every banked figure survives: the positions turn on them.
+    expect(out).toContain("Stat 6");
     // The source entries themselves survive (URL count for the gate intact).
     expect(out).toContain("https://s6.example.com/r");
+  });
+
+  it("drops trailing statistics only once no Key claims are left to drop", async () => {
+    const { trimExcessClaims } = await import("./citations.js");
+    const sources = Array.from({ length: 2 }, (_, i) => `${i + 1}. **R${i + 1}** — Org. https://k${i + 1}.example.com/r\n   Key claim: key ${i + 1}`).join("\n");
+    const stats = Array.from({ length: 8 }, (_, i) => `- Stat ${i + 1}: ${i + 1}0% — Source #${(i % 2) + 1}`).join("\n");
+    const { notes: out } = trimExcessClaims(`## Authoritative Sources\n${sources}\n\n## Statistics & Data Points\n${stats}\n`, 8);
+    expect(out).not.toContain("Key claim:");
+    expect(parseResearchCitations(out).claims.length).toBe(8);
   });
 
   it("is a no-op within budget", async () => {
