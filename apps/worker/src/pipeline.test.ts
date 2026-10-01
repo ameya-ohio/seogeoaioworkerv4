@@ -1200,6 +1200,47 @@ describe("runPipeline, expert interview (D59)", () => {
     expect(strategist).toContain("### F1: Retrieval-augmented generation was introduced in a 2020 paper");
   }, 120_000);
 
+  it("a fact whose source fails the live check is demoted to unsourced, and the run goes on (D61)", async () => {
+    const article = await createArticle(db, {
+      companyId: "testco",
+      slug: "interview-evidence-demote",
+      folder: "2026-09-30-interview-evidence-demote",
+      topic: "Context engineering basics",
+      targetKeyword: "context engineering",
+      interviewMode: "pause",
+    });
+    const id = article._id as ObjectId;
+    await enqueueRun(db, { companyId: "testco", articleId: id });
+    const llm = new FakeDirectLlm();
+    llm.pov = POV_WITH_FACTS;
+    const failingEvidence: CitationVerifier = {
+      verifyResearch: async (notes) =>
+        notes.includes("interview evidence F1")
+          ? {
+              ranAt: new Date(),
+              results: [{ sourceN: 101, url: "https://arxiv.org/abs/2005.11401", claim: "c", kind: "key_claim", verdict: "unsupported", note: "claim not on page" }],
+              verifiedSourceCount: 0,
+              verifiedUrls: [],
+              unsupportedCount: 1,
+              unreachableCount: 0,
+            }
+          : passingCitations(),
+      verifyArticleBody: () => passingCitations(),
+    };
+    const deps = {
+      ...makeDeps(new FakeInvoker(), { cfg: directCfg(), direct: new DirectPhaseRunner(llm, fakeRenderer([])), interviewer: new FakeInterviewer() }),
+      citationVerifier: failingEvidence,
+    };
+    expect(await runPipeline(deps, (await claimRun(db, "test-worker", 60_000))!)).toBe("awaiting_input");
+    await appendExpertMessage(db, id, "C — and the 2020 RAG paper is where retrieval started.");
+    await closeInterview(db, (await db.articles.findOne({ _id: id }))!, "complete");
+    expect(await runPipeline(deps, (await claimRun(db, "test-worker", 60_000))!)).toBe("completed");
+    const doc = await db.articles.findOne({ _id: id });
+    expect(doc?.gates?.evidence?.ok).toBe(true);
+    expect(doc?.artifacts.researchNotes).toMatch(/### F1:[^\n]*\n- Verdict: unsourced\n- Use: expert opinion only/);
+    expect(doc?.citationChecks?.verifiedUrls ?? []).not.toContain("https://arxiv.org/abs/2005.11401");
+  }, 120_000);
+
   it("an operator skip resumes at the Writer without refining", async () => {
     const article = await createArticle(db, {
       companyId: "testco",

@@ -122,3 +122,42 @@ export function evidenceProblems(pov: string | undefined, notes: string): string
   }
   return problems;
 }
+
+/**
+ * D61 auto-demote, the evidence counterpart of research's D37 auto-prune:
+ * an entry whose source failed the live check is rewritten as `unsourced`
+ * (expert opinion only) instead of failing the run. The agent's claim
+ * can't reach the article as a verified fact, and the run keeps moving.
+ * Returns the rewritten notes and the ids that were demoted.
+ */
+export function demoteUnverifiedEvidence(
+  notes: string,
+  failed: { sourceN: number; note?: string }[],
+): { notes: string; demoted: string[] } {
+  if (!failed.length) return { notes, demoted: [] };
+  const bySource = new Map(failed.map((f) => [f.sourceN, f.note ?? "not found on the page"]));
+  const head = /^##\s+Interview Evidence[^\n]*$/im.exec(notes);
+  if (!head) return { notes, demoted: [] };
+  const start = head.index + head[0].length;
+  const rest = notes.slice(start);
+  const next = /^##\s+\S/m.exec(rest);
+  const section = next ? rest.slice(0, next.index) : rest;
+  const demoted: string[] = [];
+  const rewritten = section.replace(/^###\s+(F\d+)\s*[:.—-][^\n]*\n[\s\S]*?(?=^###\s+F\d+|(?![\s\S]))/gim, (block, id: string) => {
+    const src = /^\s*-\s*Source\s*#?\s*(\d+)\s*:\s*(.+)$/im.exec(block);
+    const n = src?.[1] ? Number(src[1]) : undefined;
+    if (n === undefined || !bySource.has(n)) return block;
+    demoted.push(id.toUpperCase());
+    const url = (/https?:\/\/[^\s)>\]]+/.exec(src?.[2] ?? "")?.[0] ?? "").replace(/[),.;]+$/, "");
+    const why = String(bySource.get(n)).replace(/\s+/g, " ").slice(0, 200);
+    const title = block.split("\n")[0] ?? `### ${id}`;
+    return [
+      title,
+      `- Verdict: unsourced`,
+      `- Use: expert opinion only — the live check couldn't confirm it${url ? ` on ${url}` : ""} (${why})`,
+      ``,
+      ``,
+    ].join("\n");
+  });
+  return { notes: notes.slice(0, start) + rewritten + (next ? rest.slice(next.index) : ""), demoted };
+}

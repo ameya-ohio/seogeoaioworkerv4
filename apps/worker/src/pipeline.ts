@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   GATES,
   applyRepoFiles,
+  demoteUnverifiedEvidence,
   evidenceAsSources,
   factsToVerify,
   markdownSection,
@@ -218,7 +219,29 @@ async function runCodeStep(
       article.facets?.articleType,
     );
     if (!entries.length) return { competitorReport };
-    const citationReport = await deps.citationVerifier.verifyResearch(evidenceAsSources(entries));
+    let citationReport = await deps.citationVerifier.verifyResearch(evidenceAsSources(entries));
+    // D61 auto-demote (research's D37 auto-prune for interview facts): a fact
+    // whose source failed the live check becomes the expert's opinion, so it
+    // can't reach the article as verified and can't stall the run.
+    const failed = citationReport.results.filter((r) => r.verdict === "unsupported" || r.verdict === "unreachable");
+    if (failed.length) {
+      const { notes: demotedNotes, demoted } = demoteUnverifiedEvidence(notes, failed);
+      if (demoted.length) {
+        await writeFile(join(dir, "research-notes.md"), demotedNotes, "utf-8");
+        const gone = new Set(failed.map((r) => r.sourceN));
+        const results = citationReport.results.filter((r) => !gone.has(r.sourceN));
+        citationReport = {
+          ...citationReport,
+          results,
+          unsupportedCount: results.filter((r) => r.verdict === "unsupported").length,
+          unreachableCount: results.filter((r) => r.verdict === "unreachable").length,
+        };
+        deps.log(
+          `[${article.slug}/evidence] auto-demoted ${demoted.length} fact(s) to unsourced (failed the live check): ` +
+            failed.map((r) => `#${r.sourceN} "${r.claim.slice(0, 60)}"`).join("; "),
+        );
+      }
+    }
     if (article._id && citationReport.verifiedUrls.length) {
       const prior = article.citationChecks;
       const merged: CitationReport = prior

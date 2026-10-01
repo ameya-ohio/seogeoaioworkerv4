@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   EVIDENCE_SOURCE_BASE,
+  demoteUnverifiedEvidence,
   evidenceAsSources,
   evidenceGate,
   evidenceProblems,
@@ -99,6 +100,25 @@ describe("interview evidence (D61)", () => {
     });
     expect(g.ok).toBe(false);
     expect(g.problems.join(" ")).toContain("source #101");
+  });
+});
+
+describe("demoteUnverifiedEvidence (D61)", () => {
+  it("rewrites an entry whose source failed the live check as unsourced, leaving the rest", () => {
+    const { notes, demoted } = demoteUnverifiedEvidence(NOTES + "\n## After\nkeep me\n", [{ sourceN: 101, note: "claim not on page" }]);
+    expect(demoted).toEqual(["F1"]);
+    const [f1, f2] = parseInterviewEvidence(notes);
+    expect(f1).toMatchObject({ id: "F1", verdict: "unsourced" });
+    expect(f1?.url).toBeUndefined();
+    expect(f1?.use).toContain("expert opinion only");
+    expect(f1?.use).toContain("claim not on page");
+    expect(f2).toMatchObject({ id: "F2", verdict: "unsourced" });
+    expect(notes).toContain("## After\nkeep me");
+    expect(evidenceProblems(POV, notes)).toEqual([]);
+  });
+
+  it("changes nothing when every source passed", () => {
+    expect(demoteUnverifiedEvidence(NOTES, [])).toEqual({ notes: NOTES, demoted: [] });
   });
 });
 
