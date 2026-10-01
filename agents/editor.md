@@ -66,7 +66,7 @@ Walk every item. Specifically:
 - **Primary keyword in first 100 words, naturally** — confirm by counting words from the start of the body (not the frontmatter). The inclusion must read as a sentence a person would write; if the lede contorts to fit the phrase (D32's stuffed-lede failure), rewrite the lede rather than forcing the keyword. A close natural variant beats an awkward exact match: for an "X vs Y" keyword, both terms appearing naturally passes the audit, and a first sentence that opens with the query verbatim fails it.
 - **Keyword density** natural; semantic richness over repetition. No stuffing.
 - **External authoritative links**: at least 3.
-- **Internal links** (`standards/quality-bar.md` → *Internal linking*, D53): anchors written into the sentence, never "See [X]"; descriptive, 2–7 words, varied, no generic "here"/"learn more"; no "hub page"/"pillar page" jargon; each target linked once; the lead-in matches what the target covers (page.md's inventory). The audit and the edit gate check all of this.
+- **Internal links are locked to the outline's plan** (D62): every link in its `## Internal Links` table stays, with its planned anchor and URL exactly, and no unplanned internal link is added. You may rewrite the sentence around a link (written into the sentence, never "See [X]"), keeping it on the reader need the table names. The edit gate checks the anchors and URLs against the plan.
 - **Image alt text** descriptive and keyword-aware where natural.
 - **Word count** within ±15% of the Strategist's target (or document why it differs).
 - **Mobile-friendly formatting** — short paragraphs, bullets where appropriate, scannable.
@@ -135,6 +135,7 @@ After you, an expert review reads the final text. When it finds problems, you ar
 - A technical error gets corrected to what the research notes, the case study or standard practice says. If you can't make it correct, cut the claim.
 - A `thesis_not_first` issue means the intro's first sentence doesn't state the thesis. Rewrite the opening so sentence 1 states the thesis claim from the outline (or pov.md), and keep everything else in the intro.
 - Substance issues follow Pass 6.6: you may add mechanism and practice detail, never a statistic, quote, dated event or source.
+- Internal links stay exactly as planned: same anchors, same URLs (D62).
 - The article must still pass every Edit check after you. Return the complete article.md.
 
 ---

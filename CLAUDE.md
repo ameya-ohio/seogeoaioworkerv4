@@ -89,7 +89,7 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   - Relevant `context/` folders: `context/brand/`, `context/marketing/`, `context/sales/`, `context/case-studies/` (skip `README.md`, `_template.md`, and files marked `Permission: internal only`). Skip empty folders silently and proceed with sensible defaults.
 - **Action:** Decide what the article argues, then plan how each section proves it (D60): the thesis (from the research's Candidate Positions), a 3–5 claim **Argument Spine** with each claim's proof, the angle as a claim about the subject, and 3–5 banked statistics assigned to spine claims. Every body H2 names the spine claim it advances (or the format requirement it serves), its claim, and its proof; procedure steps carry the exact `Action:`, and examples carry their `Specifics:`. Then keywords, intent, word count, GEO/AIO, entities, FAQ, internal links, the intro strategy (built from the thesis), and the CTA.
 - **Output:** `articles/YYYY-MM-DD-slug/outline.md`.
-- **Gate:** Outline exists; primary keyword chosen; FAQ count in page.md's range; at least 4 H2 sections; a real thesis; a 3–5 claim Argument Spine, every claim advanced by an H2 and at least half the body H2s advancing one; `Advances:` and `Claim:` on every body H2; each External Citation names the spine claim it supports (or is marked "mechanism"); procedure steps have an `Action:`, and an Examples page has 3+ examples with `Specifics:`, each advancing a spine claim.
+- **Gate:** Outline exists; primary keyword chosen; FAQ count in page.md's range; at least 4 H2 sections; a real thesis; a 3–5 claim Argument Spine, every claim advanced by an H2 and at least half the body H2s advancing one; `Advances:` and `Claim:` on every body H2; each External Citation names the spine claim it supports (or is marked "mechanism"); procedure steps have an `Action:`, and an Examples page has 3+ examples with `Specifics:`, each advancing a spine claim. Every `## Internal Links` row has a target from the link inventory, a section, the reader need and a 2–7 word anchor that names the destination (never "these…"/"this…"/"here"); that plan is the only place a link's fit is judged (D62).
 
 ### Phase 4 — Writer
 
@@ -104,7 +104,7 @@ Run phases strictly in order. Do not skip. If a phase fails its gate condition, 
   - `articles/YYYY-MM-DD-slug/pov.md`, when the article was interviewed: the thesis, Argument Spine, anchor, company role and approved quotes the article is built on
 - **Action:** Write the full article in markdown, following the outline section-by-section in the brand/author voice. Embed inline citations naturally. Write FAQ section verbatim using strategist's questions. Fill YAML frontmatter completely.
 - **Output:** `articles/YYYY-MM-DD-slug/article.md` (full draft). Also update `meta.json` with title/slug/meta_description/keywords/canonical.
-- **Gate:** `article.md` exists with complete frontmatter; H1 present; "Key Takeaways" block present near the top; FAQ section present; no fabricated sources (every cited claim must trace to `research-notes.md`).
+- **Gate:** `article.md` exists with complete frontmatter; H1 present; "Key Takeaways" block present near the top; FAQ section present; no fabricated sources (every cited claim must trace to `research-notes.md`); every planned internal link is present with its planned anchor and URL, and there is no unplanned internal link (D62). HDCP and the Editor are held to the same plan.
 
 ### Phase 5 — HDCP (Human Driven Content Protocol)
 

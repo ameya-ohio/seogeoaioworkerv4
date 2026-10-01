@@ -18,6 +18,8 @@ import type { FormatRegistry } from "./formats.js";
 import { parseOutlineFacets, type PageRules } from "./pageRules.js";
 import { povProblems } from "./interview.js";
 import { evidenceProblems, factsToVerify } from "./evidence.js";
+import { linkPlanProblems, plannedLinkProblems } from "./links/plan.js";
+import type { LinkTarget } from "./links/inventory.js";
 
 /**
  * Per-phase gate conditions from CLAUDE.md, enforced in code (roadmap 2.3).
@@ -38,8 +40,10 @@ export interface GateFiles {
   citationReport?: CitationReport;
   /** Research gate: scripts/competitor_checks.py --research (no competitor as a source). */
   competitorReport?: ScriptReport;
-  /** Internal-link resolution report (D35 — edit gate). */
+  /** Internal-link resolution report (D35 — edit gate; outline gate: the planned links, D62). */
   linkReport?: LinkReport;
+  /** D53/D62: the pages this article may link to (outline gate checks the plan against it). */
+  linkInventory?: LinkTarget[];
   /** D45–D50: what this page's facets resolve to. Absent = pre-registry defaults. */
   page?: PageRules;
   /** Set when the article has no facets: the outline must supply them (validated here). */
@@ -239,6 +243,15 @@ export function outlineGate(files: GateFiles): GateResult {
   if (repeated.length) {
     problems.push(`Internal Links plans the same target more than once: ${repeated.join(", ")} — link each page once`);
   }
+  // D62: links are judged once, here — every later phase uses them exactly.
+  problems.push(...linkPlanProblems(outline, files.linkInventory, files.page?.facets?.pageRole));
+  for (const r of files.linkReport?.results ?? []) {
+    if (r.status === "missing") {
+      problems.push(`Internal Links plans a page that doesn't resolve: ${r.url}${r.note ? ` (${r.note})` : ""}`);
+    } else if (r.status === "anchor_conflict") {
+      problems.push(`Internal Links: anchor "${r.anchor ?? ""}" already points at a different page on the site${r.note ? ` (${r.note})` : ""} — pick another`);
+    }
+  }
   const h2Count = (outline.match(/^###\s+H2:/gim) ?? []).length;
   if (h2Count < 4) {
     problems.push(`Full Outline has ${h2Count} H2 section(s); need >= 4`);
@@ -420,7 +433,13 @@ export function writeGate(files: GateFiles): GateResult {
   if (faq?.max === 0 && hasSection(clean, "Frequently Asked Questions")) {
     problems.push("This format carries no FAQ — remove `## Frequently Asked Questions`");
   }
+  problems.push(...plannedLinkProblems(files.outline, raw, ctaExempt(files.page)));
   return result(problems);
+}
+
+/** The funnel CTA is linked from the close by rule (D50), never from the link plan. */
+function ctaExempt(page: PageRules | undefined): string[] {
+  return page?.cta?.url ? [page.cta.url] : [];
 }
 
 /**
@@ -491,6 +510,8 @@ export function editGate(files: GateFiles): GateResult {
   }
   // D50: the funnel's CTA closes the page.
   if (files.article) problems.push(...ctaProblems(files.article, files.page));
+  // D62: the planned internal links, exactly as planned.
+  problems.push(...plannedLinkProblems(files.outline, files.article, ctaExempt(files.page)));
   // D35: internal links must resolve; planned siblings are mentions, not links.
   const lr = files.linkReport;
   if (!lr) {
@@ -500,10 +521,6 @@ export function editGate(files: GateFiles): GateResult {
       if (r.status === "missing") {
         problems.push(
           `internal link does not resolve: ${r.url}${r.note ? ` (${r.note})` : ""} — link a page from page.md's link inventory, or drop the link`,
-        );
-      } else if (r.status === "off_target") {
-        problems.push(
-          `internal link off target: "${r.anchor ?? ""}" → ${r.url}${r.note ? ` — ${r.note}` : ""}. The sentence before a link must match what the destination delivers (D53)`,
         );
       } else if (r.status === "anchor_conflict") {
         problems.push(
@@ -596,6 +613,8 @@ export function hdcpGate(files: GateFiles): GateResult {
     problems.push("the editor notes belong in hdcp.md, not in the article");
   }
   problems.push(...parseHdcpLog(files.hdcpLog).problems);
+  // D62: links are locked — the sentence around one may change, the link may not.
+  problems.push(...plannedLinkProblems(files.outline, raw, ctaExempt(files.page)));
   // D61: a note left for a human stays until a human resolves it.
   if (files.priorArticle) {
     const after = editorMarkers(raw);

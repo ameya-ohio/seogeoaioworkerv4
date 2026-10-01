@@ -9,6 +9,7 @@ import { publishTarget } from "@/lib/actions/publishing";
 import { getFormats } from "@/lib/db";
 import {
   CTA_SETTINGS_KEY,
+  compareLinksToPlan,
   formatBySlug,
   mergeCtaSettings,
   renderTranscript,
@@ -65,6 +66,12 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
           message: `${r.anchor ? `"${r.anchor}" → ` : ""}${r.url}${r.status !== "ok" ? ` [${r.status}]` : ""}${r.note ? ` — ${r.note}` : ""}`,
         }))
       : null,
+    linkPlan:
+      compareLinksToPlan(
+        doc.artifacts.outline ?? undefined,
+        doc.artifacts.article ?? doc.artifacts.draft ?? "",
+        rules.cta?.url ? [rules.cta.url] : [],
+      ) ?? null,
     technicalReview: doc.technicalReview
       ? {
           ranAt: new Date(doc.technicalReview.ranAt).toISOString(),

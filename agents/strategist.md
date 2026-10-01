@@ -132,7 +132,15 @@ As many as page.md's FAQ range allows (D49: pillar 5–8, hub 4–6, cluster 3�
 
 ### 12. Internal links
 
-Plan them from page.md's **link inventory** (D53); `standards/quality-bar.md` → *Internal linking* has the rules. For each link: the target URL from the inventory; the section it goes in, at the point the reader needs it; the reader need it serves, which must match what the inventory says the target **covers**; and a 2–7 word anchor that says what the reader gets. Vary the anchors: use the target's query or a natural variant, and don't reuse an anchor the inventory lists as already used. Each target appears **at most once** (the gate fails a duplicate). Link down to every child page on a pillar or hub. With no inventory, list only pages you know are live.
+Plan them from page.md's **link inventory** (D53); `standards/quality-bar.md` → *Internal linking* has the rules. **This is the only place a link's fit is judged (D62).** The Writer, HDCP and Editor must use each anchor and URL you plan exactly, and the gates fail a changed anchor, a missing planned link and any internal link you didn't plan. So plan every internal link the article will carry, and get each one right here.
+
+For each link, one table row:
+- the target URL from the inventory, exactly;
+- the section it goes in, at the point the reader needs it;
+- the reader need it serves, which must match what the inventory says the target **covers**;
+- a 2–7 word anchor that names what the destination covers, written as a phrase that fits unchanged mid-sentence ("how to prioritize identity exposure", "the difference between exposure and a CVE").
+
+The anchor describes the page it opens, never the page it sits on: no "these numbers", "this surface", "here". Read alone, it tells the reader where they're going (the gate fails a demonstrative). Vary the anchors: use the target's query or a natural variant, and don't reuse an anchor the inventory lists as already used. Each target appears **at most once** (the gate fails a duplicate). Link down to every child page on a pillar or hub (the gate checks it). With no inventory, list only pages you know are live; the gate checks that each one resolves.
 
 ### 13. Quotable sound bites
 

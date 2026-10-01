@@ -14,7 +14,7 @@ import {
 } from "@/lib/actions/content";
 import { markArticleLive, setArticleFacets, signOffArticle } from "@/lib/actions/publishing";
 import { FACET_OPTIONS } from "./facets";
-import type { CheckLine, TechnicalIssue } from "@blogagent/engine";
+import type { CheckLine, LinkPlanComparison, TechnicalIssue } from "@blogagent/engine";
 import type { UiRun } from "@/lib/ui-types";
 import { buttonCls, cls, inputCls } from "./ui";
 
@@ -34,6 +34,8 @@ export interface ReviewArticle {
   /** D34 citation verification + D35 link resolution, as pass/fail lines. */
   citations: CheckLine[] | null;
   links: CheckLine[] | null;
+  /** D62: the outline's planned internal links against the saved article. */
+  linkPlan: LinkPlanComparison | null;
   /** Pre-edit expert read of the Writer's draft (agents/technical-reviewer.md). */
   technicalReview: {
     ranAt: string;
@@ -110,6 +112,7 @@ type SideTab =
   | "facets"
   | "research"
   | "outline"
+  | "links"
   | "interview"
   | "draft"
   | "audit"
@@ -158,6 +161,7 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
     { key: "facets", label: "Facets" },
     { key: "research", label: "Research", disabled: !article.researchNotes },
     { key: "outline", label: "Outline", disabled: !article.outline },
+    { key: "links", label: "Links", disabled: !article.linkPlan },
     { key: "interview", label: "Interview", disabled: !article.interview },
     { key: "draft", label: "First draft", disabled: !article.draft },
     { key: "audit", label: "Audit", disabled: !article.audit && !article.citations },
@@ -385,6 +389,7 @@ export function ReviewEditor({ article }: { article: ReviewArticle }) {
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.interview.transcript}</ReactMarkdown>
               </div>
             )}
+            {tab === "links" && article.linkPlan && <LinkPlanPanel plan={article.linkPlan} />}
             {tab === "outline" && article.outline && (
               <div className="prose-article">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.outline}</ReactMarkdown>
@@ -482,6 +487,53 @@ const KIND_LABEL: Record<TechnicalIssue["kind"], string> = {
 };
 
 /** D61: the verify stage's review rounds on the final text, and what each one left open. */
+const LINK_STATUS: Record<LinkPlanComparison["planned"][number]["status"], { label: string; cls: string }> = {
+  used: { label: "as planned", cls: "text-emerald-700" },
+  anchor_changed: { label: "anchor changed", cls: "text-red-700" },
+  missing: { label: "missing", cls: "text-red-700" },
+};
+
+function LinkPlanPanel({ plan }: { plan: LinkPlanComparison }) {
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-slate-500">
+        The Strategist planned these links against what each page covers. Every later phase must keep each planned
+        anchor and URL exactly, so this table is where you check that a link fits: does the anchor say what the page
+        delivers, and does the reader need match? Status reflects the last saved version.
+      </p>
+      <ul className="space-y-3">
+        {plan.planned.map((p) => (
+          <li key={p.url} className="rounded-md border border-slate-200 p-3 text-xs">
+            <p className="font-semibold text-slate-800">
+              “{p.anchor}” <span className={LINK_STATUS[p.status].cls}>· {LINK_STATUS[p.status].label}</span>
+            </p>
+            {p.status === "anchor_changed" && <p className="text-red-700">The article uses “{p.used}”.</p>}
+            <p className="break-all text-slate-500">{p.url}</p>
+            <p className="mt-1 text-slate-700">
+              <span className="text-slate-400">Section:</span> {p.section}
+            </p>
+            <p className="text-slate-700">
+              <span className="text-slate-400">Reader need:</span> {p.need}
+            </p>
+          </li>
+        ))}
+      </ul>
+      {plan.unplanned.length > 0 && (
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-red-700">Not in the plan</p>
+          <ul className="space-y-1 text-xs text-slate-700">
+            {plan.unplanned.map((u) => (
+              <li key={u.url} className="break-all">
+                “{u.anchor}” → {u.url}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function VerificationPanel({ verification }: { verification: NonNullable<ReviewArticle["verification"]> }) {
   return (
     <div className="space-y-5">

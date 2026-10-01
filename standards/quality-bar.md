@@ -518,8 +518,11 @@ Internal links carry readers and search engines to the next page. An anchor that
 > (The third link is removed: it repeated the same target with the same anchor.)
 
 **How it's enforced:**
+- **The plan (D62).** Whether a link fits its destination is decided once, when the Strategist plans it in the outline's `## Internal Links` table. The outline gate FAILs a row without a section, reader need or anchor; an anchor outside 2–7 words; an anchor that points back at its own page ("these numbers", "this surface", "here"); one anchor planned for two pages; a target outside the link inventory, or one that doesn't resolve; an anchor the site already uses for a different page; and, on a pillar or hub, a child page left out.
+- **Held to the plan (D62).** The write, HDCP and edit gates (and the verify fix pass, through the edit gate) FAIL a planned link that is missing, a planned anchor that was changed (case aside), and an internal link the plan doesn't name. The sentence around a link may be rewritten; the link may not. The CTA is exempt. Review's **Links** tab shows the plan against the article.
 - **Page-level checks** (`scripts/link_checks.py`) FAIL on footnote links, generic anchors, jargon, relative internal URLs, a target linked twice, and one anchor for two pages. They WARN on anchor length and on an anchor that is the target's full title (unless that title is also the page's query).
-- **The worker's link checker** FAILs an anchor already used for a different page anywhere on the site, and a link whose lead-in a relevance judge finds off target. The judge suggests a better page from the inventory.
+- **The worker's link checker** FAILs a link that doesn't resolve and an anchor already used for a different page anywhere on the site.
+- The LLM relevance judge (D53 `off_target`) is gone. It re-judged every rewrite, flagged links the plan itself had chosen, and failed runs on borderline calls (D62).
 - **Planned pages** in the inventory are linked with their reserved `/learn/` URL. They count as deferred, not missing, and the Framer export renders them as text until each target is live.
 
 ## Company numbers (D51)

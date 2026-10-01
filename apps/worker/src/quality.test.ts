@@ -254,21 +254,6 @@ describe("LiveLinkChecker (D35)", () => {
       status: "planned" as const,
       anchorsUsed: [],
     };
-    const offTarget = {
-      judge: async () => [{ fits: false, note: "the sentence is about ranking findings", better: "https://www.saporo.io/learn/m/" }],
-    };
-    const body = `If you have exposure data but no way to rank it, start with [how to shrink the exposure](${target.url}).`;
-    const judged = await new LiveLinkChecker(db, "testco", ["saporo.io"], async () => ({ ok: false }), offTarget).check(body, {
-      inventory: [target],
-    });
-    expect(judged.results[0]?.status).toBe("off_target");
-    expect(judged.results[0]?.note).toContain("better target");
-    // A judge that can't answer never fails the article.
-    const silent = { judge: async () => null };
-    const tolerant = await new LiveLinkChecker(db, "testco", ["saporo.io"], async () => ({ ok: false }), silent).check(body, {
-      inventory: [target],
-    });
-    expect(tolerant.results[0]?.status).toBe("deferred");
     // Another article already uses this anchor for a different page.
     const clash = await new LiveLinkChecker(db, "testco", ["saporo.io"], async () => ({ ok: false })).check(
       `Here is [reduce identity exposure](${target.url}) in practice.`,

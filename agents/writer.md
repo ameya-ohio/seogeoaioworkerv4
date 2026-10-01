@@ -130,7 +130,10 @@ Never invent a scenario: no "picture a…", "imagine a…", "suppose…", "let's
 
 ## Internal links
 
-Link from page.md's **link inventory** (D53), following the Strategist's `## Internal Links` plan and `standards/quality-bar.md` → *Internal linking*:
+Link exactly as the outline's `## Internal Links` table plans (D62), following `standards/quality-bar.md` → *Internal linking*:
+
+- **Use every planned link, with its planned anchor and URL, word for word.** Capitalize the first word when it starts a sentence; change nothing else in the anchor. Build the sentence around the anchor so it serves the reader need the table names, in the section it names.
+- **Add no other internal link.** A page the plan doesn't name stays plain text. The gate fails a changed anchor, a missing planned link and an unplanned internal link. External citations and the funnel CTA aren't internal links in this sense.
 
 - Write the link into the sentence, where it tells the reader what they get: "…and [what causes identity exposure in hybrid environments](url) breaks down each one." Never "See [Title]." or "For more, see…".
 - Use a descriptive 2–7 word anchor. Never "here", "this article" or "learn more".

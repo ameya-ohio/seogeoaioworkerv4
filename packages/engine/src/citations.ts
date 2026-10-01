@@ -400,12 +400,10 @@ export function extractInternalLinks(body: string, internalHosts: string[]): str
  * deferred  — a same-plan page's reserved /learn/ path, not live yet: a real
  *             link in the draft, rendered as text in the export until it is (D53)
  * missing   — resolves to nothing (D35) — FAIL
- * off_target — the sentence leading into the link promises something the
- *             destination doesn't deliver (relevance judge, D53) — FAIL
  * anchor_conflict — this anchor text already points at a different page on
  *             the site (D53) — FAIL
  */
-export type LinkStatus = "ok" | "deferred" | "missing" | "off_target" | "anchor_conflict";
+export type LinkStatus = "ok" | "deferred" | "missing" | "anchor_conflict";
 
 export interface LinkCheckResult {
   url: string;
@@ -422,7 +420,7 @@ export interface LinkReport {
 }
 
 /** Statuses that fail the edit gate. */
-export const FAILING_LINK_STATUSES: readonly LinkStatus[] = ["missing", "off_target", "anchor_conflict"];
+export const FAILING_LINK_STATUSES: readonly LinkStatus[] = ["missing", "anchor_conflict"];
 
 export function buildLinkReport(results: LinkCheckResult[]): LinkReport {
   return {

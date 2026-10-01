@@ -3,6 +3,7 @@ export * from "./formats.js";
 export * from "./pageRules.js";
 export * from "./researchBrief.js";
 export * from "./links/inventory.js";
+export * from "./links/plan.js";
 export * from "./db.js";
 export * from "./companyConfig.js";
 export * from "./frontmatter.js";

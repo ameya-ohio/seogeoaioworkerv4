@@ -11,7 +11,6 @@ import {
   type EngineDb,
   type LinkCheckResult,
   type LinkReport,
-  type LinkTarget,
   anchorKey,
   extractMarkdownLinks,
 } from "@blogagent/engine";
@@ -39,8 +38,6 @@ export interface CitationVerifier {
 export interface LinkCheckContext {
   /** The article being checked — excluded from the site-wide anchor registry. */
   articleId?: ObjectId;
-  /** D53: the pages it may link to, with what each covers (relevance judge). */
-  inventory?: LinkTarget[];
 }
 
 export interface LinkChecker {
@@ -347,89 +344,13 @@ export class LiveCitationVerifier implements CitationVerifier {
 }
 
 /**
- * D53: does the sentence leading into each internal link promise what the
- * destination delivers? One cheap call per article, all links at once. A
- * judge failure (unparseable reply, API error) never counts against the
- * article — the verifier-parse lesson from Session 15.
- */
-export interface LinkJudgement {
-  fits: boolean;
-  note?: string;
-  better?: string;
-}
-
-export interface LinkRelevanceJudge {
-  judge(
-    links: { anchor: string; sentence: string; target: LinkTarget }[],
-    inventory: LinkTarget[],
-  ): Promise<LinkJudgement[] | null>;
-}
-
-export class LlmLinkRelevanceJudge implements LinkRelevanceJudge {
-  constructor(
-    private readonly llm: LlmClient,
-    private readonly model: string,
-    private readonly log: (msg: string) => void = () => {},
-  ) {}
-
-  async judge(
-    links: { anchor: string; sentence: string; target: LinkTarget }[],
-    inventory: LinkTarget[],
-  ): Promise<LinkJudgement[] | null> {
-    if (links.length === 0) return [];
-    try {
-      const res = await this.llm.complete({
-        model: this.model,
-        maxTokens: 1500,
-        prompt: [
-          `You check internal links in a B2B article. For each link, decide whether the sentence`,
-          `leading into it promises what the destination page actually covers. A link fails when a`,
-          `reader who follows it would get something different from what the sentence set up (e.g.`,
-          `the sentence is about ranking or prioritizing findings, and the page is about removing them).`,
-          ``,
-          `PAGES ON THE SITE (url — what it covers):`,
-          ...inventory.map((p) => `- ${p.url} — ${p.title}: ${p.covers}`),
-          ``,
-          `LINKS:`,
-          ...links.map((l, i) => `${i}: anchor "${l.anchor}" → ${l.target.url}\n   sentence: ${l.sentence}`),
-          ``,
-          `Reply with JSON only: [{"index": 0, "fits": true|false, "note": "<one line when false>",`,
-          ` "better": "<url from the list that fits the sentence, when false and one exists>"}]`,
-        ].join("\n"),
-      });
-      const parsed = extractJson(res.text);
-      const list = Array.isArray(parsed)
-        ? parsed
-        : parsed && typeof parsed === "object"
-          ? (Object.values(parsed as Record<string, unknown>).find(Array.isArray) as unknown[] | undefined)
-          : undefined;
-      if (!list) {
-        this.log(`[links] relevance judge reply unparseable (${res.text.length} chars) — links not judged`);
-        return null;
-      }
-      return links.map((_, i) => {
-        const e = list.find((x) => x && typeof x === "object" && (x as Record<string, unknown>)["index"] === i) as
-          | Record<string, unknown>
-          | undefined;
-        if (!e) return { fits: true };
-        const note = typeof e["note"] === "string" ? (e["note"] as string).slice(0, 200) : undefined;
-        const better = typeof e["better"] === "string" ? (e["better"] as string) : undefined;
-        return { fits: e["fits"] !== false, ...(note ? { note } : {}), ...(better ? { better } : {}) };
-      });
-    } catch (err) {
-      this.log(`[links] relevance judge failed (${err instanceof Error ? err.message : String(err)}) — links not judged`);
-      return null;
-    }
-  }
-}
-
-/**
  * D35/D53: internal links resolve against the articles collection (published
  * HubSpot URL, marked-live URL, slug, or reserved /learn/ path) or a live
  * HTTP check. A same-plan page that isn't live yet is DEFERRED — a real link
  * in the draft that the export renders as text until the page is live. An
- * anchor already pointing at a different page anywhere on the site fails, and
- * so does a link whose lead-in doesn't match what the destination covers.
+ * anchor already pointing at a different page anywhere on the site fails.
+ * Whether a link fits its destination is decided once, in the outline's link
+ * plan, and held there by the gates (D62).
  */
 export class LiveLinkChecker implements LinkChecker {
   constructor(
@@ -437,7 +358,6 @@ export class LiveLinkChecker implements LinkChecker {
     private readonly companyId: string,
     private readonly internalHosts: string[],
     private readonly fetchPage: PageFetcher = defaultPageFetcher,
-    private readonly judge?: LinkRelevanceJudge,
   ) {}
 
   async check(body: string, ctx: LinkCheckContext = {}): Promise<LinkReport> {
@@ -451,7 +371,6 @@ export class LiveLinkChecker implements LinkChecker {
       results.push({ ...(await this.resolve(url)), ...(anchor ? { anchor } : {}) });
     }
     await this.flagAnchorConflicts(results, ctx);
-    await this.judgeRelevance(prose, results, ctx);
     return buildLinkReport(results);
   }
 
@@ -517,26 +436,5 @@ export class LiveLinkChecker implements LinkChecker {
         r.note = `"${hit.slug}" uses it for ${hit.url}`;
       }
     }
-  }
-
-  private async judgeRelevance(prose: string, results: LinkCheckResult[], ctx: LinkCheckContext): Promise<void> {
-    const inventory = ctx.inventory ?? [];
-    if (!this.judge || inventory.length === 0) return;
-    const norm = (u: string) => u.replace(/\/+$/, "");
-    const byUrl = new Map(inventory.map((t) => [norm(t.url), t]));
-    const links = extractMarkdownLinks(prose)
-      .map((l) => ({ ...l, target: byUrl.get(norm(l.url)) }))
-      .filter((l): l is typeof l & { target: LinkTarget } => Boolean(l.target));
-    const verdicts = await this.judge.judge(links, inventory);
-    if (!verdicts) return;
-    verdicts.forEach((v, i) => {
-      const l = links[i];
-      if (!l || v.fits) return;
-      const r = results.find((x) => norm(x.url) === norm(l.url) && (x.status === "ok" || x.status === "deferred"));
-      if (!r) return;
-      r.status = "off_target";
-      r.anchor = l.anchor;
-      r.note = `${v.note ?? "the lead-in doesn't match what this page covers"}${v.better ? `; a better target: ${v.better}` : ""}`;
-    });
   }
 }

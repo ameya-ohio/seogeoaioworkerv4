@@ -49,6 +49,7 @@ import {
   parseHdcpLog,
   parseOutlineFacets,
   extractMarkdownLinks,
+  parseLinkPlan,
   type FormatRegistry,
   type LinkTarget,
   type PageRules,
@@ -99,7 +100,7 @@ async function loadGateFiles(
   article: ArticleDoc,
   phase: WorkStage,
   outputs: CodeStepOutputs,
-  page?: { rules: PageRules; formats: FormatRegistry },
+  page?: { rules: PageRules; formats: FormatRegistry; inventory?: LinkTarget[] },
 ): Promise<GateFiles> {
   const dir = articleDir(cfg, article);
   const read = async (name: string) =>
@@ -132,6 +133,7 @@ async function loadGateFiles(
     files.page = page.rules;
     // A page with no facets gets them from the Strategist, validated here.
     if (phase === "outline" && !article.facets) files.facetRegistry = page.formats;
+    if (phase === "outline" && page.inventory) files.linkInventory = page.inventory;
   }
   return files;
 }
@@ -145,7 +147,6 @@ async function runCodeStep(
   article: ArticleDoc,
   phase: WorkStage,
   rules?: PageRules,
-  inventory: LinkTarget[] = [],
 ): Promise<CodeStepOutputs> {
   const { cfg, db } = deps;
   // The worker owns the facet and canonical_url frontmatter keys (D45–D46):
@@ -260,6 +261,18 @@ async function runCodeStep(
     );
     return { citationReport, competitorReport };
   }
+  if (phase === "outline") {
+    // D62: the planned links resolve, and no planned anchor already points
+    // at a different page on the site — checked now, because every later
+    // phase must use the plan exactly and couldn't fix either.
+    const plan = parseLinkPlan(await readIf("outline.md"));
+    if (!plan) return {};
+    const linkReport = await deps.linkChecker.check(
+      plan.map((l) => `[${l.anchor}](${l.url})`).join("\n\n"),
+      article._id ? { articleId: article._id } : {},
+    );
+    return { linkReport };
+  }
   if (phase === "edit" || phase === "verify" || phase === "design") {
     const report = await runSeoAudit(opts, relFolder);
     if (article._id) {
@@ -277,7 +290,7 @@ async function runCodeStep(
       article.citationChecks,
       rules?.cta?.url ? [rules.cta.url] : [],
     );
-    const linkReport = await recordLinks(deps, article, body, inventory);
+    const linkReport = await recordLinks(deps, article, body);
     return { report, citationReport, linkReport };
   }
   if (phase === "schema") {
@@ -388,16 +401,8 @@ async function materializeHdcpInputs(
  * against. The Edit gate uses the report; after HDCP it is re-recorded so the
  * registry holds the anchors that actually ship (bookkeeping, never a gate).
  */
-async function recordLinks(
-  deps: PipelineDeps,
-  article: ArticleDoc,
-  body: string,
-  inventory: LinkTarget[],
-): Promise<LinkReport> {
-  const linkReport = await deps.linkChecker.check(body, {
-    ...(article._id ? { articleId: article._id } : {}),
-    inventory,
-  });
+async function recordLinks(deps: PipelineDeps, article: ArticleDoc, body: string): Promise<LinkReport> {
+  const linkReport = await deps.linkChecker.check(body, article._id ? { articleId: article._id } : {});
   const hosts = new Set(linkReport.results.map((r) => r.url));
   const internalLinks = extractMarkdownLinks(articleProse(body))
     .filter((l) => hosts.has(l.url))
@@ -470,7 +475,7 @@ async function executePhase(
   // attempt 1 starts with the exact problems a retry would have been given.
   let preAudit: string[] | undefined;
   if (phase === "edit") {
-    const preOutputs = await runCodeStep(deps, article, phase, page.rules, page.inventory);
+    const preOutputs = await runCodeStep(deps, article, phase, page.rules);
     const pre = GATES.edit(await loadGateFiles(cfg, article, phase, preOutputs, page));
     // Style WARNs (rhythm, lists of three, signposts) don't fail the gate,
     // but they're the same class of problem — hand them over as advisory.
@@ -553,7 +558,7 @@ async function executePhase(
       throw new Error(`${phase}: ${err}`);
     }
 
-    const outputs = await runCodeStep(deps, article, phase, page.rules, page.inventory);
+    const outputs = await runCodeStep(deps, article, phase, page.rules);
     const files = await loadGateFiles(cfg, article, phase, outputs, page);
     gate = (opts.gate ?? GATES[phase])(files);
     await saveGateResult(db, articleId, phase, gate);
@@ -842,7 +847,7 @@ async function verifyStep(deps: PipelineDeps, run: RunDoc, article: ArticleDoc):
   await save();
 
   // The text that ships passes every Edit check and carries its notes.
-  const outputs = await runCodeStep(deps, article, "verify", page.rules, page.inventory);
+  const outputs = await runCodeStep(deps, article, "verify", page.rules);
   const files = await loadGateFiles(cfg, article, "verify", outputs, page);
   files.verification = v;
   const gate = verifyGate(files);

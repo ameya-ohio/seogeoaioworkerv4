@@ -19,6 +19,9 @@ import type { ArticleDoc } from "../types.js";
 
 export type LinkTargetStatus = "live" | "in_production" | "planned";
 
+/** Where the target sits relative to this page in the plan's tree. */
+export type LinkTargetRelation = "parent" | "grandparent" | "child" | "sibling";
+
 export interface LinkTarget {
   url: string;
   path: string;
@@ -30,6 +33,7 @@ export interface LinkTarget {
   status: LinkTargetStatus;
   /** Anchors other articles already use for this page. */
   anchorsUsed: string[];
+  relation?: LinkTargetRelation;
 }
 
 const MAX_TARGETS = 14;
@@ -61,36 +65,36 @@ export async function buildLinkInventory(
   if (!self) return [];
 
   const ids = new Set<string>();
-  const picked: PlanItemDoc[] = [];
-  const add = (it: PlanItemDoc | null | undefined) => {
+  const picked: { item: PlanItemDoc; relation: LinkTargetRelation }[] = [];
+  const add = (it: PlanItemDoc | null | undefined, relation: LinkTargetRelation) => {
     if (!it?._id || it._id.equals(self._id as ObjectId) || ids.has(it._id.toHexString())) return;
     if (it.held?.kind === "not_producible" || !it.path) return;
     ids.add(it._id.toHexString());
-    picked.push(it);
+    picked.push({ item: it, relation });
   };
 
   const parent = self.parentItemId ? await db.planItems.findOne({ _id: self.parentItemId }) : null;
-  add(parent);
-  if (parent?.parentItemId) add(await db.planItems.findOne({ _id: parent.parentItemId }));
-  for (const c of await db.planItems.find({ planId: self.planId, parentItemId: self._id }).sort({ sequence: 1 }).toArray()) add(c);
+  add(parent, "parent");
+  if (parent?.parentItemId) add(await db.planItems.findOne({ _id: parent.parentItemId }), "grandparent");
+  for (const c of await db.planItems.find({ planId: self.planId, parentItemId: self._id }).sort({ sequence: 1 }).toArray()) add(c, "child");
   if (self.subtopicId) {
     const siblings = await db.planItems
       .find({ planId: self.planId, subtopicId: self.subtopicId, pageRole: "cluster" })
       .sort({ sequence: 1 })
       .toArray();
-    for (const s of siblings) add(s);
+    for (const s of siblings) add(s, "sibling");
   }
 
   const base = siteBase.replace(/\/+$/, "");
   const chosen = picked.slice(0, MAX_TARGETS);
-  const articleIds = chosen.map((c) => c.articleId).filter((x): x is ObjectId => Boolean(x));
+  const articleIds = chosen.map((c) => c.item.articleId).filter((x): x is ObjectId => Boolean(x));
   const articles = articleIds.length
     ? await db.articles.find({ _id: { $in: articleIds } }).project<Pick<ArticleDoc, "_id" | "stage" | "live">>({ stage: 1, live: 1 }).toArray()
     : [];
   const byId = new Map(articles.map((a) => [a._id?.toHexString(), a]));
 
   const targets: LinkTarget[] = [];
-  for (const it of chosen) {
+  for (const { item: it, relation } of chosen) {
     const url = `${base}${it.path}`;
     const used = await db.articles
       .find({ companyId: article.companyId, "internalLinks.url": url, ...(article._id ? { _id: { $ne: article._id } } : {}) })
@@ -108,6 +112,7 @@ export async function buildLinkInventory(
       covers: coversOf(it),
       status: statusOf(it, it.articleId ? byId.get(it.articleId.toHexString()) : undefined),
       anchorsUsed,
+      relation,
     });
   }
   return targets;
@@ -119,13 +124,17 @@ export function renderLinkInventory(targets: LinkTarget[]): string {
   const lines = [
     `## Internal link inventory (D53)`,
     ``,
-    `Link only to these pages, each **at most once**, at the point where the reader needs it.`,
+    `Link only to these pages, each **at most once**, at the point where the reader needs it. The Strategist`,
+    `plans every link in the outline's Internal Links table; from then on each planned anchor and URL is used`,
+    `exactly, and the gate fails a changed anchor, a missing planned link or an unplanned one (D62).`,
     ``,
     `- Write the link into the sentence with a 2–7 word anchor that says what the reader gets:`,
     `  "…and [what causes identity exposure in hybrid environments](url) breaks down each one."`,
     `  Never "See [Title]", "For more, see…", or an anchor like "here", "this article", "learn more".`,
+    `- An anchor names what the destination covers and reads on its own. No "these numbers", "this surface":`,
+    `  those describe this page, not the one the link opens.`,
     `- Don't name the site structure ("the hub page", "pillar page", "cluster article"); describe the page.`,
-    `- The sentence leading into a link must match what the page **covers** below — a mismatch fails the gate.`,
+    `- The sentence leading into a link must match what the page **covers** below.`,
     `- Vary anchors: the page's query, a natural variant, or a partial match — not its full title. Don't reuse an`,
     `  anchor listed as already used, and never give two different pages the same anchor.`,
     `- Use the full URL exactly as listed. Planned pages are linked now; the export shows them as text until they're live.`,

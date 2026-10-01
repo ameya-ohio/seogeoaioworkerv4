@@ -73,7 +73,7 @@ Rewrite the article to fix the problems you diagnosed. Fix causes, not symptoms.
 
 - **Facts are locked.** Keep every number, date, statistic, name, title, and attribution you keep exactly as written. Quotes stay word for word. You may cut a statistic that decorates rather than carries the argument (log it under Cuts), but never alter one.
 - **No new material.** Don't add facts, examples, anecdotes, sources, or quotes. If the piece needs a real example it doesn't have, insert `[HUMAN INPUT: <what's needed>]`.
-- **Links are locked.** Keep every internal link at least once, and keep the CTA and its URL exactly.
+- **Links are locked (D62).** Keep every internal link with its anchor text and URL exactly as they are, and add none. You may rewrite or move the sentence a link sits in, as long as it still leads into what the link opens; when you cut a passage, move its link into the text you keep. Keep the CTA and its URL exactly.
 - **The expert's point of view is locked (D59).** When pov.md exists, the article keeps arguing its thesis and Argument Spine, and the expert's quotes stay word for word with the attribution they have. You may reorder how the spine is argued and cut repetition of it. You may not soften it, swap it for another claim, or argue a position pov.md lists under Rejected.
 
 ### Allowed

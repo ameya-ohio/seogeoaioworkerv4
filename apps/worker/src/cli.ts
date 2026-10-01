@@ -61,7 +61,7 @@ import { loadWorkerConfig, type WorkerConfig } from "./config.js";
 import { importArticles } from "./importer.js";
 import { AnthropicLlmClient, geminiObserverFromEnv } from "./llm.js";
 import type { PipelineDeps } from "./pipeline.js";
-import { LiveCitationVerifier, LiveLinkChecker, LlmLinkRelevanceJudge } from "./quality.js";
+import { LiveCitationVerifier, LiveLinkChecker } from "./quality.js";
 import { installSignalHandlers, startQueue, type QueueController } from "./queue.js";
 import { startScrapeQueue } from "./scrapeQueue.js";
 import { startPlanQueue } from "./planQueue.js";
@@ -203,13 +203,7 @@ async function cmdStart(argv: string[]): Promise<void> {
         undefined,
         log,
       ),
-      linkChecker: new LiveLinkChecker(
-        db,
-        companyId,
-        hosts,
-        undefined,
-        new LlmLinkRelevanceJudge(new AnthropicLlmClient(), cfg.verifierModel, log),
-      ),
+      linkChecker: new LiveLinkChecker(db, companyId, hosts),
       techReviewer: new LlmTechReviewer(new SdkDirectLlm(), cfg),
       interviewer: new LlmInterviewOpener(
         new SdkDirectLlm(),
