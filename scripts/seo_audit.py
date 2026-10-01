@@ -216,6 +216,16 @@ def strip_html_comments(body: str) -> str:
     return re.sub(r"<!--[\s\S]*?-->", "", body)
 
 
+# Inline notes for the editor (D61: HDCP flags, the verify stage's leftovers).
+# They aren't article prose: their own words (a quoted figure, a problem
+# statement) must not count toward the style and evidence limits.
+_EDITOR_NOTE = re.compile(r"\s?\[(?:NEEDS SOURCE|NEEDS RESEARCH|HUMAN INPUT|VERIFY):[^\]]*\]")
+
+
+def strip_editor_notes(body: str) -> str:
+    return _EDITOR_NOTE.sub("", body)
+
+
 def _internal_hosts() -> list[str]:
     """The company's own hosts, from company.yaml (domain, site, blog)."""
     hosts: set[str] = set()
@@ -303,7 +313,7 @@ def audit(folder: Path) -> int:
     primary_kw = str(fm.get("primary_keyword", "")).lower().strip()
 
     # body-level checks
-    body_clean = strip_html_comments(strip_jsonld_fences(body))
+    body_clean = strip_editor_notes(strip_html_comments(strip_jsonld_fences(body)))
 
     h1 = re.findall(r"^#\s+\S", body_clean, flags=re.MULTILINE)
     if len(h1) == 1:
