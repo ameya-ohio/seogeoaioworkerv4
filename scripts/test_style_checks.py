@@ -358,3 +358,26 @@ class IntroThesisFirstTests(unittest.TestCase):
         self.assertEqual(len(found), 1, "two figures in one sentence still count as two")
         one = "The link decides how far a compromise reaches. Microsoft recorded a 32% rise in identity-based attacks in 2025."
         self.assertFalse([f for f in run(self._intro(one)) if "intro carries" in f.message])
+
+
+class StatsPageTakeawaysTests(unittest.TestCase):
+    """A Stats / Data page's takeaways are its key figures, which its intro also leads with."""
+
+    BODY = (
+        "# Identity exposure statistics\n\n"
+        "IBM Security's 2026 Cost of a Data Breach Report found the global average breach cost reached $4.99 million, a 12% increase.\n\n"
+        "## Key Takeaways\n\n"
+        "- IBM Security's 2026 Cost of a Data Breach Report found the global average breach cost reached $4.99 million.\n"
+        "- Another figure about credential abuse rising across hybrid estates this year.\n"
+        "- A third specific about remediation order across directories.\n\n"
+        "## Section\n\nBody text here.\n"
+    )
+
+    def _repeats(self, article_type: str):
+        return [f for f in sc.run_all(self.BODY, len(self.BODY.split()), article_type=article_type) if "Key Takeaways repeat the intro" in f.message]
+
+    def test_figures_may_repeat_on_a_stats_page(self):
+        self.assertFalse(self._repeats("stats-data"))
+
+    def test_still_fails_on_other_formats(self):
+        self.assertTrue(self._repeats("examples"))

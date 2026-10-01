@@ -334,8 +334,15 @@ def check_definitions(body: str) -> Finding | None:
     )
 
 
-def check_takeaway_restatement(intro: str, sections: list[tuple[str, str]]) -> Finding | None:
+def check_takeaway_restatement(
+    intro: str, sections: list[tuple[str, str]], figures_are_takeaways: bool = False
+) -> Finding | None:
     intro_sents = [s for s in sentences(" ".join(_plain(intro).split())) if len(_content_words(s)) >= TAKEAWAY_MIN_SHARED]
+    # On a Stats / Data or Original Research page the takeaways ARE the key
+    # figures (writer.md, step 5) and the intro leads with them too, so only
+    # the intro's argument, not its figures, is off-limits for a takeaway.
+    if figures_are_takeaways:
+        intro_sents = [s for s in intro_sents if not _STATISTIC.search(s)]
     hits = []
     for heading, text in sections:
         if not re.match(r"key takeaways", heading, re.I):
@@ -671,7 +678,7 @@ def run_all(
         check_faq_answer_length(sections),
         check_faq_repeats_h2(sections),
         check_definitions(body),
-        check_takeaway_restatement(intro, sections),
+        check_takeaway_restatement(intro, sections, article_type in EVIDENCE_FORMATS),
         check_takeaway_count(sections, takeaways),
         check_intro_hooks(intro),
         check_misconception_opener(intro),
