@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCompany, getDb } from "@/lib/db";
 import { toUiRun, type UiRun } from "@/lib/ui-types";
-import { PageHeader, StageBadge } from "@/components/ui";
-import { ReviewEditor, type ReviewArticle } from "@/components/review-editor";
+import { ReviewEditor } from "@/components/review/review-editor";
+import type { ReviewArticle } from "@/components/review/model";
 import { hubspotStatus } from "@/lib/actions/content";
 import { publishTarget } from "@/lib/actions/publishing";
 import { getFormats } from "@/lib/db";
@@ -113,6 +112,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
     hubspotConfig: await hubspotStatus(),
     publishTarget: await publishTarget(),
     live: doc.live ? { url: doc.live.url, verifiedAt: new Date(doc.live.verifiedAt).toISOString(), status: doc.live.status } : null,
+    exportedAt: doc.exportedAt ? new Date(doc.exportedAt).toISOString() : null,
     signoffRequired: format.signoff,
     signoff: doc.signoff ? { by: doc.signoff.by, at: new Date(doc.signoff.at).toISOString(), note: doc.signoff.note ?? null } : null,
     facets: doc.facets ? { ...doc.facets } : null,
@@ -128,7 +128,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
       cta: rules.cta
         ? `${rules.cta.label} — ${rules.cta.url}`
         : doc.facets
-          ? "not configured for this funnel (Admin → CTAs)"
+          ? "not configured for this funnel (Settings › Calls to action)"
           : "set by the funnel once the page has facets",
       schema: rules.schemaTypes,
     },
@@ -139,23 +139,8 @@ export default async function ReviewPage({ params }: { params: Promise<{ slug: s
     runs,
   };
 
-  return (
-    <>
-      <PageHeader
-        title={article.title}
-        subtitle={`${slug} · ${article.targetKeyword ?? "no target keyword"}`}
-        actions={
-          <div className="flex items-center gap-3">
-            <StageBadge stage={doc.stage} />
-            <Link href="/production?tab=review" className="text-sm text-slate-500 hover:underline">
-              ← back to review queue
-            </Link>
-          </div>
-        }
-      />
-      <ReviewEditor key={slug} article={article} />
-    </>
-  );
+  // The editor renders the page frame itself: its toolbar carries live editor state.
+  return <ReviewEditor key={slug} article={article} />;
 }
 
 /**

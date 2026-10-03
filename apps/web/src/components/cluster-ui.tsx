@@ -1,57 +1,57 @@
 import { CLUSTER_STAGES } from "@blogagent/engine";
-import { cls } from "./ui";
+import { Check, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Status, StatusPill, type StatusFamily } from "./kit";
 
 /** Presentational pieces for the cluster review UI (4D) — server-safe. */
 
-const STATUS_STYLE: Record<string, string> = {
-  queued: "bg-slate-100 text-slate-600",
-  running: "bg-sky-100 text-sky-700",
-  succeeded: "bg-emerald-100 text-emerald-800",
-  failed: "bg-red-100 text-red-700",
-  canceled: "bg-zinc-100 text-zinc-600",
+const STATUS_FAMILY: Record<string, StatusFamily> = {
+  queued: "idle",
+  running: "working",
+  succeeded: "done",
+  failed: "problem",
+  canceled: "idle",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  queued: "Queued",
+  running: "Running",
+  succeeded: "Done",
+  failed: "Failed",
+  canceled: "Canceled",
 };
 
 export function ClusterStatusBadge({ status }: { status: string }) {
-  return (
-    <span
-      className={cls(
-        "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
-        STATUS_STYLE[status] ?? "bg-slate-100 text-slate-600",
-      )}
-    >
-      {status}
-    </span>
-  );
+  return <Status family={STATUS_FAMILY[status] ?? "idle"}>{STATUS_LABEL[status] ?? status}</Status>;
 }
 
-const TIER_STYLE: Record<string, string> = {
-  core: "bg-indigo-100 text-indigo-700",
-  secondary: "bg-cyan-100 text-cyan-700",
-  noise: "bg-zinc-100 text-zinc-500",
+const TIER_FAMILY: Record<string, StatusFamily> = {
+  core: "working",
+  secondary: "idle",
+  noise: "idle",
 };
 
 export function TierBadge({ tier }: { tier: string }) {
   return (
-    <span
-      className={cls(
-        "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
-        TIER_STYLE[tier] ?? "bg-slate-100 text-slate-600",
-      )}
-    >
+    <StatusPill family={TIER_FAMILY[tier] ?? "idle"} className={cn("capitalize", tier === "noise" && "text-label-3")}>
       {tier}
-    </span>
+    </StatusPill>
   );
 }
 
-const GAP_STYLE: Record<string, string> = {
-  owned: "text-emerald-700",
-  buried: "text-amber-700",
-  missing: "text-red-600",
+const GAP_FAMILY: Record<string, StatusFamily> = {
+  owned: "done",
+  buried: "needs",
+  missing: "problem",
 };
 
 export function GapLabel({ status }: { status: string | null }) {
-  if (!status) return <span className="text-slate-400">—</span>;
-  return <span className={cls("text-xs font-medium", GAP_STYLE[status])}>{status}</span>;
+  if (!status) return <span className="text-label-3">—</span>;
+  return (
+    <Status family={GAP_FAMILY[status] ?? "idle"} className="text-xs capitalize">
+      {status}
+    </Status>
+  );
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -66,7 +66,12 @@ const STAGE_LABELS: Record<string, string> = {
   briefs: "Briefs",
 };
 
-/** Nine-stage progress strip: done / current / pending. */
+export function clusterStageLabel(stage: string): string {
+  if (stage === "done") return "Done";
+  return STAGE_LABELS[stage] ?? stage;
+}
+
+/** Nine-stage horizontal stepper: done / current (pulses while running) / pending. */
 export function ClusterStageProgress({
   stage,
   completed,
@@ -76,23 +81,62 @@ export function ClusterStageProgress({
   completed: string[];
   status: string;
 }) {
+  const doneCount = CLUSTER_STAGES.filter((s) => completed.includes(s) || stage === "done").length;
   return (
-    <ol className="flex flex-wrap gap-1.5">
-      {CLUSTER_STAGES.map((s) => {
+    <ol
+      aria-label={`${doneCount} of ${CLUSTER_STAGES.length} stages done`}
+      className="grid grid-cols-[repeat(auto-fit,minmax(84px,1fr))] gap-y-4"
+    >
+      {CLUSTER_STAGES.map((s, i) => {
         const done = completed.includes(s) || stage === "done";
         const current = !done && stage === s;
+        const failed = current && status === "failed";
+        const running = current && status === "running";
+        const waiting = current && !failed && !running;
+        const isDone = (k: number) => {
+          const st = CLUSTER_STAGES[k];
+          return st !== undefined && (completed.includes(st) || stage === "done");
+        };
+        const reached = done || current;
         return (
-          <li
-            key={s}
-            className={cls(
-              "flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium",
-              done && "border-emerald-200 bg-emerald-50 text-emerald-700",
-              current && status === "running" && "border-sky-300 bg-sky-50 text-sky-700",
-              current && status !== "running" && "border-amber-300 bg-amber-50 text-amber-700",
-              !done && !current && "border-slate-200 bg-white text-slate-400",
+          <li key={s} aria-current={current ? "step" : undefined} className="relative flex flex-col items-center gap-2 text-center">
+            {i > 0 && (
+              <span
+                aria-hidden
+                className={cn("absolute top-[9px] right-1/2 left-0 h-[1.5px] -translate-y-1/2", isDone(i - 1) && reached ? "bg-phase-done" : "bg-separator-strong")}
+              />
             )}
-          >
-            {done ? "✓" : current ? (status === "running" ? "●" : "…") : "○"} {STAGE_LABELS[s]}
+            {i < CLUSTER_STAGES.length - 1 && (
+              <span
+                aria-hidden
+                className={cn("absolute top-[9px] right-0 left-1/2 h-[1.5px] -translate-y-1/2", done && (isDone(i + 1) || stage === CLUSTER_STAGES[i + 1]) ? "bg-phase-done" : "bg-separator-strong")}
+              />
+            )}
+            <span
+              aria-hidden
+              className={cn(
+                "relative z-[1] inline-flex size-[18px] items-center justify-center rounded-full",
+                done && "bg-phase-done text-surface",
+                running && "bg-primary pulse-dot",
+                waiting && "bg-needs shadow-[0_0_0_3px_var(--needs-bg)]",
+                failed && "bg-problem text-primary-foreground shadow-[0_0_0_3px_var(--problem-bg)]",
+                !done && !current && "bg-surface shadow-[inset_0_0_0_1.5px_var(--separator-strong)]",
+              )}
+            >
+              {done && <Check className="size-3 stroke-[3]" />}
+              {failed && <X className="size-3 stroke-[3]" />}
+              {running && <span className="size-1.5 rounded-full bg-primary-foreground" />}
+            </span>
+            <span
+              className={cn(
+                "px-1 text-xs leading-4",
+                current ? "font-semibold text-label" : done ? "font-medium text-label-2" : "text-label-3",
+                failed && "text-problem-fg",
+              )}
+            >
+              {STAGE_LABELS[s] ?? s}
+              <span className="sr-only">{done ? " (done)" : current ? ` (${status})` : " (pending)"}</span>
+            </span>
           </li>
         );
       })}

@@ -1,4 +1,4 @@
-import { cls } from "./ui";
+import { cls } from "./kit";
 
 /**
  * Page facets (D45–D49) as badges, shared by the plan, production, articles
@@ -25,43 +25,48 @@ export const FACET_OPTIONS = {
   ],
 } as const;
 
-const base = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap";
+const base = "inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold whitespace-nowrap";
 
-const FUNNEL_STYLE: Record<string, string> = {
-  tofu: "bg-emerald-50 text-emerald-700",
-  mofu: "bg-amber-50 text-amber-700",
-  bofu: "bg-rose-50 text-rose-700",
+/** Human label for a funnel stage ("Top of funnel"), for prose and meta lines. */
+export const FUNNEL_LONG: Record<string, string> = {
+  tofu: "Top of funnel",
+  mofu: "Middle of funnel",
+  bofu: "Bottom of funnel",
 };
 
 export function FunnelBadge({ funnel }: { funnel: string }) {
-  return <span className={cls(base, FUNNEL_STYLE[funnel] ?? "bg-slate-100 text-slate-600")}>{funnel.toUpperCase()}</span>;
+  return (
+    <span className={cls(base, "bg-fill-2 text-label-2 tracking-[0.02em]")} title={FUNNEL_LONG[funnel]}>
+      {funnel.toUpperCase()}
+    </span>
+  );
 }
 
 export function IntentBadge({ intent }: { intent: string }) {
-  return <span className={cls(base, "bg-slate-100 text-slate-600")}>{intent}</span>;
+  return <span className={cls(base, "bg-transparent px-1 font-medium text-label-2 capitalize")}>{intent}</span>;
 }
 
 export function TypeBadge({ label }: { label: string }) {
-  return <span className={cls(base, "bg-violet-50 text-violet-700")}>{label}</span>;
+  return <span className={cls(base, "bg-fill text-label")}>{label}</span>;
 }
 
 const HOLD_STYLE: Record<string, string> = {
-  signoff: "bg-amber-50 text-amber-700",
-  fact_sheet: "bg-orange-50 text-orange-700",
-  dataset: "bg-orange-50 text-orange-700",
-  not_producible: "bg-slate-100 text-slate-500",
+  signoff: "bg-needs-bg text-needs-fg",
+  fact_sheet: "bg-needs-bg text-needs-fg",
+  dataset: "bg-needs-bg text-needs-fg",
+  not_producible: "bg-fill-2 text-label-2",
 };
 
 const HOLD_LABEL: Record<string, string> = {
-  signoff: "hand send + sign-off",
-  fact_sheet: "needs fact sheet",
-  dataset: "needs dataset",
-  not_producible: "not produced",
+  signoff: "Hand send + sign-off",
+  fact_sheet: "Needs fact sheet",
+  dataset: "Needs dataset",
+  not_producible: "Not produced",
 };
 
 export function HoldBadge({ kind, reason }: { kind: string; reason: string }) {
   return (
-    <span className={cls(base, HOLD_STYLE[kind] ?? "bg-slate-100 text-slate-600")} title={reason}>
+    <span className={cls(base, HOLD_STYLE[kind] ?? "bg-fill-2 text-label-2")} title={reason}>
       {HOLD_LABEL[kind] ?? kind}
     </span>
   );

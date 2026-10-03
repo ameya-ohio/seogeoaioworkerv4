@@ -8,7 +8,12 @@ import {
   type CsvCheckResult,
   type CsvRow,
 } from "@/lib/actions/keywords";
-import { Card, EmptyState, buttonCls, cls, tableCls } from "./ui";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { CheckCircle2, FileUp, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Card, EmptyState, cls, tableCls } from "./kit";
 
 /**
  * Upload Keywords tab (3.4): CSV → parse (client-side) → dedupe against the
@@ -47,16 +52,27 @@ function mapRows(data: Record<string, unknown>[] | unknown[][]): CsvRow[] {
 }
 
 export function UploadCsv() {
+  const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [check, setCheck] = useState<CsvCheckResult | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
-  const [done, setDone] = useState<number | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [pending, startTransition] = useTransition();
 
+  const runCheck = (rows: CsvRow[]) =>
+    startTransition(async () => {
+      try {
+        setCheck(await checkCsvRows(rows));
+      } catch {
+        setParseError("Couldn't check the file against the library. Try again.");
+      }
+    });
+
   const onFile = (file: File) => {
-    setDone(null);
     setCheck(null);
     setParseError(null);
+    setFileName(file.name);
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -73,86 +89,139 @@ export function UploadCsv() {
                 setParseError("No keywords found. Expected a `keyword` column (or one keyword per line).");
                 return;
               }
-              startTransition(async () => setCheck(await checkCsvRows(rows)));
+              runCheck(rows);
             },
           });
           return;
         }
-        startTransition(async () => setCheck(await checkCsvRows(rows)));
+        runCheck(rows);
       },
       error: (err: Error) => setParseError(`CSV parse failed: ${err.message}`),
     });
   };
 
+  const reset = () => {
+    setCheck(null);
+    setFileName(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
   const commit = () => {
     if (!check) return;
     startTransition(async () => {
-      const n = await commitCsvRows(check.fresh);
-      setDone(n);
-      setCheck(null);
-      if (fileRef.current) fileRef.current.value = "";
+      try {
+        const n = await commitCsvRows(check.fresh);
+        reset();
+        toast.success(`Imported ${n} keyword${n === 1 ? "" : "s"}`, {
+          description: "They're in the library as ideas.",
+          action: { label: "Open Keywords", onClick: () => router.push("/keywords?status=idea") },
+        });
+      } catch {
+        toast.error("Import failed. Try again.");
+      }
     });
   };
 
   return (
-    <div className="max-w-3xl space-y-4">
-      <Card title="Upload a keyword CSV">
-        <div className="space-y-3">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,text/csv"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onFile(f);
-            }}
-            className="block text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-indigo-700"
-          />
-          <p className="text-xs text-slate-400">
-            Columns recognized: <span className="font-mono">keyword</span> (required),{" "}
-            <span className="font-mono">volume</span>, <span className="font-mono">difficulty</span>,{" "}
-            <span className="font-mono">priority</span>. A plain one-keyword-per-line file works too.
-          </p>
-          {parseError && <p className="text-sm text-red-600">{parseError}</p>}
-          {done !== null && (
-            <p className="text-sm text-emerald-700">
-              Imported {done} keyword{done === 1 ? "" : "s"} into the library (status: idea).
-            </p>
-          )}
-        </div>
-      </Card>
+    <div className="mx-auto flex max-w-3xl flex-col gap-5">
+      <label
+        htmlFor="csv-file"
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          const f = e.dataTransfer.files?.[0];
+          if (f) onFile(f);
+        }}
+        className={cn(
+          "flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-[1.5px] border-dashed px-6 py-12 text-center transition-colors",
+          dragging ? "border-primary bg-primary-soft" : "border-separator-strong bg-surface hover:bg-fill-2",
+        )}
+      >
+        <span className="mb-1 inline-flex size-11 items-center justify-center rounded-xl bg-fill-2 text-label-2">
+          <FileUp aria-hidden className="size-5 stroke-[1.6]" />
+        </span>
+        <span className="text-[15px] font-semibold">{fileName ?? "Drop a keyword CSV here"}</span>
+        <span className="text-[13px] text-label-2">
+          or <span className="font-medium text-primary">choose a file</span>
+        </span>
+        <span className="mt-2 max-w-md text-xs leading-[18px] text-label-2">
+          Columns recognized: <span className="font-mono">keyword</span> (required), <span className="font-mono">volume</span>,{" "}
+          <span className="font-mono">difficulty</span>, <span className="font-mono">priority</span>. A plain one-keyword-per-line file
+          works too.
+        </span>
+        <input
+          ref={fileRef}
+          id="csv-file"
+          type="file"
+          accept=".csv,text/csv"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onFile(f);
+          }}
+          className="sr-only"
+        />
+      </label>
 
-      {pending && !check && <p className="text-sm text-slate-500">Checking against the library…</p>}
+      {parseError && (
+        <p role="alert" className="rounded-lg bg-problem-bg px-3 py-2 text-[13px] text-problem-fg">
+          {parseError}
+        </p>
+      )}
+
+      {pending && !check && (
+        <p className="flex items-center justify-center gap-2 text-[13px] text-label-2">
+          <Loader2 aria-hidden className="size-4 animate-spin" />
+          Checking against the library…
+        </p>
+      )}
 
       {check && (
         <Card
-          title={`Ready to import: ${check.fresh.length} new · ${check.duplicates.length} already in the library`}
+          flush
+          title={
+            <span className="flex flex-col">
+              <span>Ready to import</span>
+              <span className="text-xs font-normal text-label-2">
+                {check.fresh.length} new · {check.duplicates.length} already in the library
+              </span>
+            </span>
+          }
           actions={
-            <button onClick={commit} disabled={pending || check.fresh.length === 0} className={buttonCls("primary")}>
-              {pending ? "Importing…" : `Import ${check.fresh.length}`}
-            </button>
+            <span className="flex items-center gap-2">
+              <Button variant="ghost" onClick={reset} disabled={pending}>
+                Cancel
+              </Button>
+              <Button onClick={commit} disabled={pending || check.fresh.length === 0}>
+                {pending ? "Importing…" : `Import ${check.fresh.length}`}
+              </Button>
+            </span>
           }
         >
           {check.fresh.length === 0 ? (
-            <EmptyState title="Every row already exists in the library." />
+            <EmptyState icon={CheckCircle2} title="Every row already exists in the library" />
           ) : (
-            <div className="max-h-80 overflow-auto rounded-md border border-slate-100">
+            <div className="max-h-80 overflow-auto">
               <table className={tableCls.table}>
-                <thead>
+                <thead className="sticky top-0 bg-surface">
                   <tr>
-                    <th className={tableCls.th}>Keyword</th>
-                    <th className={tableCls.th}>Volume</th>
-                    <th className={tableCls.th}>Difficulty</th>
-                    <th className={tableCls.th}>Priority</th>
+                    <th scope="col" className={tableCls.th}>Keyword</th>
+                    <th scope="col" className={cls(tableCls.th, "text-right")}>Volume</th>
+                    <th scope="col" className={cls(tableCls.th, "text-right")}>Difficulty</th>
+                    <th scope="col" className={cls(tableCls.th, "text-right")}>Priority</th>
                   </tr>
                 </thead>
                 <tbody>
                   {check.fresh.map((r) => (
                     <tr key={r.text} className={tableCls.tr}>
-                      <td className={cls(tableCls.td, "font-medium text-slate-800")}>{r.text}</td>
-                      <td className={cls(tableCls.td, "tabular-nums text-slate-600")}>{r.volume ?? "—"}</td>
-                      <td className={cls(tableCls.td, "tabular-nums text-slate-600")}>{r.difficulty ?? "—"}</td>
-                      <td className={cls(tableCls.td, "tabular-nums text-slate-600")}>{r.priority ?? "—"}</td>
+                      <td className={cls(tableCls.td, "font-semibold")}>{r.text}</td>
+                      <td className={cls(tableCls.td, "text-right text-label-2 tabular-nums")}>{r.volume ?? "—"}</td>
+                      <td className={cls(tableCls.td, "text-right text-label-2 tabular-nums")}>{r.difficulty ?? "—"}</td>
+                      <td className={cls(tableCls.td, "text-right text-label-2 tabular-nums")}>{r.priority ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -160,7 +229,7 @@ export function UploadCsv() {
             </div>
           )}
           {check.duplicates.length > 0 && (
-            <p className="mt-3 text-xs text-slate-400">
+            <p className="border-t-[0.5px] border-separator px-4 py-3 text-xs text-label-2">
               Skipping duplicates: {check.duplicates.slice(0, 12).join(", ")}
               {check.duplicates.length > 12 ? "…" : ""}
             </p>

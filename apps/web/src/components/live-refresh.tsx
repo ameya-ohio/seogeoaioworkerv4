@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 /**
- * Subscribes to /api/events (SSE). Each pipeline event triggers a throttled
- * router.refresh(), so the server-rendered Work board stays live without
- * client-side data fetching.
+ * Subscribes to an SSE stream (default /api/events). Each event triggers a
+ * throttled router.refresh(), so server-rendered views stay live without
+ * client-side data fetching. Renders a small "Live" pill.
  */
-export function LiveRefresh({ src = "/api/events" }: { src?: string }) {
+export function LiveRefresh({ src = "/api/events", label = true }: { src?: string; label?: boolean }) {
   const router = useRouter();
   const [connected, setConnected] = useState(false);
   const throttleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -31,11 +32,12 @@ export function LiveRefresh({ src = "/api/events" }: { src?: string }) {
   }, [router, src]);
 
   return (
-    <p className="flex items-center gap-1.5 text-xs text-slate-400">
-      <span
-        className={`inline-block h-1.5 w-1.5 rounded-full ${connected ? "bg-emerald-500" : "bg-slate-300"}`}
-      />
-      {connected ? "live — updates stream in as the worker reports" : "connecting to event stream…"}
-    </p>
+    <span
+      title={connected ? "Updates stream in as the worker reports" : "Connecting to the event stream…"}
+      className="inline-flex h-7 items-center gap-2 rounded-full bg-fill-2 px-3 text-xs font-medium text-label-2"
+    >
+      <span aria-hidden className={cn("inline-block size-[7px] rounded-full", connected ? "bg-done" : "bg-idle")} />
+      {label && (connected ? "Live" : "Connecting…")}
+    </span>
   );
 }

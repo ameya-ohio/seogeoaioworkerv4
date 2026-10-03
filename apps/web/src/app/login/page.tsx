@@ -1,31 +1,21 @@
-"use client";
+import { getCompany } from "@/lib/db";
+import { LoginForm } from "./login-form";
 
-import { useActionState } from "react";
-import { login, type LoginState } from "@/lib/actions/auth";
-import { buttonCls, inputCls } from "@/components/ui";
+export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
-  const [state, formAction, pending] = useActionState<LoginState, FormData>(login, {});
+  let companyName: string | null = null;
+  try {
+    companyName = getCompany().companyName || null;
+  } catch {
+    /* company.yaml missing: sign in still works */
+  }
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
-      <form
-        action={formAction}
-        className="w-full max-w-sm rounded-xl border border-slate-700 bg-slate-800 p-6 shadow-xl"
-      >
-        <h1 className="text-lg font-bold text-white">Content Engine</h1>
-        <p className="mt-1 text-sm text-slate-300">Enter the operator password.</p>
-        <input
-          type="password"
-          name="password"
-          autoFocus
-          placeholder="Password"
-          className={`${inputCls} mt-4 w-full`}
-        />
-        {state.error && <p className="mt-2 text-sm text-red-400">{state.error}</p>}
-        <button type="submit" disabled={pending} className={buttonCls("primary", "mt-4 w-full justify-center")}>
-          {pending ? "Checking…" : "Sign in"}
-        </button>
-      </form>
+    <main
+      className="flex min-h-screen items-center justify-center bg-window px-4 py-6"
+      style={{ backgroundImage: "radial-gradient(900px 520px at 50% 0%, color-mix(in srgb, var(--primary) 9%, transparent), transparent 70%)" }}
+    >
+      <LoginForm companyName={companyName} />
     </main>
   );
 }

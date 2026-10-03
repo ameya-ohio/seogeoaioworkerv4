@@ -1,14 +1,24 @@
 import Link from "next/link";
 import type { Filter } from "mongodb";
+import { Search, Upload } from "lucide-react";
 import type { KeywordDoc } from "@blogagent/engine";
 import { getCompany, getDb } from "@/lib/db";
 import { toUiKeyword, type UiKeyword } from "@/lib/ui-types";
-import { PageHeader, cls } from "@/components/ui";
+import { Page, SegmentedNav, cls, inputCls } from "@/components/kit";
 import { KeywordsTable } from "@/components/keywords-table";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_FILTERS = ["all", "idea", "queued", "in_production", "in_review", "published", "archived"];
+const STATUS_FILTERS: { key: string; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "idea", label: "Ideas" },
+  { key: "queued", label: "Queued" },
+  { key: "in_production", label: "In production" },
+  { key: "in_review", label: "In review" },
+  { key: "published", label: "Published" },
+  { key: "archived", label: "Archived" },
+];
 
 export default async function KeywordsPage({
   searchParams,
@@ -55,43 +65,58 @@ export default async function KeywordsPage({
     .toArray();
   const countByStatus = new Map(counts.map((c) => [c._id, c.n]));
   const total = counts.reduce((s, c) => s + c.n, 0);
+  // "All" lists everything but the archive, so its count does too.
+  const active = total - (countByStatus.get("archived") ?? 0);
+
+  const statusHref = (s: string) => {
+    const qs = [s !== "all" ? `status=${s}` : "", q ? `q=${encodeURIComponent(q)}` : ""].filter(Boolean).join("&");
+    return qs ? `/keywords?${qs}` : "/keywords";
+  };
+  const statusItems = STATUS_FILTERS.some((s) => s.key === status) ? STATUS_FILTERS : [...STATUS_FILTERS, { key: status, label: status.replace("_", " ") }];
 
   return (
-    <>
-      <PageHeader
-        title="Target Keywords"
-        subtitle={`${total} keyword${total === 1 ? "" : "s"} in the library`}
-      />
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {STATUS_FILTERS.map((s) => {
-          const n = s === "all" ? total : (countByStatus.get(s) ?? 0);
-          return (
-            <Link
-              key={s}
-              href={s === "all" ? "/keywords" : `/keywords?status=${s}`}
-              className={cls(
-                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                s === status
-                  ? "border-accent bg-accent-soft text-accent"
-                  : "border-slate-200 bg-white text-slate-500 hover:border-slate-300",
-              )}
-            >
-              {s.replace("_", " ")} {n > 0 && <span className="opacity-60">({n})</span>}
-            </Link>
-          );
-        })}
-        <form className="ml-auto" action="/keywords" method="get">
+    <Page
+      crumbs={[{ label: "Keywords" }]}
+      title="Keywords"
+      subtitle={`${total} keyword${total === 1 ? "" : "s"} in the library. Select a few and send them to the pipeline.`}
+      width="wide"
+      actions={
+        <Button variant="secondary" asChild>
+          <Link href="/strategy?tab=upload">
+            <Upload data-icon="inline-start" />
+            Import CSV
+          </Link>
+        </Button>
+      }
+    >
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <SegmentedNav
+          label="Filter keywords"
+          active={status}
+          items={statusItems.map((s) => ({
+            key: s.key,
+            label: s.label,
+            count: s.key === "all" ? active : (countByStatus.get(s.key) ?? 0),
+            href: statusHref(s.key),
+          }))}
+        />
+        <form action="/keywords" method="get" role="search" className="relative">
           {status !== "all" && <input type="hidden" name="status" value={status} />}
+          <Search aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-label-3" />
+          <label htmlFor="keyword-search" className="sr-only">
+            Search keywords
+          </label>
           <input
+            id="keyword-search"
             type="search"
             name="q"
             defaultValue={q}
-            placeholder="Search keywords…"
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm placeholder:text-slate-400 focus:border-accent focus:outline-none"
+            placeholder="Search keywords"
+            className={cls(inputCls, "w-64 pl-8")}
           />
         </form>
       </div>
-      <KeywordsTable rows={rows} />
-    </>
+      <KeywordsTable rows={rows} filtered={Boolean(q) || status !== "all"} />
+    </Page>
   );
 }

@@ -1,58 +1,60 @@
 "use client";
 
 import { useActionState } from "react";
+import { Download } from "lucide-react";
 import { startScrapeRun, type ScrapeFormState } from "@/lib/actions/competitive";
-import { Card, buttonCls, cls, inputCls } from "./ui";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { inputCls } from "./kit";
+import { SettingsGroup, SettingsRow } from "./settings/settings-ui";
 
-/** Admin › Competitive (6.2): queue a competitor blog scrape. */
+/** Settings › Competitors (6.2): queue a competitor blog scrape. */
 export function ScrapeRunForm() {
-  const [state, formAction, pending] = useActionState<ScrapeFormState, FormData>(
-    startScrapeRun,
-    {},
-  );
+  const [state, formAction, pending] = useActionState<ScrapeFormState, FormData>(startScrapeRun, {});
   return (
-    <Card title="Scrape a competitor blog">
-      <form action={formAction} className="space-y-3">
-        <p className="text-xs leading-relaxed text-slate-500">
-          Crawls the blog (robots.txt-respecting), extracts every post, and builds a TF-IDF topic
-          index. The corpus feeds gap analysis in the Researcher phase and the cluster agent&apos;s
-          gap map (6.3).
+    <form action={formAction} className="flex flex-col gap-3">
+      <SettingsGroup
+        title="Scrape a competitor blog"
+        footnote="Respects robots.txt. Every post is extracted and indexed by topic; the corpus feeds gap analysis in research and the cluster agent's gap map. Runs on the worker's scrape queue, and you land on the run to follow along."
+      >
+        <SettingsRow label="Blog index URL" htmlFor="scrape-url" stack>
+          <input
+            id="scrape-url"
+            name="url"
+            inputMode="url"
+            placeholder="https://www.competitor.com/blog"
+            className={cn(inputCls, "w-full font-mono text-xs")}
+          />
+        </SettingsRow>
+        <SettingsRow label="Browser mode" htmlFor="scrape-browser" sub="For JavaScript-rendered sites like Webflow and Framer">
+          <Switch id="scrape-browser" name="useBrowser" defaultChecked />
+        </SettingsRow>
+        <SettingsRow label="Store header images" htmlFor="scrape-images">
+          <Switch id="scrape-images" name="withImages" />
+        </SettingsRow>
+        <SettingsRow label="Article limit" htmlFor="scrape-max" sub="Stop after this many posts">
+          <input
+            id="scrape-max"
+            name="maxArticles"
+            type="number"
+            min={1}
+            placeholder="All"
+            className={cn(inputCls, "w-[120px] text-right tabular-nums")}
+          />
+        </SettingsRow>
+      </SettingsGroup>
+      {state.error && (
+        <p role="alert" className="rounded-xl bg-problem-bg px-3.5 py-2.5 text-[13px] text-problem-fg">
+          {state.error}
         </p>
-        <input
-          name="url"
-          placeholder='Blog index URL, e.g. "https://www.competitor.com/blog"'
-          className={cls(inputCls, "w-full")}
-        />
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-600">
-          <label className="flex items-center gap-1.5">
-            <input type="checkbox" name="useBrowser" defaultChecked className="accent-accent" />
-            Browser mode (JS-rendered sites: Webflow, Framer…)
-          </label>
-          <label className="flex items-center gap-1.5">
-            <input type="checkbox" name="withImages" className="accent-accent" />
-            Also store header images
-          </label>
-          <label className="flex items-center gap-1.5">
-            Max articles
-            <input
-              name="maxArticles"
-              type="number"
-              min={1}
-              placeholder="all"
-              className={cls(inputCls, "w-20")}
-            />
-          </label>
-        </div>
-        {state.error && <p className="text-sm text-red-600">{state.error}</p>}
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-slate-400">
-            Runs on the worker&apos;s scrape queue — you land on the run view to follow along.
-          </p>
-          <button type="submit" disabled={pending} className={buttonCls("primary")}>
-            {pending ? "Queuing…" : "Scrape"}
-          </button>
-        </div>
-      </form>
-    </Card>
+      )}
+      <div className="flex justify-end">
+        <Button type="submit" disabled={pending}>
+          <Download data-icon="inline-start" />
+          {pending ? "Queuing…" : "Scrape"}
+        </Button>
+      </div>
+    </form>
   );
 }

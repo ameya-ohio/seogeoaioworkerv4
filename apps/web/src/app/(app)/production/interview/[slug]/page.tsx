@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MessageSquare } from "lucide-react";
 import { CAPTURE_CHECKLIST, markdownSection } from "@blogagent/engine";
 import { getCompany, getDb } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { buttonCls, PageHeader, StageBadge } from "@/components/ui";
+import { Card, EmptyState, Page } from "@/components/kit";
+import { Button } from "@/components/ui/button";
 import { InterviewChat, type InterviewView } from "@/components/interview-chat";
 
 export const dynamic = "force-dynamic";
 
-/** D59: the expert interview for one article — chat on the left, what's planned and captured on the right. */
+/** D59: the expert interview for one article: the conversation in the middle, what's captured and the research beside it. */
 export default async function InterviewPage({ params }: { params: Promise<{ slug: string }> }) {
   await requireAuth();
   const { slug } = await params;
@@ -19,9 +21,17 @@ export default async function InterviewPage({ params }: { params: Promise<{ slug
   const outline = doc.artifacts.outline ?? "";
   const title = /^#\s+Strategy & Outline:\s*(.+)$/m.exec(outline)?.[1]?.trim() ?? doc.topic;
 
+  const crumbs = [
+    { label: "Production", href: "/production" },
+    { label: title, href: `/production/review/${doc.slug}` },
+    { label: "Interview" },
+  ];
+
   const view: InterviewView | null = iv
     ? {
         slug: doc.slug,
+        title,
+        stage: doc.stage,
         status: iv.status,
         messages: iv.messages.map((m) => ({ role: m.role, content: m.content, at: m.at.toISOString() })),
         checklist: [
@@ -39,27 +49,32 @@ export default async function InterviewPage({ params }: { params: Promise<{ slug
       }
     : null;
 
+  if (view) return <InterviewChat view={view} crumbs={crumbs} />;
+
   return (
-    <div>
-      <PageHeader
-        title={`Expert interview: ${title}`}
-        subtitle="Your point of view shapes the angle, the thesis, the story and where the product fits. The outline is planned from your answers, and any facts you raise are checked before it is."
-        actions={
-          <>
-            <StageBadge stage={doc.stage} />
-            <Link href={`/production/review/${doc.slug}`} className={buttonCls("secondary")}>
-              Open in Review
-            </Link>
-          </>
-        }
-      />
-      {view ? (
-        <InterviewChat view={view} />
-      ) : (
-        <p className="text-sm text-slate-500">
-          No interview for this article yet. It opens when the run reaches the Interview stage, right after research.
-        </p>
-      )}
-    </div>
+    <Page
+      crumbs={crumbs}
+      title={title}
+      eyebrow="Expert interview"
+      width="narrow"
+      actions={
+        <Button variant="secondary" asChild>
+          <Link href={`/production/review/${doc.slug}`}>Open review</Link>
+        </Button>
+      }
+    >
+      <Card>
+        <EmptyState
+          icon={MessageSquare}
+          title="No interview yet"
+          hint="It opens when the run reaches the Interview stage, right after research."
+          action={
+            <Button variant="secondary" asChild>
+              <Link href="/production">Back to Production</Link>
+            </Button>
+          }
+        />
+      </Card>
+    </Page>
   );
 }
