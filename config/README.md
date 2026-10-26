@@ -3,8 +3,9 @@
 Everything company- or brand-specific that the engine needs lives here. The
 engine itself (agents, standards, templates, scripts, tools) contains **zero**
 company hardcodes; pointing the system at a new company means writing this
-folder and nothing else. The Configurator agent (roadmap Phase 1) will
-eventually write it for you.
+folder (plus the company's `context/` docs) and nothing else. The Configurator
+agent ([agents/configurator.md](../agents/configurator.md), invoked with
+`/configure-company`) writes both for you.
 
 ## Layout
 
@@ -18,6 +19,23 @@ config/
       logo-light-bg.svg # full-color logo for light backgrounds
       logo-dark-bg.svg  # white/mono logo for dark backgrounds
 ```
+
+## Sections of company.yaml
+
+| Section | What it drives |
+|---|---|
+| `company` | identity; `description` is shown to the expert in the interview |
+| `site` | D46: where pillar/hub/cluster pages live (`path_prefix`), canonical URLs and breadcrumbs stamped at plan import |
+| `publish` | D52: `framer-export` (export bundle + Mark live) or `hubspot` |
+| `pipeline` | D59: `interview: pause` stops each run for the expert interview; `skip` never stops |
+| `market` | D21: DataForSEO `location_code` / `language_code` for keyword data (default 2840/en) |
+| `ctas` | D50: closing CTA per funnel stage (`tofu`/`mofu`/`bofu`); Settings → Calls to action overrides win |
+| `blog` | the existing blog's base URL, canonical pattern, locale, breadcrumbs |
+| `author`, `organization` | byline and schema.org Person/Organization nodes |
+| `hubspot` | token env var name + blog/author IDs (empty → resolved via API) |
+| `brand` | header image colors, font, logos |
+| `voice` | company-specific banned phrases and style rules |
+| `competitors` | head-to-head vendors the audit bans as sources; mirrors `context/sales/competitive-landscape.md` |
 
 ## Rules
 
@@ -35,4 +53,8 @@ config/
   wordmark from `company.name`.
 - **YAML subset.** The parser supports nested maps (2-space indent), lists of
   scalars, lists of flat maps, quoted/unquoted scalars, and `#` comments. No
-  anchors, no multi-line strings, no flow mappings.
+  anchors, no multi-line strings, no flow mappings. Inline lists of scalars
+  (`[a, "b c", d]`) are fine.
+- **Deploys copy it.** The worker image copies `config/` and `context/` at
+  build time; changes reach the hosted worker and web app after commit +
+  redeploy.
